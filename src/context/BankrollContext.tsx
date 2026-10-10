@@ -29,6 +29,11 @@ import {
   pushAllStateToSupabase,
   clearAllSupabaseTables
 } from '../lib/supabase';
+import {
+  getCurrentSession,
+  setCurrentSession,
+  localSignOut
+} from '../lib/localAuth';
 
 export interface AuthUser {
   id: string;
@@ -115,62 +120,103 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const [freebets, setFreebets] = useState<FreebetEntry[]>(initialFreebets);
   const [freeSpins, setFreeSpins] = useState<FreeSpinEntry[]>(initialFreeSpins);
 
-  // Listen to Supabase Auth session
+  // Initialize auth state (supporting both local session and Supabase)
   useEffect(() => {
-    if (!supabase) {
-      setAuthLoading(false);
-      return;
-    }
-
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session?.user) {
-        const u = session.user;
+    // 1. Check local session first for instantaneous loading
+    const localSession = getCurrentSession();
+    if (localSession?.user) {
+      if (mounted) {
         setCurrentUser({
-          id: u.id,
-          email: u.email || '',
-          name:
-            u.user_metadata?.full_name ||
-            u.user_metadata?.name ||
-            (u.email ? u.email.split('@')[0] : 'Trader')
+          id: localSession.user.id,
+          email: localSession.user.email,
+          name: localSession.user.name
         });
-      } else {
-        setCurrentUser(null);
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
-    });
+    }
 
-    const {
-      data: { subscription }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!mounted) return;
-      if (session?.user) {
-        const u = session.user;
-        setCurrentUser({
-          id: u.id,
-          email: u.email || '',
-          name:
-            u.user_metadata?.full_name ||
-            u.user_metadata?.name ||
-            (u.email ? u.email.split('@')[0] : 'Trader')
-        });
-      } else {
-        setCurrentUser(null);
-        setBets(initialBets);
-        setTreasury(initialTreasury);
-        setFreebets(initialFreebets);
-        setFreeSpins(initialFreeSpins);
-        setSettings(defaultSettings);
+    // 2. Also check / subscribe to Supabase if available
+    if (supabase) {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!mounted) return;
+        if (session?.user) {
+          const u = session.user;
+          const userObj: AuthUser = {
+            id: u.id,
+            email: u.email || '',
+            name:
+              u.user_metadata?.full_name ||
+              u.user_metadata?.name ||
+              (u.email ? u.email.split('@')[0] : 'Trader')
+          };
+          setCurrentUser(userObj);
+          setCurrentSession({
+            user: userObj,
+            token: session.access_token || 'sb_token'
+          });
+        } else if (!localSession?.user) {
+          setCurrentUser(null);
+        }
+        setAuthLoading(false);
+      }).catch(() => {
+        if (mounted && !localSession?.user) {
+          setAuthLoading(false);
+        }
+      });
+
+      const {
+        data: { subscription }
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (!mounted) return;
+        if (session?.user) {
+          const u = session.user;
+          const userObj: AuthUser = {
+            id: u.id,
+            email: u.email || '',
+            name:
+              u.user_metadata?.full_name ||
+              u.user_metadata?.name ||
+              (u.email ? u.email.split('@')[0] : 'Trader')
+          };
+          setCurrentUser(userObj);
+          setCurrentSession({
+            user: userObj,
+            token: session.access_token || 'sb_token'
+          });
+        }
+      });
+
+      return () => {
+        mounted = false;
+        subscription.unsubscribe();
+      };
+    } else {
+      if (!localSession?.user) {
+        setAuthLoading(false);
       }
-      setAuthLoading(false);
-    });
+    }
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
     };
+  }, []);
+
+  // Listen to cross-tab or local login changes
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'apex_current_session_v1') {
+        const sess = getCurrentSession();
+        if (sess?.user) {
+          setCurrentUser(sess.user);
+        } else {
+          setCurrentUser(null);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   // Load user-scoped localStorage whenever currentUser changes
@@ -245,7 +291,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(getStorageKey(currentUser.id, 'settings'), JSON.stringify(settings));
   }, [settings, currentUser?.id]);
 
-  // Cloud Sync with Supabase scoped strictly to currentUser.id
+  // Cloud Sync with Supabase scoped strictly to currentUser.id (gracefully silent if network or offline)
   const syncNow = useCallback(async (): Promise<boolean> => {
     if (!isSupabaseConfigured || !currentUser?.id) return false;
     const uid = currentUser.id;
@@ -301,11 +347,11 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isSupabaseConfigured || !currentUser?.id) return;
-    syncNow();
+    syncNow().catch(() => {});
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        syncNow();
+        syncNow().catch(() => {});
       }
     };
     window.addEventListener('visibilitychange', handleVisibility);
@@ -314,10 +360,20 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   }, [currentUser?.id]);
 
   const signOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
+    try {
+      if (supabase) {
+        await supabase.auth.signOut().catch(() => {});
+      }
+    } catch {
+      // ignore
     }
+    localSignOut();
     setCurrentUser(null);
+    setBets(initialBets);
+    setTreasury(initialTreasury);
+    setFreebets(initialFreebets);
+    setFreeSpins(initialFreeSpins);
+    setSettings(defaultSettings);
   };
 
   // Compute Bet outcomes accurately based on status and fund type

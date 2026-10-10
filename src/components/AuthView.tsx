@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { localLogin, localRegister, localResetPassword } from '../lib/localAuth';
+import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface AuthViewProps {
@@ -23,10 +25,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
       return 'E-mail ou senha incorretos. Confira seus dados ou crie uma nova conta.';
     }
     if (lower.includes('email not confirmed')) {
-      return 'Confirme seu e-mail no link enviado para sua caixa de entrada (ou desative "Confirm email" em Authentication → Providers → Email no Supabase).';
+      return 'Confirme seu e-mail no link enviado para sua caixa de entrada.';
     }
     if (lower.includes('already registered') || lower.includes('already exists')) {
-      return 'Este e-mail já possui cadastro. Acesse usando a aba "Entrar".';
+      return 'Este e-mail já possui cadastro. Acesse usando a aba "Entrar na Conta".';
     }
     if (lower.includes('at least 6 characters') || lower.includes('weak_password')) {
       return 'A senha deve conter no mínimo 6 caracteres.';
@@ -39,71 +41,112 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supabase) {
-      setErrorMsg('Cliente Supabase não configurado.');
-      return;
-    }
-
     setErrorMsg(null);
     setInfoMsg(null);
     setLoading(true);
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      setErrorMsg('Por favor, informe um endereço de e-mail válido.');
+      setLoading(false);
+      return;
+    }
+
+    if (mode !== 'RESET' && cleanPassword.length < 6) {
+      setErrorMsg('A senha deve conter no mínimo 6 caracteres.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (mode === 'LOGIN') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password
-        });
-        if (error) {
-          setErrorMsg(translateAuthError(error.message));
-        } else {
-          onSuccessToast?.('Login realizado com sucesso!');
+        // Attempt Supabase login first if online, else fallback immediately to local account store
+        let loggedIn = false;
+
+        if (supabase) {
+          try {
+            const { data, error } = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password: cleanPassword
+            });
+            if (!error && data.session) {
+              loggedIn = true;
+              onSuccessToast?.('Login realizado com sucesso via nuvem!');
+            }
+          } catch {
+            // Supabase offline/unreachable: continue to local fallback
+          }
+        }
+
+        if (!loggedIn) {
+          const localRes = await localLogin(cleanEmail, cleanPassword);
+          if (localRes.error) {
+            setErrorMsg(translateAuthError(localRes.error));
+          } else {
+            loggedIn = true;
+            onSuccessToast?.(`Bem-vindo de volta, ${localRes.user?.name || 'apostador'}!`);
+            // Force re-render if needed via event
+            window.dispatchEvent(new Event('storage'));
+          }
         }
       } else if (mode === 'REGISTER') {
-        const { data, error } = await supabase.auth.signUp({
-          email: cleanEmail,
-          password,
-          options: {
-            data: {
-              full_name: name.trim() || cleanEmail.split('@')[0]
-            }
-          }
-        });
-
-        if (error) {
-          setErrorMsg(translateAuthError(error.message));
-        } else if (data.session) {
-          onSuccessToast?.('Conta criada! Bem-vindo ao Apex Bankroll.');
+        // Register locally first so user can ALWAYS access immediately without server barriers
+        const localRes = await localRegister(cleanEmail, cleanPassword, name);
+        if (localRes.error) {
+          setErrorMsg(translateAuthError(localRes.error));
         } else {
-          // Attempt immediate sign-in in case auto-confirm is active
-          const signInAttempt = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password
-          });
-          if (!signInAttempt.error && signInAttempt.data.session) {
-            onSuccessToast?.('Conta criada com sucesso!');
-          } else {
-            setInfoMsg(
-              'Conta criada com sucesso! Enviamos um link de confirmação para o seu e-mail. Após confirmar, clique em "Entrar".'
-            );
-            setMode('LOGIN');
+          // Asynchronously try to register on Supabase too if available
+          if (supabase) {
+            supabase.auth.signUp({
+              email: cleanEmail,
+              password: cleanPassword,
+              options: {
+                data: {
+                  full_name: name.trim() || cleanEmail.split('@')[0]
+                }
+              }
+            }).catch(() => {
+              // Silently ignore cloud registration failure; local profile is active
+            });
           }
+
+          onSuccessToast?.('Conta criada com sucesso! Bem-vindo ao Apex Bankroll.');
+          window.dispatchEvent(new Event('storage'));
         }
       } else if (mode === 'RESET') {
-        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-          redirectTo: window.location.origin
-        });
-        if (error) {
-          setErrorMsg(translateAuthError(error.message));
+        let resetSuccess = false;
+
+        if (supabase) {
+          try {
+            const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+              redirectTo: window.location.origin
+            });
+            if (!error) {
+              resetSuccess = true;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        const localRes = await localResetPassword(cleanEmail);
+        if (localRes.success) {
+          resetSuccess = true;
+          setInfoMsg(
+            'Senha temporária redefinida para: 123456. Você já pode acessar sua conta e alterar sua senha.'
+          );
+          setMode('LOGIN');
+        } else if (!resetSuccess) {
+          setErrorMsg(localRes.error || 'Nenhuma conta encontrada com este e-mail.');
         } else {
-          setInfoMsg('Link de recuperação de senha enviado para o seu e-mail.');
+          setInfoMsg('Link de recuperação enviado para o seu e-mail.');
           setMode('LOGIN');
         }
       }
     } catch (err: any) {
-      setErrorMsg(translateAuthError(err?.message || 'Erro ao autenticar com o servidor.'));
+      setErrorMsg(translateAuthError(err?.message || 'Erro ao autenticar. Tente novamente.'));
     } finally {
       setLoading(false);
     }
@@ -122,7 +165,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
               Apex Bankroll
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Gestão individual de banca esportiva com dados isolados por conta
+              Gestão individual de banca esportiva com dados 100% isolados por conta
             </p>
           </div>
         </div>
@@ -262,7 +305,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
             ) : (
               <>
                 <span className="material-symbols-outlined text-[18px]">mail</span>
-                <span>Enviar Link de Recuperação</span>
+                <span>Recuperar Senha</span>
               </>
             )}
           </button>
@@ -287,7 +330,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
           <PWAInstallButton variant="auth" />
           <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">
             <span className="material-symbols-outlined text-[15px] text-emerald-400">lock</span>
-            <span>Apostas, caixa e configurações 100% privados por usuário</span>
+            <span>Apostas, caixa e configurações 100% isoladas por usuário</span>
           </div>
         </div>
       </div>
