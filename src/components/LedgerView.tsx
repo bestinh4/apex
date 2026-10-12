@@ -47,17 +47,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const filteredBets = useMemo(() => {
     return bets.filter((b) => {
       if (selectedMonth !== 'ALL') {
-        const match = b.date.match(/(\d{4})-(\d{2})|(\d{2})\/(\d{2})/);
-        const mNum = match ? match[2] || match[4] : b.date.includes('Mai') || b.date.includes('-05-') ? '05' : '';
+        const dStr = b.date || '';
+        const match = dStr.match(/(\d{4})-(\d{2})|(\d{2})\/(\d{2})/);
+        const mNum = match ? match[2] || match[4] : dStr.includes('Mai') || dStr.includes('-05-') ? '05' : '';
         if (mNum !== selectedMonth) return false;
       }
 
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        const matchesTerm =
-          b.event.toLowerCase().includes(term) ||
-          b.market.toLowerCase().includes(term) ||
-          (b.bookmaker && b.bookmaker.toLowerCase().includes(term));
+        const ev = (b.event || '').toLowerCase();
+        const mk = (b.market || '').toLowerCase();
+        const bk = (b.bookmaker || '').toLowerCase();
+        const matchesTerm = ev.includes(term) || mk.includes(term) || bk.includes(term);
         if (!matchesTerm) return false;
       }
 
@@ -458,7 +459,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
                   <div className="flex items-center gap-1.5 font-mono tabular-nums">
-                    <span className="text-blue-400 font-semibold">@{bet.odd.toFixed(2)}</span>
+                    <span className="text-blue-400 font-semibold">@{Number(bet.odd || 1).toFixed(2)}</span>
                     <span>·</span>
                     <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                     <span>({bet.units}u)</span>
@@ -569,7 +570,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       </div>
                     </td>
                     <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 tabular-nums">
-                      @{bet.odd.toFixed(2)}
+                      @{Number(bet.odd || 1).toFixed(2)}
                     </td>
                     <td className="py-3 px-3.5 text-right font-mono text-slate-200 tabular-nums">
                       {formatBRL(bet.stake)}

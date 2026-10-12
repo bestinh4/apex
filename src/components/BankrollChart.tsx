@@ -383,7 +383,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                   <>
                     <span>·</span>
                     <span className="font-mono text-blue-400 font-semibold">
-                      @{activePoint.odd.toFixed(2)}
+                      @{Number(activePoint.odd || 1).toFixed(2)}
                     </span>
                   </>
                 )}
@@ -414,7 +414,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                 >
                   {activePoint.deltaPL > 0 ? '+' : ''}
                   {formatBRL(activePoint.deltaPL)} ({activePoint.deltaUnits >= 0 ? '+' : ''}
-                  {activePoint.deltaUnits.toFixed(2)}u)
+                  {Number(activePoint.deltaUnits || 0).toFixed(2)}u)
                 </span>
               </div>
             )}

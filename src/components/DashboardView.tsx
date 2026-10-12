@@ -43,11 +43,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const plUnits = settings.unitValue > 0 ? netBetProfit / settings.unitValue : 0;
 
   const filteredBets = bets.filter((b) => {
-    const matchesSearch =
-      !searchTerm ||
-      b.event.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.market.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (b.bookmaker && b.bookmaker.toLowerCase().includes(searchTerm.toLowerCase()));
+    const ev = (b.event || '').toLowerCase();
+    const mk = (b.market || '').toLowerCase();
+    const bk = (b.bookmaker || '').toLowerCase();
+    const st = searchTerm.toLowerCase();
+
+    const matchesSearch = !searchTerm || ev.includes(st) || mk.includes(st) || bk.includes(st);
 
     const matchesStatus =
       filterStatus === 'ALL' ||
@@ -375,7 +376,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {/* Middle Metadata Row: Odd · Stake · Bookmaker · Date */}
                   <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
                     <div className="flex items-center gap-1.5 font-mono tabular-nums">
-                      <span className="text-blue-400 font-semibold">@{bet.odd.toFixed(2)}</span>
+                      <span className="text-blue-400 font-semibold">@{Number(bet.odd || 1).toFixed(2)}</span>
                       <span>·</span>
                       <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                       <span>({bet.units}u)</span>
@@ -485,7 +486,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </div>
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 tabular-nums">
-                        @{bet.odd.toFixed(2)}
+                        @{Number(bet.odd || 1).toFixed(2)}
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono text-slate-200 tabular-nums">
                         {formatBRL(bet.stake)}

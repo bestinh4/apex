@@ -153,54 +153,64 @@ export const BetModal: React.FC<BetModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!event.trim()) return;
 
     const finalMarket =
       customMarketText.trim() ||
       (sport === 'Futebol' ? `${activeMarket?.name}: ${selectedOption}` : 'Mercado Geral');
+
+    const finalEvent = event.trim() || (sport === 'Futebol' ? `${activeMarket?.name || 'Aposta'}` : 'Entrada Avulsa');
 
     const now = new Date();
     const formattedDate = `Hoje, ${String(now.getHours()).padStart(2, '0')}:${String(
       now.getMinutes()
     ).padStart(2, '0')}`;
 
-    if (initialBet) {
-      updateBet(initialBet.id, {
-        type: fundType,
-        bookmaker,
-        sport,
-        event,
-        market: finalMarket,
-        odd: numOdd,
-        stake: numStake,
-        status,
-        gross,
-        pl
-      });
-      onSuccessToast?.(`Aposta #${initialBet.id} atualizada com sucesso.`);
-    } else {
-      addBet({
-        date: formattedDate,
-        type: fundType,
-        bookmaker,
-        sport,
-        event,
-        market: finalMarket,
-        odd: numOdd,
-        stake: numStake,
-        units: Number(units.toFixed(2)),
-        status,
-        gross,
-        pl
-      });
-      onSuccessToast?.(`Nova aposta registrada com sucesso!`);
+    try {
+      if (initialBet) {
+        updateBet(initialBet.id, {
+          type: fundType,
+          bookmaker,
+          sport,
+          event: finalEvent,
+          market: finalMarket,
+          odd: numOdd,
+          stake: numStake,
+          status,
+          gross,
+          pl
+        });
+        onSuccessToast?.(`Aposta #${initialBet.id} atualizada com sucesso.`);
+      } else {
+        addBet({
+          date: formattedDate,
+          type: fundType,
+          bookmaker,
+          sport,
+          event: finalEvent,
+          market: finalMarket,
+          odd: numOdd,
+          stake: numStake,
+          units: Number(units.toFixed(2)),
+          status,
+          gross,
+          pl
+        });
+        onSuccessToast?.(`Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada!`);
+      }
+    } catch (err) {
+      console.error('Falha ao registrar aposta:', err);
     }
 
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 overflow-y-auto"
+    >
       <div className="w-full max-w-2xl bg-[#0e1422] border-t sm:border border-white/[0.09] rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto">
         <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto sm:hidden shrink-0" />
         {/* Header */}
@@ -306,8 +316,7 @@ export const BetModal: React.FC<BetModalProps> = ({
               type="text"
               value={event}
               onChange={(e) => setEvent(e.target.value)}
-              placeholder="Ex: Real Madrid vs Manchester City • Champions League"
-              required
+              placeholder="Ex: Real Madrid vs Manchester City (ou deixe em branco)"
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 transition-colors"
             />
           </div>

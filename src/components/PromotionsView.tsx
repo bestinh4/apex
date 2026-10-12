@@ -5,12 +5,14 @@ interface PromotionsViewProps {
   onOpenFreeSpinModal: () => void;
   onOpenFreebetModal: () => void;
   onSuccessToast?: (msg: string) => void;
+  onNavigateDashboard?: () => void;
 }
 
 export const PromotionsView: React.FC<PromotionsViewProps> = ({
   onOpenFreeSpinModal,
   onOpenFreebetModal,
-  onSuccessToast
+  onSuccessToast,
+  onNavigateDashboard
 }) => {
   const {
     freebets,
@@ -52,13 +54,26 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
     <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm">
-        <div>
-          <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-            Bônus, Freebets & Giros Grátis
-          </h2>
-          <p className="text-xs text-slate-400">
-            Controle de apostas grátis, rodadas promocionais e calculadora de extração
-          </p>
+        <div className="flex items-center gap-3">
+          {onNavigateDashboard && (
+            <button
+              type="button"
+              onClick={onNavigateDashboard}
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-[#080c14] border border-white/[0.08] text-slate-300 hover:text-white hover:bg-white/[0.06] transition-colors flex items-center gap-1.5 text-xs font-semibold shrink-0"
+              title="Voltar ao Dashboard"
+            >
+              <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+              <span className="hidden sm:inline">Voltar ao Início</span>
+            </button>
+          )}
+          <div>
+            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              Bônus, Freebets & Giros Grátis
+            </h2>
+            <p className="text-xs text-slate-400">
+              Controle de apostas grátis, rodadas promocionais e calculadora de extração
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

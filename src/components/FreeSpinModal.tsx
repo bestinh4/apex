@@ -20,6 +20,8 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
   const [spinsCount, setSpinsCount] = useState('10');
   const [netProfit, setNetProfit] = useState('25.00');
 
+  if (!isOpen) return null;
+
   const parseNum = (val: string | number): number => {
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
     if (!val) return 0;
@@ -52,7 +54,12 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 overflow-y-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 overflow-y-auto"
+    >
       <div className="w-full max-w-md bg-[#0e1422] border-t sm:border border-white/[0.09] rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto">
         <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto sm:hidden shrink-0" />
         <div className="flex items-center justify-between pb-4 border-b border-white/[0.06]">

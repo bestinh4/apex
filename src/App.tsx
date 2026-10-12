@@ -42,25 +42,7 @@ function AppContent() {
     setIsBetModalOpen(true);
   };
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#080c14] text-[#e2e8f0] flex flex-col items-center justify-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 animate-pulse">
-          <span className="material-symbols-outlined text-[22px]">account_balance_wallet</span>
-        </div>
-        <span className="text-xs font-medium text-slate-400">Carregando sua banca...</span>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return (
-      <>
-        <AuthView onSuccessToast={showToast} />
-        <Toast message={toastMessage} onClose={() => setToastMessage(null)} />
-      </>
-    );
-  }
+  // Carregamento imediato sem travar na tela inicial
 
   return (
     <div className="min-h-screen bg-[#080c14] text-[#e2e8f0] flex flex-col bg-ambient-glow selection:bg-blue-500 selection:text-white">
@@ -107,6 +89,7 @@ function AppContent() {
               onOpenFreeSpinModal={() => setIsFreeSpinModalOpen(true)}
               onOpenFreebetModal={() => setIsFreebetModalOpen(true)}
               onSuccessToast={showToast}
+              onNavigateDashboard={() => setActiveTab('dashboard')}
             />
           )}
 
@@ -120,33 +103,41 @@ function AppContent() {
       </div>
 
       {/* Modals */}
-      <BetModal
-        isOpen={isBetModalOpen}
-        onClose={() => {
-          setIsBetModalOpen(false);
-          setEditingBet(null);
-        }}
-        initialBet={editingBet}
-        onSuccessToast={showToast}
-      />
+      {isBetModalOpen && (
+        <BetModal
+          isOpen={isBetModalOpen}
+          onClose={() => {
+            setIsBetModalOpen(false);
+            setEditingBet(null);
+          }}
+          initialBet={editingBet}
+          onSuccessToast={showToast}
+        />
+      )}
 
-      <CashflowModal
-        isOpen={isCashflowModalOpen}
-        onClose={() => setIsCashflowModalOpen(false)}
-        onSuccessToast={showToast}
-      />
+      {isCashflowModalOpen && (
+        <CashflowModal
+          isOpen={isCashflowModalOpen}
+          onClose={() => setIsCashflowModalOpen(false)}
+          onSuccessToast={showToast}
+        />
+      )}
 
-      <FreeSpinModal
-        isOpen={isFreeSpinModalOpen}
-        onClose={() => setIsFreeSpinModalOpen(false)}
-        onSuccessToast={showToast}
-      />
+      {isFreeSpinModalOpen && (
+        <FreeSpinModal
+          isOpen={isFreeSpinModalOpen}
+          onClose={() => setIsFreeSpinModalOpen(false)}
+          onSuccessToast={showToast}
+        />
+      )}
 
-      <FreebetModal
-        isOpen={isFreebetModalOpen}
-        onClose={() => setIsFreebetModalOpen(false)}
-        onSuccessToast={showToast}
-      />
+      {isFreebetModalOpen && (
+        <FreebetModal
+          isOpen={isFreebetModalOpen}
+          onClose={() => setIsFreebetModalOpen(false)}
+          onSuccessToast={showToast}
+        />
+      )}
 
       {/* Feedback Toast */}
       <Toast message={toastMessage} onClose={() => setToastMessage(null)} />

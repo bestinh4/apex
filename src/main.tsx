@@ -1,14 +1,22 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { registerSW } from 'virtual:pwa-register';
 import App from './App.tsx';
+import { ErrorBoundary } from './components/ErrorBoundary.tsx';
 import './index.css';
 
-// Register PWA Service Worker immediately for standalone installability and offline cache
-registerSW({ immediate: true });
+// Em ambiente de desenvolvimento e preview, limpar Service Workers obsoletos para garantir que o celular sempre baixe o app atualizado
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  }).catch(() => {});
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>
 );

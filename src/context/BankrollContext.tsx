@@ -119,8 +119,20 @@ function getStorageKey(userId: string, key: string): string {
 }
 
 export function BankrollProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<AuthUser>(() => {
+    try {
+      const session = getCurrentSession();
+      if (session?.user?.id) {
+        return {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name
+        };
+      }
+    } catch {}
+    return DEFAULT_USER;
+  });
+  const [authLoading, setAuthLoading] = useState<boolean>(false);
 
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [bets, setBets] = useState<BetEntry[]>(initialBets);
@@ -402,12 +414,14 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     localSignOut();
     loadedUserRef.current = null;
-    setCurrentUser(null);
+    const session = getOrCreateDefaultSession();
+    setCurrentUser(session.user);
     setBets(initialBets);
     setTreasury(initialTreasury);
     setFreebets(initialFreebets);
     setFreeSpins(initialFreeSpins);
     setSettings(defaultSettings);
+    loadUserData(session.user.id);
   };
 
   // Compute Bet outcomes accurately based on status and fund type
