@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
 import { BetEntry, TreasuryEntry, FreebetEntry, FreeSpinEntry, AppSettings, BetStatus } from '../types';
 import {
   initialBets,
@@ -32,6 +32,9 @@ import {
 import {
   getCurrentSession,
   setCurrentSession,
+  localLogin,
+  localRegister,
+  localResetPassword,
   localSignOut
 } from '../lib/localAuth';
 
@@ -44,6 +47,9 @@ export interface AuthUser {
 interface BankrollContextType {
   currentUser: AuthUser | null;
   authLoading: boolean;
+  signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, pass: string, name?: string) => Promise<{ success: boolean; error?: string }>;
+  resetPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
   signOut: () => Promise<void>;
   bets: BetEntry[];
   treasury: TreasuryEntry[];
@@ -120,110 +126,9 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const [freebets, setFreebets] = useState<FreebetEntry[]>(initialFreebets);
   const [freeSpins, setFreeSpins] = useState<FreeSpinEntry[]>(initialFreeSpins);
 
-  // Initialize auth state (supporting both local session and Supabase)
-  useEffect(() => {
-    let mounted = true;
+  const loadedUserRef = useRef<string | null>(null);
 
-    // 1. Check local session first for instantaneous loading
-    const localSession = getCurrentSession();
-    if (localSession?.user) {
-      if (mounted) {
-        setCurrentUser({
-          id: localSession.user.id,
-          email: localSession.user.email,
-          name: localSession.user.name
-        });
-        setAuthLoading(false);
-      }
-    }
-
-    // 2. Also check / subscribe to Supabase if available
-    if (supabase) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!mounted) return;
-        if (session?.user) {
-          const u = session.user;
-          const userObj: AuthUser = {
-            id: u.id,
-            email: u.email || '',
-            name:
-              u.user_metadata?.full_name ||
-              u.user_metadata?.name ||
-              (u.email ? u.email.split('@')[0] : 'Trader')
-          };
-          setCurrentUser(userObj);
-          setCurrentSession({
-            user: userObj,
-            token: session.access_token || 'sb_token'
-          });
-        } else if (!localSession?.user) {
-          setCurrentUser(null);
-        }
-        setAuthLoading(false);
-      }).catch(() => {
-        if (mounted && !localSession?.user) {
-          setAuthLoading(false);
-        }
-      });
-
-      const {
-        data: { subscription }
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mounted) return;
-        if (session?.user) {
-          const u = session.user;
-          const userObj: AuthUser = {
-            id: u.id,
-            email: u.email || '',
-            name:
-              u.user_metadata?.full_name ||
-              u.user_metadata?.name ||
-              (u.email ? u.email.split('@')[0] : 'Trader')
-          };
-          setCurrentUser(userObj);
-          setCurrentSession({
-            user: userObj,
-            token: session.access_token || 'sb_token'
-          });
-        }
-      });
-
-      return () => {
-        mounted = false;
-        subscription.unsubscribe();
-      };
-    } else {
-      if (!localSession?.user) {
-        setAuthLoading(false);
-      }
-    }
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Listen to cross-tab or local login changes
-  useEffect(() => {
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === 'apex_current_session_v1') {
-        const sess = getCurrentSession();
-        if (sess?.user) {
-          setCurrentUser(sess.user);
-        } else {
-          setCurrentUser(null);
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
-
-  // Load user-scoped localStorage whenever currentUser changes
-  useEffect(() => {
-    if (!currentUser?.id) return;
-    const uid = currentUser.id;
-
+  const loadUserData = (uid: string) => {
     try {
       const savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
       const parsedSettings = savedSettings ? JSON.parse(savedSettings) : null;
@@ -241,57 +146,76 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       setSettings(userSettings);
 
       const savedBets = localStorage.getItem(getStorageKey(uid, 'bets'));
-      const parsedBets = savedBets ? JSON.parse(savedBets) : [];
-      setBets(
-        Array.isArray(parsedBets)
-          ? parsedBets.map((item) => mapRowToBet(item, userSettings.unitValue))
-          : []
-      );
+      const parsedBets = savedBets ? JSON.parse(savedBets) : null;
+      if (parsedBets !== null && Array.isArray(parsedBets)) {
+        setBets(parsedBets.map((item) => mapRowToBet(item, userSettings.unitValue)));
+      } else {
+        setBets(initialBets);
+      }
 
       const savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
-      setTreasury(savedTreasury ? JSON.parse(savedTreasury) : []);
+      setTreasury(savedTreasury ? JSON.parse(savedTreasury) : initialTreasury);
 
       const savedFreebets = localStorage.getItem(getStorageKey(uid, 'freebets'));
-      setFreebets(savedFreebets ? JSON.parse(savedFreebets) : []);
+      setFreebets(savedFreebets ? JSON.parse(savedFreebets) : initialFreebets);
 
       const savedSpins = localStorage.getItem(getStorageKey(uid, 'freespins'));
-      setFreeSpins(savedSpins ? JSON.parse(savedSpins) : []);
+      setFreeSpins(savedSpins ? JSON.parse(savedSpins) : initialFreeSpins);
     } catch {
       setSettings(defaultSettings);
-      setBets([]);
-      setTreasury([]);
-      setFreebets([]);
-      setFreeSpins([]);
+      setBets(initialBets);
+      setTreasury(initialTreasury);
+      setFreebets(initialFreebets);
+      setFreeSpins(initialFreeSpins);
+    } finally {
+      loadedUserRef.current = uid;
     }
-  }, [currentUser?.id]);
+  };
 
-  // Persist user-scoped localStorage on state changes
+  // Initialize active session on mount
   useEffect(() => {
-    if (!currentUser?.id) return;
+    const session = getCurrentSession();
+    if (session?.user?.id) {
+      const userObj: AuthUser = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name
+      };
+      setCurrentUser(userObj);
+      loadUserData(userObj.id);
+    } else {
+      setCurrentUser(null);
+    }
+    setAuthLoading(false);
+  }, []);
+
+  // Persist user-scoped localStorage on state changes (strictly isolated per user ID)
+  useEffect(() => {
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'bets'), JSON.stringify(bets));
   }, [bets, currentUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'treasury'), JSON.stringify(treasury));
   }, [treasury, currentUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'freebets'), JSON.stringify(freebets));
   }, [freebets, currentUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'freespins'), JSON.stringify(freeSpins));
   }, [freeSpins, currentUser?.id]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'settings'), JSON.stringify(settings));
   }, [settings, currentUser?.id]);
 
-  // Cloud Sync with Supabase scoped strictly to currentUser.id (gracefully silent if network or offline)
+  // Cloud Sync with Supabase scoped strictly to currentUser.id (gracefully silent if not configured)
   const syncNow = useCallback(async (): Promise<boolean> => {
     if (!isSupabaseConfigured || !currentUser?.id) return false;
     const uid = currentUser.id;
@@ -359,15 +283,71 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id]);
 
-  const signOut = async () => {
+  const signUp = async (
+    email: string,
+    pass: string,
+    name?: string
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut().catch(() => {});
+      const res = await localRegister(email, pass, name);
+      if (res.error || !res.user) {
+        return { success: false, error: res.error || 'Erro ao criar conta.' };
       }
-    } catch {
-      // ignore
+      const userObj: AuthUser = {
+        id: res.user.id,
+        email: res.user.email,
+        name: res.user.name
+      };
+      setCurrentUser(userObj);
+      loadUserData(userObj.id);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Erro ao criar conta.' };
     }
+  };
+
+  const signIn = async (
+    email: string,
+    pass: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await localLogin(email, pass);
+      if (res.error || !res.user) {
+        return { success: false, error: res.error || 'Credenciais inválidas.' };
+      }
+      const userObj: AuthUser = {
+        id: res.user.id,
+        email: res.user.email,
+        name: res.user.name
+      };
+      setCurrentUser(userObj);
+      loadUserData(userObj.id);
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Erro ao realizar login.' };
+    }
+  };
+
+  const resetPassword = async (
+    email: string
+  ): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const res = await localResetPassword(email);
+      if (!res.success) {
+        return { success: false, error: res.error || 'Conta não encontrada com este e-mail.' };
+      }
+      return {
+        success: true,
+        message: 'Senha temporária definida como: 123456. Você já pode fazer login e alterá-la.'
+      };
+    } catch (err: any) {
+      return { success: false, error: err?.message || 'Erro ao redefinir senha.' };
+    }
+  };
+
+  const signOut = async () => {
     localSignOut();
+    loadedUserRef.current = null;
     setCurrentUser(null);
     setBets(initialBets);
     setTreasury(initialTreasury);
@@ -789,6 +769,9 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       value={{
         currentUser,
         authLoading,
+        signIn,
+        signUp,
+        resetPassword,
         signOut,
         bets,
         treasury,

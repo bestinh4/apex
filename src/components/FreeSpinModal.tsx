@@ -20,11 +20,17 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
   const [spinsCount, setSpinsCount] = useState('10');
   const [netProfit, setNetProfit] = useState('25.00');
 
-  if (!isOpen) return null;
+  const parseNum = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const profit = parseFloat(netProfit) || 0;
+    const profit = parseNum(netProfit);
     if (profit <= 0) return;
 
     const now = new Date();
@@ -135,11 +141,16 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
               Lucro Líquido Obtido (R$)
             </label>
             <input
-              type="number"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputMode="decimal"
               value={netProfit}
-              onChange={(e) => setNetProfit(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                  setNetProfit(val);
+                }
+              }}
+              placeholder="25,00"
               className="bg-[#080c14] border border-white/[0.08] text-emerald-400 font-mono px-3.5 py-2.5 rounded-xl text-sm font-bold focus:outline-none focus:border-emerald-500"
               required
             />

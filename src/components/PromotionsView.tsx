@@ -27,9 +27,17 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
   const [calcOddBack, setCalcOddBack] = useState('4.00');
   const [calcOddLay, setCalcOddLay] = useState('4.10');
 
-  const fbVal = parseFloat(calcFreebetAmount) || 0;
-  const oddB = parseFloat(calcOddBack) || 1.0;
-  const oddL = parseFloat(calcOddLay) || 1.0;
+  const parseNum = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const fbVal = parseNum(calcFreebetAmount);
+  const oddB = parseNum(calcOddBack) || 1.0;
+  const oddL = parseNum(calcOddLay) || 1.0;
 
   const layStake = oddL > 0.05 ? (fbVal * (oddB - 1)) / (oddL - 0.03) : 0;
   const guaranteedProfit = Math.max(0, fbVal * (oddB - 1) - layStake * (oddL - 1));
@@ -138,9 +146,16 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               Valor da Freebet (R$)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={calcFreebetAmount}
-              onChange={(e) => setCalcFreebetAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                  setCalcFreebetAmount(val);
+                }
+              }}
+              placeholder="50,00"
               className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -150,10 +165,16 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               Odd Back (Casa de Apostas)
             </label>
             <input
-              type="number"
-              step="0.05"
+              type="text"
+              inputMode="decimal"
               value={calcOddBack}
-              onChange={(e) => setCalcOddBack(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                  setCalcOddBack(val);
+                }
+              }}
+              placeholder="4,00"
               className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -163,10 +184,16 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               Odd Lay (Exchange / Betfair)
             </label>
             <input
-              type="number"
-              step="0.05"
+              type="text"
+              inputMode="decimal"
               value={calcOddLay}
-              onChange={(e) => setCalcOddLay(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                  setCalcOddLay(val);
+                }
+              }}
+              placeholder="4,10"
               className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3.5 py-2.5 rounded-xl text-xs font-mono focus:outline-none focus:border-blue-500"
             />
           </div>

@@ -21,9 +21,15 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
   const [details, setDetails] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
 
-  if (!isOpen) return null;
+  const parseNum = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
 
-  const numAmount = parseFloat(amount) || 0;
+  const numAmount = parseNum(amount);
   let projectedEquity = currentEquity;
   if (type === 'DEPOSIT' || type === 'BONUS') {
     projectedEquity += numAmount;
@@ -127,11 +133,16 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
                 Valor (R$)
               </label>
               <input
-                type="number"
-                step="0.01"
-                min="0.01"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setAmount(val);
+                  }
+                }}
+                placeholder="100,00"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
                 required
               />

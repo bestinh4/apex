@@ -9,26 +9,30 @@ export const DEFAULT_SUPABASE_ANON_KEY =
 
 const env = (import.meta as any).env || {};
 
-const resolvedUrl: string =
+const rawUrl =
   env.VITE_SUPABASE_URL ||
   env.NEXT_PUBLIC_SUPABASE_URL ||
   env.SUPABASE_URL ||
-  DEFAULT_SUPABASE_URL;
+  '';
 
-const resolvedAnonKey: string =
+const rawAnonKey =
   env.VITE_SUPABASE_ANON_KEY ||
   env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   env.SUPABASE_ANON_KEY ||
   env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ||
-  DEFAULT_SUPABASE_ANON_KEY;
+  '';
 
+// Only mark Supabase as active if real environment variables are provided (not empty and not the placeholder)
 export const isSupabaseConfigured = Boolean(
-  resolvedUrl && resolvedAnonKey && resolvedAnonKey !== 'YOUR_SUPABASE_ANON_PUBLIC_KEY'
+  rawUrl &&
+  rawAnonKey &&
+  rawAnonKey !== 'YOUR_SUPABASE_ANON_PUBLIC_KEY' &&
+  !rawUrl.includes('giwvoaxkqmuepnjlrxgz')
 );
 
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(resolvedUrl, resolvedAnonKey, {
+  ? createClient(rawUrl, rawAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true

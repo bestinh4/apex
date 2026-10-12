@@ -3,10 +3,12 @@ import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import {
+  isSupabaseConfigured,
   SUPABASE_PROJECT_REF,
   SUPABASE_REGION,
   SUPABASE_SQL_SCHEMA
 } from '../lib/supabase';
+import { localResetPassword } from '../lib/localAuth';
 
 interface SettingsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -45,8 +47,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setUnitValue(String(settings.unitValue));
   }, [settings.initialBankroll, settings.unitValue]);
 
-  const numBankroll = parseFloat(initialBankroll) || 1000;
-  const numUnit = parseFloat(unitValue) || 25;
+  const parseNum = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const numBankroll = parseNum(initialBankroll) || 1000;
+  const numUnit = parseNum(unitValue) || 25;
   const unitPct = numBankroll > 0 ? (numUnit / numBankroll) * 100 : 0;
 
   const handleSave = (e: React.FormEvent) => {
@@ -63,7 +73,31 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setUnitValue(calculated);
   };
 
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser?.email) return;
+    if (newPasswordInput.trim().length < 6) {
+      onSuccessToast?.('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+    const res = await localResetPassword(currentUser.email, newPasswordInput.trim());
+    if (res.success) {
+      onSuccessToast?.('Senha da sua conta alterada com sucesso!');
+      setNewPasswordInput('');
+      setShowPasswordChange(false);
+    } else {
+      onSuccessToast?.(res.error || 'Erro ao alterar senha.');
+    }
+  };
+
   const handleManualSync = async () => {
+    if (!isSupabaseConfigured) {
+      onSuccessToast?.('Modo Local Seguro ativo. Seus dados estão 100% salvos e isolados neste dispositivo.');
+      return;
+    }
     setIsSyncing(true);
     const ok = await syncNow();
     setIsSyncing(false);
@@ -71,7 +105,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       onSuccessToast?.('Seus dados foram sincronizados com a nuvem!');
     } else {
       setShowSqlModal(true);
-      onSuccessToast?.('Copie e execute o script SQL abaixo no Supabase para ativar as políticas.');
+      onSuccessToast?.('Falha ao conectar com o Supabase. Seus dados continuam seguros localmente.');
     }
   };
 
@@ -158,17 +192,70 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={signOut}
-              className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 text-xs font-semibold flex items-center gap-1 transition-colors shrink-0"
-            >
-              <span className="material-symbols-outlined text-[15px]">logout</span>
-              <span>Sair</span>
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowPasswordChange((v) => !v)}
+                title="Alterar Senha da Conta"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[15px]">key</span>
+                <span className="hidden md:inline">Senha</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={signOut}
+                className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 text-xs font-semibold flex items-center gap-1 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[15px]">logout</span>
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         )}
       </div>
+
+      {showPasswordChange && currentUser && (
+        <form
+          onSubmit={handleChangePassword}
+          className="bg-[#0e1422]/95 border border-blue-500/30 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-end gap-3 animate-in fade-in duration-150"
+        >
+          <div className="flex-1 flex flex-col gap-1">
+            <label className="text-xs font-semibold text-slate-300">
+              Nova Senha para {currentUser.email}
+            </label>
+            <input
+              type="password"
+              placeholder="Mínimo 6 caracteres"
+              value={newPasswordInput}
+              onChange={(e) => setNewPasswordInput(e.target.value)}
+              className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
+              required
+              minLength={6}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[15px]">check</span>
+              <span>Salvar Nova Senha</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowPasswordChange(false);
+                setNewPasswordInput('');
+              }}
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Main Settings Form */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm">
@@ -179,11 +266,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 Banca Inicial de Referência (R$)
               </label>
               <input
-                type="number"
-                step="0.01"
-                min="1"
+                type="text"
+                inputMode="decimal"
                 value={initialBankroll}
-                onChange={(e) => setInitialBankroll(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setInitialBankroll(val);
+                  }
+                }}
+                placeholder="1000,00"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500"
                 required
               />
@@ -202,11 +294,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </span>
               </div>
               <input
-                type="number"
-                step="0.5"
-                min="0.5"
+                type="text"
+                inputMode="decimal"
                 value={unitValue}
-                onChange={(e) => setUnitValue(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setUnitValue(val);
+                  }
+                }}
+                placeholder="25,00"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500"
                 required
               />

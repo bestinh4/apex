@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { localLogin, localRegister, localResetPassword } from '../lib/localAuth';
 import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -11,6 +9,7 @@ interface AuthViewProps {
 type AuthMode = 'LOGIN' | 'REGISTER' | 'RESET';
 
 export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
+  const { signIn, signUp, resetPassword } = useBankroll();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -21,20 +20,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
 
   const translateAuthError = (msg: string): string => {
     const lower = msg.toLowerCase();
-    if (lower.includes('invalid login credentials')) {
-      return 'E-mail ou senha incorretos. Confira seus dados ou crie uma nova conta.';
+    if (lower.includes('invalid login credentials') || lower.includes('senha incorreta')) {
+      return 'E-mail ou senha incorretos. Confira seus dados ou recupere sua senha.';
     }
-    if (lower.includes('email not confirmed')) {
-      return 'Confirme seu e-mail no link enviado para sua caixa de entrada.';
-    }
-    if (lower.includes('already registered') || lower.includes('already exists')) {
+    if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('já possui cadastro')) {
       return 'Este e-mail já possui cadastro. Acesse usando a aba "Entrar na Conta".';
     }
-    if (lower.includes('at least 6 characters') || lower.includes('weak_password')) {
+    if (lower.includes('at least 6 characters') || lower.includes('mínimo 6 caracteres')) {
       return 'A senha deve conter no mínimo 6 caracteres.';
-    }
-    if (lower.includes('rate limit') || lower.includes('too many requests')) {
-      return 'Muitas tentativas seguidas. Aguarde alguns instantes e tente novamente.';
     }
     return msg;
   };
@@ -62,86 +55,27 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
 
     try {
       if (mode === 'LOGIN') {
-        // Attempt Supabase login first if online, else fallback immediately to local account store
-        let loggedIn = false;
-
-        if (supabase) {
-          try {
-            const { data, error } = await supabase.auth.signInWithPassword({
-              email: cleanEmail,
-              password: cleanPassword
-            });
-            if (!error && data.session) {
-              loggedIn = true;
-              onSuccessToast?.('Login realizado com sucesso via nuvem!');
-            }
-          } catch {
-            // Supabase offline/unreachable: continue to local fallback
-          }
-        }
-
-        if (!loggedIn) {
-          const localRes = await localLogin(cleanEmail, cleanPassword);
-          if (localRes.error) {
-            setErrorMsg(translateAuthError(localRes.error));
-          } else {
-            loggedIn = true;
-            onSuccessToast?.(`Bem-vindo de volta, ${localRes.user?.name || 'apostador'}!`);
-            // Force re-render if needed via event
-            window.dispatchEvent(new Event('storage'));
-          }
+        const res = await signIn(cleanEmail, cleanPassword);
+        if (!res.success) {
+          setErrorMsg(translateAuthError(res.error || 'Credenciais inválidas.'));
+        } else {
+          onSuccessToast?.('Login realizado com sucesso! Bem-vindo de volta.');
         }
       } else if (mode === 'REGISTER') {
-        // Register locally first so user can ALWAYS access immediately without server barriers
-        const localRes = await localRegister(cleanEmail, cleanPassword, name);
-        if (localRes.error) {
-          setErrorMsg(translateAuthError(localRes.error));
+        const res = await signUp(cleanEmail, cleanPassword, name);
+        if (!res.success) {
+          setErrorMsg(translateAuthError(res.error || 'Erro ao criar conta.'));
         } else {
-          // Asynchronously try to register on Supabase too if available
-          if (supabase) {
-            supabase.auth.signUp({
-              email: cleanEmail,
-              password: cleanPassword,
-              options: {
-                data: {
-                  full_name: name.trim() || cleanEmail.split('@')[0]
-                }
-              }
-            }).catch(() => {
-              // Silently ignore cloud registration failure; local profile is active
-            });
-          }
-
           onSuccessToast?.('Conta criada com sucesso! Bem-vindo ao Apex Bankroll.');
-          window.dispatchEvent(new Event('storage'));
         }
       } else if (mode === 'RESET') {
-        let resetSuccess = false;
-
-        if (supabase) {
-          try {
-            const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-              redirectTo: window.location.origin
-            });
-            if (!error) {
-              resetSuccess = true;
-            }
-          } catch {
-            // ignore
-          }
-        }
-
-        const localRes = await localResetPassword(cleanEmail);
-        if (localRes.success) {
-          resetSuccess = true;
-          setInfoMsg(
-            'Senha temporária redefinida para: 123456. Você já pode acessar sua conta e alterar sua senha.'
-          );
-          setMode('LOGIN');
-        } else if (!resetSuccess) {
-          setErrorMsg(localRes.error || 'Nenhuma conta encontrada com este e-mail.');
+        const res = await resetPassword(cleanEmail);
+        if (!res.success) {
+          setErrorMsg(translateAuthError(res.error || 'Nenhuma conta encontrada com este e-mail.'));
         } else {
-          setInfoMsg('Link de recuperação enviado para o seu e-mail.');
+          setInfoMsg(
+            res.message || 'Senha temporária definida como: 123456. Você já pode acessar sua conta.'
+          );
           setMode('LOGIN');
         }
       }

@@ -105,16 +105,26 @@ export async function localRegister(
     return { user: null as any, error: 'A senha deve conter no mínimo 6 caracteres.' };
   }
 
+  const passwordHash = await hashPassword(cleanPass);
   const users = getAllLocalUsers();
   const existing = users.find((u) => u.email.toLowerCase() === cleanEmail);
   if (existing) {
+    if (existing.passwordHash === passwordHash) {
+      setCurrentSession({
+        user: {
+          id: existing.id,
+          email: existing.email,
+          name: existing.name
+        },
+        token: `tok_${Date.now()}`
+      });
+      return { user: existing };
+    }
     return {
       user: null as any,
-      error: 'Este e-mail já possui cadastro. Use a aba "Entrar na Conta".'
+      error: 'Este e-mail já possui cadastro. Use a aba "Entrar na Conta" ou recupere sua senha.'
     };
   }
-
-  const passwordHash = await hashPassword(cleanPass);
   const id =
     typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
       ? crypto.randomUUID()

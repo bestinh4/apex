@@ -104,9 +104,19 @@ export const BetModal: React.FC<BetModalProps> = ({
 
   if (!isOpen) return null;
 
-  const numStake = parseFloat(stake) || 0;
-  const numOdd = parseFloat(odd) || 1.0;
-  const units = numStake / settings.unitValue;
+  // Suporte a decimais com vírgula ou ponto (ex: 2,75 ou 2.75)
+  const parseLocaleNumber = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const numStake = parseLocaleNumber(stake);
+  const numOdd = parseLocaleNumber(odd) || 1.0;
+  const safeUnitVal = settings.unitValue > 0 ? settings.unitValue : 25;
+  const units = numStake / safeUnitVal;
 
   let gross = 0;
   let pl = 0;
@@ -138,7 +148,7 @@ export const BetModal: React.FC<BetModalProps> = ({
   };
 
   const handleApplyUnit = (multiplier: number) => {
-    setStake((settings.unitValue * multiplier).toFixed(2));
+    setStake((safeUnitVal * multiplier).toFixed(2));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -440,11 +450,16 @@ export const BetModal: React.FC<BetModalProps> = ({
                 Odd Decimal
               </label>
               <input
-                type="number"
-                step="0.01"
-                min="1.01"
+                type="text"
+                inputMode="decimal"
                 value={odd}
-                onChange={(e) => setOdd(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setOdd(val);
+                  }
+                }}
+                placeholder="Ex: 1,90"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
                 required
               />
@@ -455,11 +470,16 @@ export const BetModal: React.FC<BetModalProps> = ({
                 Valor / Stake (R$)
               </label>
               <input
-                type="number"
-                step="0.5"
-                min="0.5"
+                type="text"
+                inputMode="decimal"
                 value={stake}
-                onChange={(e) => setStake(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setStake(val);
+                  }
+                }}
+                placeholder="Ex: 2,75"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
                 required
               />
@@ -532,7 +552,7 @@ export const BetModal: React.FC<BetModalProps> = ({
               >
                 {pl > 0 ? '+' : ''}
                 {formatBRL(pl)} ({pl >= 0 ? '+' : ''}
-                {(pl / settings.unitValue).toFixed(2)}u)
+                {(pl / safeUnitVal).toFixed(2)}u)
               </span>
             </div>
           </div>

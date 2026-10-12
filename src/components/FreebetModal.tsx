@@ -24,8 +24,16 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
 
   if (!isOpen) return null;
 
-  const numBonus = parseFloat(bonusAmount) || 0;
-  const numOdd = parseFloat(odd) || 1.0;
+  const parseNum = (val: string | number): number => {
+    if (typeof val === 'number') return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const clean = String(val).trim().replace(',', '.');
+    const parsed = parseFloat(clean);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const numBonus = parseNum(bonusAmount);
+  const numOdd = parseNum(odd) || 1.0;
   const netReturn = numBonus * (numOdd - 1);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -145,11 +153,16 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
                 Valor Bônus (R$)
               </label>
               <input
-                type="number"
-                step="1"
-                min="1"
+                type="text"
+                inputMode="decimal"
                 value={bonusAmount}
-                onChange={(e) => setBonusAmount(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setBonusAmount(val);
+                  }
+                }}
+                placeholder="50,00"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
                 required
               />
@@ -159,11 +172,16 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
                 Odd Decimal
               </label>
               <input
-                type="number"
-                step="0.05"
-                min="1.05"
+                type="text"
+                inputMode="decimal"
                 value={odd}
-                onChange={(e) => setOdd(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setOdd(val);
+                  }
+                }}
+                placeholder="2,10"
                 className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
                 required
               />
