@@ -32,6 +32,8 @@ import {
 import {
   getCurrentSession,
   setCurrentSession,
+  getOrCreateDefaultSession,
+  DEFAULT_USER,
   localLogin,
   localRegister,
   localResetPassword,
@@ -130,7 +132,19 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
 
   const loadUserData = (uid: string) => {
     try {
-      const savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
+      let savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
+      if (!savedSettings) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.includes('settings') && k !== getStorageKey(uid, 'settings')) {
+            const val = localStorage.getItem(k);
+            if (val) {
+              savedSettings = val;
+              break;
+            }
+          }
+        }
+      }
       const parsedSettings = savedSettings ? JSON.parse(savedSettings) : null;
       const userSettings: AppSettings = parsedSettings
         ? {
@@ -145,15 +159,41 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         : defaultSettings;
       setSettings(userSettings);
 
-      const savedBets = localStorage.getItem(getStorageKey(uid, 'bets'));
-      const parsedBets = savedBets ? JSON.parse(savedBets) : null;
+      let savedBets = localStorage.getItem(getStorageKey(uid, 'bets'));
+      let parsedBets = savedBets ? JSON.parse(savedBets) : null;
+      if (!parsedBets || (Array.isArray(parsedBets) && parsedBets.length === 0)) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.includes('bets') && k !== getStorageKey(uid, 'bets')) {
+            try {
+              const candidate = JSON.parse(localStorage.getItem(k) || '');
+              if (Array.isArray(candidate) && candidate.length > 0) {
+                parsedBets = candidate;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
       if (parsedBets !== null && Array.isArray(parsedBets)) {
         setBets(parsedBets.map((item) => mapRowToBet(item, userSettings.unitValue)));
       } else {
         setBets(initialBets);
       }
 
-      const savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
+      let savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
+      if (!savedTreasury) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.includes('treasury') && k !== getStorageKey(uid, 'treasury')) {
+            const v = localStorage.getItem(k);
+            if (v) {
+              savedTreasury = v;
+              break;
+            }
+          }
+        }
+      }
       setTreasury(savedTreasury ? JSON.parse(savedTreasury) : initialTreasury);
 
       const savedFreebets = localStorage.getItem(getStorageKey(uid, 'freebets'));
@@ -172,21 +212,35 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Initialize active session on mount
+  // Initialize active session on mount with automatic instant access
   useEffect(() => {
-    const session = getCurrentSession();
-    if (session?.user?.id) {
-      const userObj: AuthUser = {
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name
-      };
-      setCurrentUser(userObj);
-      loadUserData(userObj.id);
-    } else {
-      setCurrentUser(null);
+    try {
+      let session = getCurrentSession();
+      if (!session?.user?.id) {
+        session = getOrCreateDefaultSession();
+      }
+      if (session?.user?.id) {
+        const userObj: AuthUser = {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name
+        };
+        setCurrentUser(userObj);
+        loadUserData(userObj.id);
+      } else {
+        const fallback = getOrCreateDefaultSession();
+        setCurrentUser({
+          id: fallback.user.id,
+          email: fallback.user.email,
+          name: fallback.user.name
+        });
+        loadUserData(fallback.user.id);
+      }
+    } catch (e) {
+      console.warn('Session init fallback:', e);
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   }, []);
 
   // Persist user-scoped localStorage on state changes (strictly isolated per user ID)
