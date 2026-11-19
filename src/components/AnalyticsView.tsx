@@ -1,5 +1,6 @@
 import React from 'react';
 import { useBankroll } from '../context/BankrollContext';
+import { SPORTS_LIST } from '../data/footballMarkets';
 
 interface AnalyticsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -12,8 +13,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  // Sports stats
-  const sports = ['Futebol', 'Basquete', 'Tênis', 'MMA / eSports'];
+  // Sports stats (base sports + any extra sport found in bets)
+  const extraSports = Array.from(
+    new Set(bets.map((b) => b.sport).filter((s) => s && !(SPORTS_LIST as readonly string[]).includes(s)))
+  );
+  const sports = [...SPORTS_LIST, ...extraSports];
   const sportStats = sports.map((s) => {
     const list = bets.filter((b) => b.sport === s);
     const resolved = list.filter((b) => b.status !== 'PENDENTE');

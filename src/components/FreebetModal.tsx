@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
+import { BOOKMAKERS } from '../data/footballMarkets';
 
 interface FreebetModalProps {
   isOpen: boolean;
@@ -14,7 +15,7 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
 }) => {
   const { addFreebet, addBet, settings } = useBankroll();
 
-  const [bookmaker, setBookmaker] = useState('Betano');
+  const [bookmaker, setBookmaker] = useState('1win');
   const [event, setEvent] = useState('');
   const [selection, setSelection] = useState('');
   const [bonusAmount, setBonusAmount] = useState('50.00');
@@ -115,12 +116,11 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
               onChange={(e) => setBookmaker(e.target.value)}
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
             >
-              <option value="Betano" className="bg-[#0e1422] text-white">Betano</option>
-              <option value="Bet365" className="bg-[#0e1422] text-white">Bet365</option>
-              <option value="Stake" className="bg-[#0e1422] text-white">Stake</option>
-              <option value="Pinnacle" className="bg-[#0e1422] text-white">Pinnacle</option>
-              <option value="Betfair" className="bg-[#0e1422] text-white">Betfair</option>
-              <option value="KTO" className="bg-[#0e1422] text-white">KTO</option>
+              {BOOKMAKERS.map((bk) => (
+                <option key={bk} value={bk} className="bg-[#0e1422] text-white">
+                  {bk}
+                </option>
+              ))}
             </select>
           </div>
 

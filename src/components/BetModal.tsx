@@ -4,6 +4,8 @@ import { useBankroll } from '../context/BankrollContext';
 import {
   FOOTBALL_MARKETS,
   FOOTBALL_CATEGORIES,
+  BOOKMAKERS,
+  SPORTS_LIST,
   OTHER_SPORT_MARKETS
 } from '../data/footballMarkets';
 
@@ -22,8 +24,17 @@ export const BetModal: React.FC<BetModalProps> = ({
 }) => {
   const { addBet, updateBet, settings } = useBankroll();
 
+  const getInitialBookmaker = () => {
+    try {
+      return localStorage.getItem('apex_last_bookmaker') || '1win';
+    } catch {
+      return '1win';
+    }
+  };
+
   const [fundType, setFundType] = useState<BetFundType>('Saldo Real');
-  const [bookmaker, setBookmaker] = useState('Bet365');
+  const [bookmaker, setBookmaker] = useState<string>(getInitialBookmaker);
+  const [customBookmaker, setCustomBookmaker] = useState<string>('');
   const [sport, setSport] = useState('Futebol');
   const [event, setEvent] = useState('');
   const [marketSearch, setMarketSearch] = useState('');
@@ -65,7 +76,14 @@ export const BetModal: React.FC<BetModalProps> = ({
   useEffect(() => {
     if (initialBet) {
       setFundType(initialBet.type);
-      setBookmaker(initialBet.bookmaker || 'Bet365');
+      const bk = initialBet.bookmaker || '1win';
+      if ((BOOKMAKERS as readonly string[]).includes(bk)) {
+        setBookmaker(bk);
+        setCustomBookmaker('');
+      } else {
+        setBookmaker('Outra');
+        setCustomBookmaker(bk);
+      }
       setSport(initialBet.sport);
       setEvent(initialBet.event);
       setCustomMarketText(initialBet.market);
@@ -81,7 +99,14 @@ export const BetModal: React.FC<BetModalProps> = ({
       }
     } else {
       setFundType('Saldo Real');
-      setBookmaker('Bet365');
+      const savedBk = getInitialBookmaker();
+      if ((BOOKMAKERS as readonly string[]).includes(savedBk)) {
+        setBookmaker(savedBk);
+        setCustomBookmaker('');
+      } else {
+        setBookmaker('Outra');
+        setCustomBookmaker(savedBk);
+      }
       setSport('Futebol');
       setEvent('');
       setMarketSearch('');
@@ -179,11 +204,20 @@ export const BetModal: React.FC<BetModalProps> = ({
       now.getMinutes()
     ).padStart(2, '0')}`;
 
+    const resolvedBookmaker =
+      bookmaker === 'Outra' ? customBookmaker.trim() || '1win' : bookmaker;
+
+    try {
+      localStorage.setItem('apex_last_bookmaker', resolvedBookmaker);
+    } catch {
+      // ignore storage quota errors
+    }
+
     try {
       if (initialBet) {
         updateBet(initialBet.id, {
           type: fundType,
-          bookmaker,
+          bookmaker: resolvedBookmaker,
           sport,
           event: finalEvent,
           market: finalMarket,
@@ -198,7 +232,7 @@ export const BetModal: React.FC<BetModalProps> = ({
         addBet({
           date: formattedDate,
           type: fundType,
-          bookmaker,
+          bookmaker: resolvedBookmaker,
           sport,
           event: finalEvent,
           market: finalMarket,
@@ -209,7 +243,7 @@ export const BetModal: React.FC<BetModalProps> = ({
           gross,
           pl
         });
-        onSuccessToast?.(`Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada!`);
+        onSuccessToast?.(`Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada (${resolvedBookmaker})!`);
       }
     } catch (err) {
       console.error('Falha ao registrar aposta:', err);
@@ -305,15 +339,14 @@ export const BetModal: React.FC<BetModalProps> = ({
                   onChange={(e) => setBookmaker(e.target.value)}
                   className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 transition-colors"
                 >
-                  <option value="Bet365" className="bg-[#0e1422] text-white">Bet365</option>
-                  <option value="Betano" className="bg-[#0e1422] text-white">Betano</option>
-                  <option value="Pinnacle" className="bg-[#0e1422] text-white">Pinnacle</option>
-                  <option value="Betfair" className="bg-[#0e1422] text-white">Betfair</option>
-                  <option value="Stake" className="bg-[#0e1422] text-white">Stake</option>
-                  <option value="Superbet" className="bg-[#0e1422] text-white">Superbet</option>
-                  <option value="Novibet" className="bg-[#0e1422] text-white">Novibet</option>
-                  <option value="KTO" className="bg-[#0e1422] text-white">KTO</option>
-                  <option value="EstrelaBet" className="bg-[#0e1422] text-white">EstrelaBet</option>
+                  {BOOKMAKERS.map((bk) => (
+                    <option key={bk} value={bk} className="bg-[#0e1422] text-white">
+                      {bk}
+                    </option>
+                  ))}
+                  <option value="Outra" className="bg-[#0e1422] text-white">
+                    Outra casa...
+                  </option>
                 </select>
               </div>
 
@@ -328,20 +361,38 @@ export const BetModal: React.FC<BetModalProps> = ({
                     setSport(nextSport);
                     if (nextSport !== 'Futebol') {
                       const presets = OTHER_SPORT_MARKETS[nextSport];
-                      if (presets && presets.length > 0 && !customMarketText) {
+                      if (presets && presets.length > 0) {
                         setCustomMarketText(presets[0]);
                       }
+                    } else if (activeMarket) {
+                      setCustomMarketText(`${activeMarket.name}: ${selectedOption}`);
                     }
                   }}
                   className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 transition-colors"
                 >
-                  <option value="Futebol" className="bg-[#0e1422] text-white">Futebol (Catálogo Completo)</option>
-                  <option value="Basquete" className="bg-[#0e1422] text-white">Basquete</option>
-                  <option value="Tênis" className="bg-[#0e1422] text-white">Tênis</option>
-                  <option value="MMA / eSports" className="bg-[#0e1422] text-white">MMA / eSports</option>
+                  {SPORTS_LIST.map((sp) => (
+                    <option key={sp} value={sp} className="bg-[#0e1422] text-white">
+                      {sp === 'Futebol' ? 'Futebol (Catálogo Completo)' : sp}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
+
+            {bookmaker === 'Outra' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-semibold text-slate-400">
+                  Nome da Casa de Apostas
+                </label>
+                <input
+                  type="text"
+                  value={customBookmaker}
+                  onChange={(e) => setCustomBookmaker(e.target.value)}
+                  placeholder="Digite o nome da casa..."
+                  className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                />
+              </div>
+            )}
 
             {/* Partida / Evento */}
             <div className="flex flex-col gap-1.5">
@@ -444,7 +495,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
               >
                 <option value="GREEN" className="bg-[#0e1422] text-white">GREEN (Ganho Total)</option>
-                <option value="PENDENTE" className="bg-[#0e1422] text-white">PENDENTE (Em Aberto)</option>
+                <option value="PENDENTE" className="bg-[#0e1422] text-white">AO VIVO / PENDENTE (Em Aberto)</option>
                 <option value="RED" className="bg-[#0e1422] text-white">RED (Perdida)</option>
                 <option value="HALF_GREEN" className="bg-[#0e1422] text-white">MEIO GREEN (50% Ganho)</option>
                 <option value="HALF_RED" className="bg-[#0e1422] text-white">MEIO RED (50% Devolvido)</option>

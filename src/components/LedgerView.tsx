@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BetEntry, BetStatus } from '../types';
+import { SPORTS_LIST } from '../data/footballMarkets';
 
 interface LedgerViewProps {
   onOpenNewBetModal: () => void;
@@ -380,10 +381,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
           >
             <option value="ALL" className="bg-[#0e1422] text-slate-200">Todos os Esportes</option>
-            <option value="Futebol" className="bg-[#0e1422] text-slate-200">Futebol</option>
-            <option value="Basquete" className="bg-[#0e1422] text-slate-200">Basquete</option>
-            <option value="Tênis" className="bg-[#0e1422] text-slate-200">Tênis</option>
-            <option value="MMA / eSports" className="bg-[#0e1422] text-slate-200">MMA / eSports</option>
+            {SPORTS_LIST.map((sp) => (
+              <option key={sp} value={sp} className="bg-[#0e1422] text-slate-200">
+                {sp}
+              </option>
+            ))}
           </select>
 
           <select

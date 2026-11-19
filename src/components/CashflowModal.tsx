@@ -176,7 +176,7 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
               type="text"
               value={desc}
               onChange={(e) => setDesc(e.target.value)}
-              placeholder="Ex: Depósito via Pix Bet365 / Saque Betano"
+              placeholder="Ex: Depósito via Pix 1win / Saque 1win"
               required
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
             />

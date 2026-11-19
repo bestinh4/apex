@@ -543,6 +543,27 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Total de Gols: Ímpar',
       'Total de Gols: Par'
     ]
+  },
+  {
+    id: 'proximo-gol-live',
+    name: 'Próximo Gol (Ao Vivo / Live)',
+    category: 'Especiais & Minutos',
+    popular: true,
+    selections: [
+      'Casa marca o Próximo Gol',
+      'Fora marca o Próximo Gol',
+      'Sem Mais Gols na Partida'
+    ]
+  },
+  {
+    id: 'resto-partida-live',
+    name: 'Resultado do Resto da Partida (Ao Vivo)',
+    category: 'Resultado & Linhas',
+    selections: [
+      'Casa vence o Resto da Partida',
+      'Empate no Resto da Partida',
+      'Fora vence o Resto da Partida'
+    ]
   }
 ];
 
@@ -557,6 +578,31 @@ export const FOOTBALL_CATEGORIES = [
   'Especiais & Minutos'
 ] as const;
 
+export const BOOKMAKERS = [
+  '1win',
+  'Bet365',
+  'Betano',
+  'Stake',
+  'Pinnacle',
+  'Betfair',
+  'Superbet',
+  'Novibet',
+  'KTO',
+  'EstrelaBet',
+  'Sportingbet',
+  '1xBet'
+] as const;
+
+export const SPORTS_LIST = [
+  'Futebol',
+  'Basquete',
+  'Tênis',
+  'Vôlei',
+  'Tênis de Mesa',
+  'MMA / eSports',
+  'Hóquei no Gelo'
+] as const;
+
 export const OTHER_SPORT_MARKETS: Record<string, string[]> = {
   Basquete: [
     'Vencedor da Partida (Moneyline)',
@@ -569,18 +615,38 @@ export const OTHER_SPORT_MARKETS: Record<string, string[]> = {
   ],
   'Tênis': [
     'Vencedor da Partida (ML)',
+    'Vencedor do Set Atual (Ao Vivo)',
     'Handicap de Games (-3.5 / +3.5)',
     'Handicap de Sets (-1.5 / +1.5)',
     'Total de Games (Over / Under)',
     'Placar Exato em Sets (2-0 / 2-1)',
     'Tie-Break na Partida (Sim / Não)'
   ],
+  'Vôlei': [
+    'Vencedor da Partida (ML)',
+    'Vencedor do Set Atual (Ao Vivo)',
+    'Handicap de Pontos / Sets',
+    'Total de Pontos (Over / Under)',
+    'Total de Sets (Mais/Menos 3.5)'
+  ],
+  'Tênis de Mesa': [
+    'Vencedor da Partida (ML)',
+    'Vencedor do Set Atual (Ao Vivo)',
+    'Handicap de Pontos no Set',
+    'Total de Pontos (Over / Under)'
+  ],
   'MMA / eSports': [
     'Vencedor da Luta / Série (ML)',
-    'Vitória por Nocaute / Finalização / Decisão',
-    'Total de Rounds / Mapas (Over / Under)',
+    'Vencedor do Mapa Atual (Ao Vivo)',
     'Handicap de Mapas (-1.5 / +1.5)',
-    'Vencedor do Mapa 1 / Mapa 2',
+    'Total de Rounds / Mapas (Over / Under)',
+    'Vitória por Nocaute / Finalização / Decisão',
     'Primeira Morte / First Blood'
+  ],
+  'Hóquei no Gelo': [
+    'Vencedor da Partida (Moneyline / OT)',
+    'Tempo Regulamentar (1X2)',
+    'Total de Gols (Over / Under 5.5)',
+    'Handicap Asiático (-1.5 / +1.5)'
   ]
 };
