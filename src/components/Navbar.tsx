@@ -36,8 +36,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     { key: 'dashboard', label: 'Dashboard', shortLabel: 'Início', icon: 'space_dashboard' },
     { key: 'livro-razao', label: 'Livro-Razão', shortLabel: 'Histórico', icon: 'receipt_long' },
     { key: 'analise-estatistica', label: 'Estatísticas', shortLabel: 'Dados', icon: 'monitoring' },
-    { key: 'fluxo-de-caixa', label: 'Fluxo de Caixa', shortLabel: 'Caixa', icon: 'account_balance' },
-    { key: 'giros-gratis-promocoes', label: 'Bônus & Freebets', shortLabel: 'Bônus', icon: 'redeem' },
+    { key: 'fluxo-de-caixa', label: 'Caixa', shortLabel: 'Caixa', icon: 'account_balance' },
+    { key: 'giros-gratis-promocoes', label: 'Bônus', shortLabel: 'Bônus', icon: 'redeem' },
     { key: 'ajustes', label: 'Ajustes', shortLabel: 'Ajustes', icon: 'tune' }
   ];
 
@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <>
       {/* Top Bar */}
       <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 bg-[#080c14]/90 backdrop-blur-xl border-b border-white/[0.06]">
-        <div className="h-full w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
+        <div className="h-full w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 flex items-center justify-between gap-4">
           {/* Zone 1: Brand Wordmark */}
           <button
             type="button"
@@ -56,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Zone 2: Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#0d1322] p-1 rounded-xl border border-white/[0.06]">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-[#0d1322] p-1 rounded-xl border border-white/[0.06] shrink-0">
             {navItems.map((item) => {
               const isActive = activeTab === item.key;
               return (
@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   key={item.key}
                   type="button"
                   onClick={() => onSelectTab(item.key)}
-                  className={`px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  className={`px-2.5 xl:px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     isActive
                       ? 'bg-slate-800 text-white font-semibold shadow-sm'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
@@ -84,21 +84,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Zone 3: Live Bankroll + Primary CTA + User Logout */}
-          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => onSelectTab('fluxo-de-caixa')}
-              className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0d1322] border border-white/[0.06] hover:border-white/[0.14] transition-colors"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#0d1322] border border-white/[0.06] hover:border-white/[0.14] transition-colors whitespace-nowrap shrink-0"
               title="Ver Fluxo de Caixa"
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
               <span className="text-[11px] text-slate-400 hidden sm:inline">Banca:</span>
               <span className="font-mono text-xs sm:text-sm font-bold text-emerald-400 tracking-tight tabular-nums whitespace-nowrap">
                 {formatBRL(currentEquity)}
               </span>
             </button>
 
-            <PWAInstallButton variant="navbar" />
+            <div className="hidden xl:block shrink-0">
+              <PWAInstallButton variant="navbar" />
+            </div>
 
             <button
               type="button"
@@ -114,10 +115,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={signOut}
                 title={`Sair da conta (${currentUser.email})`}
-                className="p-2 rounded-xl bg-[#0d1322] border border-white/[0.06] hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors flex items-center gap-1.5"
+                className="p-2 rounded-xl bg-[#0d1322] border border-white/[0.06] hover:border-rose-500/30 text-slate-400 hover:text-rose-400 transition-colors flex items-center gap-1.5 shrink-0"
               >
                 <span className="material-symbols-outlined text-[17px]">logout</span>
-                <span className="hidden xl:inline text-xs font-medium max-w-[100px] truncate">
+                <span className="hidden 2xl:inline text-xs font-medium max-w-[100px] truncate">
                   {currentUser.name}
                 </span>
               </button>

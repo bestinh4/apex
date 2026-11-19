@@ -240,7 +240,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                       <td className="py-3 px-3.5 font-mono text-slate-400 whitespace-nowrap tabular-nums">
                         {item.date}
                       </td>
-                      <td className="py-3 px-3.5">
+                      <td className="py-3 px-3.5 whitespace-nowrap">
                         {item.type === 'DEPOSIT' ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
                             Depósito
@@ -258,14 +258,14 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                       <td className="py-3 px-3.5 font-medium text-slate-200">{item.desc}</td>
                       <td className="py-3 px-3.5 text-slate-400">{item.details || 'Compensado'}</td>
                       <td
-                        className={`py-3 px-3.5 text-right font-mono font-bold tabular-nums ${
+                        className={`py-3 px-3.5 text-right font-mono font-bold whitespace-nowrap tabular-nums ${
                           item.type === 'WITHDRAW' ? 'text-rose-400' : 'text-emerald-400'
                         }`}
                       >
                         {item.type === 'WITHDRAW' ? '-' : '+'}
                         {formatBRL(item.amount)}
                       </td>
-                      <td className="py-3 px-3.5 text-center">
+                      <td className="py-3 px-3.5 text-center whitespace-nowrap">
                         {confirmDeleteId === item.id ? (
                           <button
                             type="button"

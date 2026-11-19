@@ -83,12 +83,57 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
   const settledBets = bets.filter((b) => b.status !== 'PENDENTE');
   const totalGains = settledBets.filter((b) => b.pl > 0).reduce((sum, b) => sum + b.pl, 0);
   const totalLosses = Math.abs(settledBets.filter((b) => b.pl < 0).reduce((sum, b) => sum + b.pl, 0));
+  const avgNet = settledBets.length > 0 ? (totalGains - totalLosses) / settledBets.length : 0;
   const profitFactor =
     totalLosses > 0
       ? (totalGains / totalLosses).toFixed(2)
       : totalGains > 0
       ? '∞'
       : '0.00';
+
+  // Market categories breakdown
+  const classifyMarket = (marketStr: string): string => {
+    const m = (marketStr || '').toLowerCase();
+    if (m.includes('escanteio') || m.includes('corner') || m.includes('canto')) return 'Escanteios';
+    if (m.includes('cart') || m.includes('card') || m.includes('vermelho') || m.includes('expuls')) return 'Cartões';
+    if (m.includes('handicap') || m.includes('asiático') || m.includes('asiatico') || m.includes('dnb') || m.includes('spread') || m.includes('.25') || m.includes('.75')) return 'Handicap Asiático';
+    if (m.includes('chute') || m.includes('finaliza') || m.includes('marcador') || m.includes('desarme') || m.includes('falta') || m.includes('assist') || m.includes('jogador') || m.includes('triplo') || m.includes('reb')) return 'Props de Jogadores';
+    if (m.includes('pênalti') || m.includes('penalti') || m.includes('minuto') || m.includes('placar') || m.includes('ímpar') || m.includes('impar')) return 'Especiais & Minutos';
+    if (m.includes('gol') || m.includes('over') || m.includes('under') || m.includes('btts') || m.includes('marcam') || m.includes('clean sheet') || m.includes('multigols')) return 'Gols & BTTS';
+    if (m.includes('resultado') || m.includes('1x2') || m.includes('dupla chance') || m.includes('moneyline') || m.includes('ml') || m.includes('vencedor') || m.includes('vence') || m.includes('intervalo') || m.includes('win to nil')) return 'Resultado & Linhas';
+    return 'Outros Mercados';
+  };
+
+  const marketCategoriesList = [
+    'Resultado & Linhas',
+    'Gols & BTTS',
+    'Handicap Asiático',
+    'Escanteios',
+    'Cartões',
+    'Props de Jogadores',
+    'Especiais & Minutos'
+  ];
+
+  const marketStats = marketCategoriesList.map((cat) => {
+    const list = bets.filter((b) => classifyMarket(b.market) === cat);
+    const resolved = list.filter((b) => b.status !== 'PENDENTE');
+    const volume = resolved.reduce((sum, b) => sum + b.stake, 0);
+    const pl = resolved.reduce((sum, b) => sum + b.pl, 0);
+    const wins = resolved.filter((b) => b.status === 'GREEN' || b.status === 'HALF_GREEN').length;
+    const losses = resolved.filter((b) => b.status === 'RED' || b.status === 'HALF_RED').length;
+    const decisive = wins + losses;
+    const winRate = decisive > 0 ? (wins / decisive) * 100 : 0;
+    const roi = volume > 0 ? (pl / volume) * 100 : 0;
+
+    return {
+      category: cat,
+      count: list.length,
+      volume,
+      winRate,
+      pl,
+      roi
+    };
+  });
 
   // Export CSV
   const handleExport = () => {
@@ -184,9 +229,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
             <span className="text-xs font-semibold text-slate-400">Média Líquida por Aposta</span>
             <span className="material-symbols-outlined text-[18px] text-indigo-400">analytics</span>
           </div>
-          <div className="text-2xl font-mono font-bold text-blue-400 mt-2 tabular-nums">
+          <div
+            className={`text-2xl font-mono font-bold mt-2 tabular-nums ${
+              settledBets.length === 0
+                ? 'text-slate-200'
+                : avgNet >= 0
+                ? 'text-emerald-400'
+                : 'text-rose-400'
+            }`}
+          >
             {settledBets.length > 0
-              ? formatBRL((totalGains - totalLosses) / settledBets.length)
+              ? `${avgNet >= 0 ? '+' : ''}${formatBRL(avgNet)}`
               : 'R$ 0,00'}
           </div>
           <div className="text-xs text-slate-400 mt-1">
@@ -294,6 +347,52 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Market Category Breakdown */}
+      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+            Desempenho por Categoria de Mercado
+          </h3>
+          <span className="text-xs text-slate-400">{marketStats.length} categorias</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {marketStats.map((item) => (
+            <div
+              key={item.category}
+              className="bg-[#080c14] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white truncate">{item.category}</span>
+                <span className="text-[11px] font-mono text-slate-400 tabular-nums shrink-0">
+                  {item.count}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] text-xs">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500">Acerto / ROI</span>
+                  <span className="font-mono text-slate-200 tabular-nums">
+                    {item.winRate.toFixed(0)}% ·{' '}
+                    <span className={item.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      {item.roi >= 0 ? '+' : ''}
+                      {item.roi.toFixed(1)}%
+                    </span>
+                  </span>
+                </div>
+                <span
+                  className={`font-mono font-bold tabular-nums ${
+                    item.pl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {item.pl >= 0 ? '+' : ''}
+                  {formatBRL(item.pl)}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 

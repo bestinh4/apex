@@ -75,7 +75,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             mLower.includes('over') ||
             mLower.includes('under') ||
             mLower.includes('btts') ||
-            mLower.includes('marcam')
+            mLower.includes('marcam') ||
+            mLower.includes('clean sheet') ||
+            mLower.includes('multigols') ||
+            mLower.includes('sofrer')
           )
         ) {
           return false;
@@ -86,8 +89,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             mLower.includes('handicap') ||
             mLower.includes('ha ') ||
             mLower.includes('asiático') ||
+            mLower.includes('asiatico') ||
             mLower.includes('dnb') ||
-            mLower.includes('spread')
+            mLower.includes('spread') ||
+            mLower.includes('.25') ||
+            mLower.includes('.75')
           )
         ) {
           return false;
@@ -100,7 +106,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         }
         if (
           selectedMarketCat === 'Cartões' &&
-          !(mLower.includes('cart') || mLower.includes('card') || mLower.includes('vermelho'))
+          !(
+            mLower.includes('cart') ||
+            mLower.includes('card') ||
+            mLower.includes('vermelho') ||
+            mLower.includes('expuls')
+          )
         ) {
           return false;
         }
@@ -113,7 +124,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             mLower.includes('moneyline') ||
             mLower.includes('ml') ||
             mLower.includes('vencedor') ||
-            mLower.includes('vence')
+            mLower.includes('vence') ||
+            mLower.includes('empate') ||
+            mLower.includes('intervalo') ||
+            mLower.includes('win to nil')
           )
         ) {
           return false;
@@ -126,8 +140,24 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             mLower.includes('jogador') ||
             mLower.includes('marcador') ||
             mLower.includes('assist') ||
+            mLower.includes('desarme') ||
+            mLower.includes('falta') ||
             mLower.includes('triplo') ||
             mLower.includes('reb')
+          )
+        ) {
+          return false;
+        }
+        if (
+          selectedMarketCat === 'Especiais' &&
+          !(
+            mLower.includes('pênalti') ||
+            mLower.includes('penalti') ||
+            mLower.includes('minuto') ||
+            mLower.includes('placar') ||
+            mLower.includes('ímpar') ||
+            mLower.includes('impar') ||
+            mLower.includes('par')
           )
         ) {
           return false;
@@ -260,8 +290,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
       </div>
 
-      {/* Month Filter Scroller */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+      {/* Month Filter Scroller (wraps cleanly on desktop, scrolls on small mobile) */}
+      <div className="flex items-center sm:flex-wrap gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         {months.map((m) => {
           const isSelected = selectedMonth === m.key;
           return (
@@ -323,7 +353,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 shadow-sm">
+      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[16px]">
@@ -349,11 +379,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             }}
             className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
           >
-            <option value="ALL">Todos os Esportes</option>
-            <option value="Futebol">Futebol</option>
-            <option value="Basquete">Basquete</option>
-            <option value="Tênis">Tênis</option>
-            <option value="MMA / eSports">MMA / eSports</option>
+            <option value="ALL" className="bg-[#0e1422] text-slate-200">Todos os Esportes</option>
+            <option value="Futebol" className="bg-[#0e1422] text-slate-200">Futebol</option>
+            <option value="Basquete" className="bg-[#0e1422] text-slate-200">Basquete</option>
+            <option value="Tênis" className="bg-[#0e1422] text-slate-200">Tênis</option>
+            <option value="MMA / eSports" className="bg-[#0e1422] text-slate-200">MMA / eSports</option>
           </select>
 
           <select
@@ -364,18 +394,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             }}
             className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
           >
-            <option value="ALL">Todos os Mercados</option>
-            <option value="Gols">Gols & BTTS</option>
-            <option value="Handicap">Handicap / Spread</option>
-            <option value="Resultado">Resultado / ML</option>
-            <option value="Escanteios">Escanteios</option>
-            <option value="Cartões">Cartões</option>
-            <option value="Props">Props / Jogadores</option>
+            <option value="ALL" className="bg-[#0e1422] text-slate-200">Todos os Mercados</option>
+            <option value="Resultado" className="bg-[#0e1422] text-slate-200">Resultado / ML</option>
+            <option value="Gols" className="bg-[#0e1422] text-slate-200">Gols & BTTS</option>
+            <option value="Handicap" className="bg-[#0e1422] text-slate-200">Handicap / Spread</option>
+            <option value="Escanteios" className="bg-[#0e1422] text-slate-200">Escanteios</option>
+            <option value="Cartões" className="bg-[#0e1422] text-slate-200">Cartões</option>
+            <option value="Props" className="bg-[#0e1422] text-slate-200">Props / Jogadores</option>
+            <option value="Especiais" className="bg-[#0e1422] text-slate-200">Especiais & Minutos</option>
           </select>
         </div>
 
         {/* Status segmented buttons */}
-        <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+        <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08] overflow-x-auto scrollbar-none shrink-0">
           {(['ALL', 'GREEN', 'RED', 'PENDENTE'] as const).map((st) => (
             <button
               key={st}
@@ -384,7 +415,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 setStatusFilter(st);
                 setCurrentPage(1);
               }}
-              className={`flex-1 lg:flex-initial px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ${
+              className={`flex-1 xl:flex-initial px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ${
                 statusFilter === st
                   ? 'bg-slate-800 text-white font-semibold shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
@@ -560,24 +591,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td className="py-3 px-3.5 font-mono text-slate-400 whitespace-nowrap tabular-nums">
                       {bet.date}
                     </td>
-                    <td className="py-3 px-3.5 font-medium text-slate-300">{bet.bookmaker || '-'}</td>
-                    <td className="py-3 px-3.5">
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-slate-100">{bet.event}</span>
-                        <span className="text-[11px] text-slate-400">
+                    <td className="py-3 px-3.5 font-medium text-slate-300 whitespace-nowrap">
+                      {bet.bookmaker || '-'}
+                    </td>
+                    <td className="py-3 px-3.5 max-w-md">
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
+                        <span className="text-[11px] text-slate-400 truncate">
                           {bet.market} · {bet.sport}
                         </span>
                       </div>
                     </td>
-                    <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 tabular-nums">
+                    <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 whitespace-nowrap tabular-nums">
                       @{Number(bet.odd || 1).toFixed(2)}
                     </td>
-                    <td className="py-3 px-3.5 text-right font-mono text-slate-200 tabular-nums">
+                    <td className="py-3 px-3.5 text-right font-mono text-slate-200 whitespace-nowrap tabular-nums">
                       {formatBRL(bet.stake)}
                     </td>
-                    <td className="py-3 px-3.5 text-center">{getStatusBadge(bet.status)}</td>
+                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                      {getStatusBadge(bet.status)}
+                    </td>
                     <td
-                      className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm tabular-nums ${
+                      className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm whitespace-nowrap tabular-nums ${
                         bet.status === 'PENDENTE'
                           ? 'text-slate-500'
                           : bet.pl >= 0
@@ -587,7 +622,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     >
                       {bet.status === 'PENDENTE' ? '-' : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
                     </td>
-                    <td className="py-3 px-3.5 text-center">
+                    <td className="py-3 px-3.5 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         {bet.status === 'PENDENTE' && (
                           <>

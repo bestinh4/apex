@@ -115,12 +115,12 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
               onChange={(e) => setBookmaker(e.target.value)}
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
             >
-              <option value="Betano">Betano</option>
-              <option value="Bet365">Bet365</option>
-              <option value="Stake">Stake</option>
-              <option value="Pinnacle">Pinnacle</option>
-              <option value="Betfair">Betfair</option>
-              <option value="KTO">KTO</option>
+              <option value="Betano" className="bg-[#0e1422] text-white">Betano</option>
+              <option value="Bet365" className="bg-[#0e1422] text-white">Bet365</option>
+              <option value="Stake" className="bg-[#0e1422] text-white">Stake</option>
+              <option value="Pinnacle" className="bg-[#0e1422] text-white">Pinnacle</option>
+              <option value="Betfair" className="bg-[#0e1422] text-white">Betfair</option>
+              <option value="KTO" className="bg-[#0e1422] text-white">KTO</option>
             </select>
           </div>
 
@@ -202,9 +202,9 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
               onChange={(e) => setStatus(e.target.value as any)}
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
             >
-              <option value="Ao Vivo">Ao Vivo (Em andamento)</option>
-              <option value="Creditado">Creditado (Green convertido)</option>
-              <option value="Pendente">Pendente (Pré-jogo)</option>
+              <option value="Ao Vivo" className="bg-[#0e1422] text-white">Ao Vivo (Em andamento)</option>
+              <option value="Creditado" className="bg-[#0e1422] text-white">Creditado (Green convertido)</option>
+              <option value="Pendente" className="bg-[#0e1422] text-white">Pendente (Pré-jogo)</option>
             </select>
           </div>
 

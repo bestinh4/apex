@@ -76,6 +76,15 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Fora 2º Tempo'
     ]
   },
+  {
+    id: 'win-to-nil',
+    name: 'Vencer Sem Sofrer Gols (Win to Nil)',
+    category: 'Resultado & Linhas',
+    selections: [
+      'Casa Vence Sem Sofrer Gols',
+      'Fora Vence Sem Sofrer Gols'
+    ]
+  },
 
   // 2. Gols & BTTS
   {
@@ -129,6 +138,17 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Mais de 1.0 Gol 1º Tempo (Asiático)',
       'Mais de 1.5 Gols 1º Tempo',
       'Menos de 1.5 Gols 1º Tempo'
+    ]
+  },
+  {
+    id: 'gols-2t',
+    name: 'Total de Gols 2º Tempo (Over/Under 2T)',
+    category: 'Gols & BTTS',
+    selections: [
+      'Mais de 0.5 Gols 2º Tempo',
+      'Menos de 0.5 Gols 2º Tempo',
+      'Mais de 1.5 Gols 2º Tempo',
+      'Menos de 1.5 Gols 2º Tempo'
     ]
   },
   {
@@ -228,6 +248,17 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     ]
   },
   {
+    id: 'ha-1t',
+    name: 'Handicap Asiático 1º Tempo (HT)',
+    category: 'Handicap Asiático',
+    selections: [
+      'Casa 0.0 (1º Tempo)',
+      'Fora 0.0 (1º Tempo)',
+      'Casa -0.5 (1º Tempo)',
+      'Fora +0.5 (1º Tempo)'
+    ]
+  },
+  {
     id: 'gols-asiaticos',
     name: 'Gols Asiáticos (Linhas Inteiras & Quartos)',
     category: 'Handicap Asiático',
@@ -300,6 +331,17 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     ]
   },
   {
+    id: 'escanteios-equipe',
+    name: 'Escanteios por Equipe (Casa / Fora)',
+    category: 'Escanteios',
+    selections: [
+      'Casa: Mais de 4.5 Escanteios',
+      'Casa: Mais de 5.5 Escanteios',
+      'Fora: Mais de 3.5 Escanteios',
+      'Fora: Mais de 4.5 Escanteios'
+    ]
+  },
+  {
     id: 'handicap-escanteios',
     name: 'Handicap de Escanteios',
     category: 'Escanteios',
@@ -348,6 +390,16 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Menos de 4.0 Cartões Asiáticos',
       'Mais de 5.0 Cartões Asiáticos',
       'Menos de 5.0 Cartões Asiáticos'
+    ]
+  },
+  {
+    id: 'cartoes-1t',
+    name: 'Cartões 1º Tempo (HT)',
+    category: 'Cartões',
+    selections: [
+      'Mais de 1.5 Cartões no 1T',
+      'Menos de 1.5 Cartões no 1T',
+      'Mais de 2.5 Cartões no 1T'
     ]
   },
   {
@@ -417,6 +469,16 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     ]
   },
   {
+    id: 'faltas-jogador',
+    name: 'Faltas Cometidas / Sofridas do Jogador',
+    category: 'Props de Jogadores',
+    selections: [
+      'Cometer 1+ Faltas',
+      'Cometer 2+ Faltas',
+      'Sofrer 2+ Faltas'
+    ]
+  },
+  {
     id: 'jogador-receber-cartao',
     name: 'Jogador Receber Cartão',
     category: 'Props de Jogadores',
@@ -472,6 +534,15 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       '1 x 2',
       'Qualquer Outro Resultado'
     ]
+  },
+  {
+    id: 'impar-par',
+    name: 'Total de Gols Ímpar / Par',
+    category: 'Especiais & Minutos',
+    selections: [
+      'Total de Gols: Ímpar',
+      'Total de Gols: Par'
+    ]
   }
 ];
 
@@ -485,3 +556,31 @@ export const FOOTBALL_CATEGORIES = [
   'Props de Jogadores',
   'Especiais & Minutos'
 ] as const;
+
+export const OTHER_SPORT_MARKETS: Record<string, string[]> = {
+  Basquete: [
+    'Vencedor da Partida (Moneyline)',
+    'Handicap / Spread (-4.5 / +4.5)',
+    'Total de Pontos (Over / Under)',
+    'Pontos do Jogador (Over / Under)',
+    'Rebotes + Assistências (PRA)',
+    'Triplos Convertidos (3PT)',
+    'Vencedor do 1º Quarto / 1º Tempo'
+  ],
+  'Tênis': [
+    'Vencedor da Partida (ML)',
+    'Handicap de Games (-3.5 / +3.5)',
+    'Handicap de Sets (-1.5 / +1.5)',
+    'Total de Games (Over / Under)',
+    'Placar Exato em Sets (2-0 / 2-1)',
+    'Tie-Break na Partida (Sim / Não)'
+  ],
+  'MMA / eSports': [
+    'Vencedor da Luta / Série (ML)',
+    'Vitória por Nocaute / Finalização / Decisão',
+    'Total de Rounds / Mapas (Over / Under)',
+    'Handicap de Mapas (-1.5 / +1.5)',
+    'Vencedor do Mapa 1 / Mapa 2',
+    'Primeira Morte / First Blood'
+  ]
+};

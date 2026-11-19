@@ -285,11 +285,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <label className="text-xs font-semibold text-slate-300">
                   Valor de 1.0 Unidade / Stake (R$)
                 </label>
-                <span className="text-[11px] font-mono text-blue-400 font-semibold tabular-nums">
+                <span className="text-[11px] font-mono text-blue-400 font-semibold tabular-nums whitespace-nowrap">
                   {unitPct.toFixed(1)}% da banca
                 </span>
               </div>
@@ -338,17 +338,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Supabase Cloud Database Integration */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
               Sincronização & Isolamento na Nuvem (Supabase)
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              Projeto <span className="font-mono text-slate-200">{SUPABASE_PROJECT_REF}</span> ({SUPABASE_REGION}) • Cada usuário acessa apenas seus próprios registros
+              Projeto <span className="font-mono text-slate-200">{SUPABASE_PROJECT_REF}</span> ({SUPABASE_REGION}) · Cada usuário acessa apenas seus próprios registros
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleManualSync}
@@ -427,11 +427,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
           <button
             type="button"
             onClick={handleExportBackup}
-            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-colors"
+            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[18px] text-blue-400">download</span>
             <span>Exportar Backup (.json)</span>
@@ -440,7 +440,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-colors"
+            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[18px] text-emerald-400">upload_file</span>
             <span>Importar Backup (.json)</span>
@@ -460,7 +460,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onSuccessToast?.('Dados de demonstração carregados na sua conta!');
               onNavigateTab('dashboard');
             }}
-            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-2 transition-colors"
+            className="px-4 py-3 bg-[#080c14] hover:bg-slate-800/80 border border-white/[0.08] rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[18px] text-indigo-400">science</span>
             <span>Carregar Exemplo</span>

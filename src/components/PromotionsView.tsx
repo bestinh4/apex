@@ -41,8 +41,9 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
   const oddB = parseNum(calcOddBack) || 1.0;
   const oddL = parseNum(calcOddLay) || 1.0;
 
-  const layStake = oddL > 0.05 ? (fbVal * (oddB - 1)) / (oddL - 0.03) : 0;
-  const guaranteedProfit = Math.max(0, fbVal * (oddB - 1) - layStake * (oddL - 1));
+  const layStake = oddL > 1.0 && oddB > 1.0 ? (fbVal * (oddB - 1)) / (oddL - 0.03) : 0;
+  const guaranteedProfit =
+    oddL > 1.0 && oddB > 1.0 ? Math.max(0, fbVal * (oddB - 1) - layStake * (oddL - 1)) : 0;
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);

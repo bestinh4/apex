@@ -122,7 +122,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
-            <span className="text-lg sm:text-2xl lg:text-3xl font-mono font-bold text-white tracking-tight tabular-nums truncate">
+            <span className="text-lg sm:text-xl xl:text-2xl font-mono font-bold text-white tracking-tight tabular-nums truncate">
               {formatBRL(currentEquity)}
             </span>
             <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 truncate">
@@ -152,7 +152,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
             <span
-              className={`text-lg sm:text-2xl lg:text-3xl font-mono font-bold tracking-tight tabular-nums truncate ${
+              className={`text-lg sm:text-xl xl:text-2xl font-mono font-bold tracking-tight tabular-nums truncate ${
                 netBetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
@@ -188,7 +188,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
-            <span className="text-lg sm:text-2xl lg:text-3xl font-mono font-bold text-white tracking-tight tabular-nums">
+            <span className="text-lg sm:text-xl xl:text-2xl font-mono font-bold text-white tracking-tight tabular-nums">
               {winRate.toFixed(1)}%
             </span>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-1 font-mono tabular-nums">
@@ -217,7 +217,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
             <span
-              className={`text-lg sm:text-2xl lg:text-3xl font-mono font-bold tracking-tight tabular-nums ${
+              className={`text-lg sm:text-xl xl:text-2xl font-mono font-bold tracking-tight tabular-nums ${
                 roi >= 0 ? 'text-emerald-400' : 'text-rose-400'
               }`}
             >
@@ -245,8 +245,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* Recent Bets Section */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
         {/* Section Header + Toolbar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div className="flex items-center justify-between">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
                 Apostas Recentes
@@ -258,16 +258,16 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={onOpenNewBetModal}
-              className="lg:hidden px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs transition-all flex items-center gap-1 active:scale-95 shadow-sm shrink-0"
+              className="xl:hidden px-3 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs transition-all flex items-center gap-1 active:scale-95 shadow-sm shrink-0 whitespace-nowrap"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Nova</span>
+              <span>Nova Aposta</span>
             </button>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {/* Search Input */}
-            <div className="relative flex-1 sm:w-56">
+            <div className="relative flex-1 sm:w-60">
               <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[16px]">
                 search
               </span>
@@ -281,7 +281,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* Status Segmented Tabs */}
-            <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+            <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08] overflow-x-auto scrollbar-none shrink-0">
               {(['ALL', 'GREEN', 'RED', 'PENDENTE'] as const).map((st) => (
                 <button
                   key={st}
@@ -301,7 +301,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <button
               type="button"
               onClick={onOpenNewBetModal}
-              className="hidden lg:flex px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs transition-all items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap"
+              className="hidden xl:flex px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-xs transition-all items-center gap-1.5 active:scale-95 shadow-sm whitespace-nowrap shrink-0"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>Nova Aposta</span>
@@ -478,22 +478,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <td className="py-3 px-3.5 font-mono text-slate-400 whitespace-nowrap tabular-nums">
                         {bet.date}
                       </td>
-                      <td className="py-3 px-3.5 font-medium text-slate-300">{bet.bookmaker || '-'}</td>
-                      <td className="py-3 px-3.5">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-100">{bet.event}</span>
-                          <span className="text-[11px] text-slate-400">{bet.market}</span>
+                      <td className="py-3 px-3.5 font-medium text-slate-300 whitespace-nowrap">
+                        {bet.bookmaker || '-'}
+                      </td>
+                      <td className="py-3 px-3.5 max-w-md">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
+                          <span className="text-[11px] text-slate-400 truncate">{bet.market}</span>
                         </div>
                       </td>
-                      <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 tabular-nums">
+                      <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 whitespace-nowrap tabular-nums">
                         @{Number(bet.odd || 1).toFixed(2)}
                       </td>
-                      <td className="py-3 px-3.5 text-right font-mono text-slate-200 tabular-nums">
+                      <td className="py-3 px-3.5 text-right font-mono text-slate-200 whitespace-nowrap tabular-nums">
                         {formatBRL(bet.stake)}
                       </td>
-                      <td className="py-3 px-3.5 text-center">{getStatusBadge(bet.status)}</td>
+                      <td className="py-3 px-3.5 text-center whitespace-nowrap">
+                        {getStatusBadge(bet.status)}
+                      </td>
                       <td
-                        className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm tabular-nums ${
+                        className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm whitespace-nowrap tabular-nums ${
                           bet.status === 'PENDENTE'
                             ? 'text-slate-500'
                             : bet.pl >= 0
@@ -505,7 +509,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           ? 'Pendente'
                           : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
                       </td>
-                      <td className="py-3 px-3.5 text-center">
+                      <td className="py-3 px-3.5 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center gap-1">
                           {bet.status === 'PENDENTE' && (
                             <>

@@ -154,8 +154,8 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
   const chartGeometry = useMemo(() => {
     const width = 720;
     const height = 220;
-    const padLeft = 8;
-    const padRight = 14;
+    const padLeft = 12;
+    const padRight = 64;
     const padTop = 20;
     const padBottom = 24;
     const plotW = width - padLeft - padRight;
@@ -284,7 +284,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
   return (
     <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
       {/* Top Row: Title + Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center justify-between sm:justify-start gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -296,13 +296,13 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Toque ou arraste no gráfico para inspecionar cada operação
+              Passe o cursor ou toque no gráfico para inspecionar cada operação
             </p>
           </div>
         </div>
 
         {/* Mode & Range Segmented Controls */}
-        <div className="flex items-center justify-between sm:justify-end gap-2 flex-wrap">
+        <div className="flex items-center justify-between md:justify-end gap-2 flex-wrap">
           {/* Metric Mode Selector */}
           <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.07]">
             {(
@@ -521,7 +521,8 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
             d={chartGeometry.linePath}
             fill="none"
             stroke={strokeColor}
-            strokeWidth="2.75"
+            strokeWidth="2.5"
+            vectorEffect="non-scaling-stroke"
             strokeLinecap="round"
             strokeLinejoin="round"
           />
@@ -535,12 +536,15 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
               y2={chartGeometry.padTop + chartGeometry.plotH}
               stroke="#94a3b8"
               strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
               strokeDasharray="3 3"
               strokeOpacity="0.5"
             />
           )}
+        </svg>
 
-          {/* Individual Data Nodes (when <= 30 points) */}
+        {/* Crisp Circular HTML Overlay Dots (prevents oval stretching on wide desktop screens) */}
+        <div className="absolute inset-0 pointer-events-none z-15">
           {visiblePoints.length <= 30 &&
             chartGeometry.coords.map((c, idx) => {
               const isSelected = idx === effectiveIdx;
@@ -553,50 +557,50 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                   ? '#f43f5e'
                   : '#94a3b8';
 
+              const leftPct = (c.x / chartGeometry.width) * 100;
+              const topPct = (c.y / chartGeometry.height) * 100;
+
               return (
-                <g key={c.pt.index}>
+                <div
+                  key={c.pt.index}
+                  style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+                >
                   {isSelected && (
-                    <circle
-                      cx={c.x}
-                      cy={c.y}
-                      r="9"
-                      fill={dotColor}
-                      opacity="0.22"
+                    <span
+                      className="absolute w-5 h-5 rounded-full opacity-25"
+                      style={{ backgroundColor: dotColor }}
                     />
                   )}
-                  <circle
-                    cx={c.x}
-                    cy={c.y}
-                    r={isSelected ? '4.5' : '3'}
-                    fill={dotColor}
-                    stroke="#080c14"
-                    strokeWidth="1.5"
+                  <span
+                    className={`rounded-full border-[1.5px] border-[#080c14] ${
+                      isSelected ? 'w-2.5 h-2.5' : 'w-2 h-2'
+                    }`}
+                    style={{ backgroundColor: dotColor }}
                   />
-                </g>
+                </div>
               );
             })}
 
-          {/* Highlight Active Node when > 30 points */}
           {visiblePoints.length > 30 && activeCoord && (
-            <g>
-              <circle
-                cx={activeCoord.x}
-                cy={activeCoord.y}
-                r="9"
-                fill={strokeColor}
-                opacity="0.22"
+            <div
+              style={{
+                left: `${(activeCoord.x / chartGeometry.width) * 100}%`,
+                top: `${(activeCoord.y / chartGeometry.height) * 100}%`
+              }}
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center"
+            >
+              <span
+                className="absolute w-5 h-5 rounded-full opacity-25"
+                style={{ backgroundColor: strokeColor }}
               />
-              <circle
-                cx={activeCoord.x}
-                cy={activeCoord.y}
-                r="4.5"
-                fill={strokeColor}
-                stroke="#080c14"
-                strokeWidth="1.5"
+              <span
+                className="w-2.5 h-2.5 rounded-full border-[1.5px] border-[#080c14]"
+                style={{ backgroundColor: strokeColor }}
               />
-            </g>
+            </div>
           )}
-        </svg>
+        </div>
 
         {/* Empty State Callout Overlay when 0 settled bets */}
         {settledCount === 0 && (

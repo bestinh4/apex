@@ -91,13 +91,13 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
               onChange={(e) => setBookmaker(e.target.value)}
               className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-emerald-500"
             >
-              <option value="Betano">Betano</option>
-              <option value="Bet365">Bet365</option>
-              <option value="Stake">Stake</option>
-              <option value="Betfair">Betfair</option>
-              <option value="EstrelaBet">EstrelaBet</option>
-              <option value="KTO">KTO</option>
-              <option value="Superbet">Superbet</option>
+              <option value="Betano" className="bg-[#0e1422] text-white">Betano</option>
+              <option value="Bet365" className="bg-[#0e1422] text-white">Bet365</option>
+              <option value="Stake" className="bg-[#0e1422] text-white">Stake</option>
+              <option value="Betfair" className="bg-[#0e1422] text-white">Betfair</option>
+              <option value="EstrelaBet" className="bg-[#0e1422] text-white">EstrelaBet</option>
+              <option value="KTO" className="bg-[#0e1422] text-white">KTO</option>
+              <option value="Superbet" className="bg-[#0e1422] text-white">Superbet</option>
             </select>
           </div>
 
