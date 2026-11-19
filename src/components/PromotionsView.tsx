@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
+import { BookmakerBadge } from './BookmakerLogo';
 
 interface PromotionsViewProps {
   onOpenFreeSpinModal: () => void;
@@ -265,9 +266,11 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
-                  <span>
-                    {fb.bookmaker} · Bônus <strong className="font-mono text-slate-200">{formatBRL(fb.bonusAmount)}</strong>
-                  </span>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <BookmakerBadge bookmaker={fb.bookmaker} size="sm" className="text-slate-200 font-medium" />
+                    <span>·</span>
+                    <span>Bônus <strong className="font-mono text-slate-200">{formatBRL(fb.bonusAmount)}</strong></span>
+                  </div>
                   <div className="flex items-center gap-1.5">
                     {fb.status !== 'Creditado' ? (
                       <button
@@ -322,9 +325,13 @@ export const PromotionsView: React.FC<PromotionsViewProps> = ({
               >
                 <div className="min-w-0 flex-1">
                   <span className="text-xs font-bold text-white block truncate">{fs.game}</span>
-                  <span className="text-[11px] text-slate-400 block truncate mt-0.5">
-                    {fs.bookmaker} · {fs.spinsCount} giros · {fs.date}
-                  </span>
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-0.5 flex-wrap">
+                    <BookmakerBadge bookmaker={fs.bookmaker} size="sm" className="text-slate-300 font-medium" />
+                    <span>·</span>
+                    <span>{fs.spinsCount} giros</span>
+                    <span>·</span>
+                    <span>{fs.date}</span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-mono font-bold text-sm text-emerald-400 tabular-nums">

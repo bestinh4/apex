@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
-import { BOOKMAKERS } from '../data/footballMarkets';
+import { BookmakerSelector } from './BookmakerLogo';
 
 interface FreebetModalProps {
   isOpen: boolean;
@@ -111,17 +111,7 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
             <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Casa de Apostas
             </label>
-            <select
-              value={bookmaker}
-              onChange={(e) => setBookmaker(e.target.value)}
-              className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
-            >
-              {BOOKMAKERS.map((bk) => (
-                <option key={bk} value={bk} className="bg-[#0e1422] text-white">
-                  {bk}
-                </option>
-              ))}
-            </select>
+            <BookmakerSelector value={bookmaker} onChange={setBookmaker} />
           </div>
 
           <div className="flex flex-col gap-1.5">

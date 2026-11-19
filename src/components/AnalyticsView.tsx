@@ -1,6 +1,7 @@
 import React from 'react';
 import { useBankroll } from '../context/BankrollContext';
-import { SPORTS_LIST } from '../data/footballMarkets';
+import { SPORTS_LIST, BOOKMAKERS } from '../data/footballMarkets';
+import { BookmakerBadge } from './BookmakerLogo';
 
 interface AnalyticsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -131,6 +132,34 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
 
     return {
       category: cat,
+      count: list.length,
+      volume,
+      winRate,
+      pl,
+      roi
+    };
+  });
+
+  // Bookmakers breakdown (used bookmakers first, or default list if empty)
+  const usedBookmakers = Array.from(
+    new Set(bets.map((b) => b.bookmaker).filter((bk): bk is string => Boolean(bk && bk.trim())))
+  );
+  const displayBookmakers =
+    usedBookmakers.length > 0 ? usedBookmakers : [...BOOKMAKERS.slice(0, 6)];
+
+  const bookmakerStats = displayBookmakers.map((bk) => {
+    const list = bets.filter((b) => b.bookmaker === bk);
+    const resolved = list.filter((b) => b.status !== 'PENDENTE');
+    const volume = resolved.reduce((sum, b) => sum + b.stake, 0);
+    const pl = resolved.reduce((sum, b) => sum + b.pl, 0);
+    const wins = resolved.filter((b) => b.status === 'GREEN' || b.status === 'HALF_GREEN').length;
+    const losses = resolved.filter((b) => b.status === 'RED' || b.status === 'HALF_RED').length;
+    const decisive = wins + losses;
+    const winRate = decisive > 0 ? (wins / decisive) * 100 : 0;
+    const roi = volume > 0 ? (pl / volume) * 100 : 0;
+
+    return {
+      bookmaker: bk,
       count: list.length,
       volume,
       winRate,
@@ -373,6 +402,56 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
                 <span className="text-xs font-bold text-white truncate">{item.category}</span>
                 <span className="text-[11px] font-mono text-slate-400 tabular-nums shrink-0">
                   {item.count}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] text-xs">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500">Acerto / ROI</span>
+                  <span className="font-mono text-slate-200 tabular-nums">
+                    {item.winRate.toFixed(0)}% ·{' '}
+                    <span className={item.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                      {item.roi >= 0 ? '+' : ''}
+                      {item.roi.toFixed(1)}%
+                    </span>
+                  </span>
+                </div>
+                <span
+                  className={`font-mono font-bold tabular-nums ${
+                    item.pl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  }`}
+                >
+                  {item.pl >= 0 ? '+' : ''}
+                  {formatBRL(item.pl)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bookmakers Breakdown */}
+      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+            Desempenho por Casa de Apostas
+          </h3>
+          <span className="text-xs text-slate-400">{bookmakerStats.length} casas</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {bookmakerStats.map((item) => (
+            <div
+              key={item.bookmaker}
+              className="bg-[#080c14] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <BookmakerBadge
+                  bookmaker={item.bookmaker}
+                  size="md"
+                  className="text-xs font-bold text-white"
+                />
+                <span className="text-[11px] font-mono text-slate-400 tabular-nums shrink-0">
+                  {item.count} {item.count === 1 ? 'aposta' : 'apostas'}
                 </span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] text-xs">

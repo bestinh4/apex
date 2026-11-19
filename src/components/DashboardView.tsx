@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BetEntry, BetStatus } from '../types';
 import { BankrollChart } from './BankrollChart';
+import { BookmakerBadge } from './BookmakerLogo';
 
 interface DashboardViewProps {
   onOpenNewBetModal: () => void;
@@ -381,8 +382,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                       <span>({bet.units}u)</span>
                     </div>
-                    <div className="flex items-center gap-1 text-[11px] text-slate-400 truncate">
-                      <span>{bet.bookmaker || 'Casa'}</span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+                      <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                       <span>·</span>
                       <span className="font-mono">{bet.date}</span>
                     </div>
@@ -478,8 +479,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <td className="py-3 px-3.5 font-mono text-slate-400 whitespace-nowrap tabular-nums">
                         {bet.date}
                       </td>
-                      <td className="py-3 px-3.5 font-medium text-slate-300 whitespace-nowrap">
-                        {bet.bookmaker || '-'}
+                      <td className="py-3 px-3.5 font-medium text-slate-200 whitespace-nowrap">
+                        <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                       </td>
                       <td className="py-3 px-3.5 max-w-md">
                         <div className="flex flex-col min-w-0">

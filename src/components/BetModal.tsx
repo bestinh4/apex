@@ -8,6 +8,7 @@ import {
   SPORTS_LIST,
   OTHER_SPORT_MARKETS
 } from '../data/footballMarkets';
+import { BookmakerSelector } from './BookmakerLogo';
 
 interface BetModalProps {
   isOpen: boolean;
@@ -334,20 +335,12 @@ export const BetModal: React.FC<BetModalProps> = ({
                 <label className="text-[11px] font-semibold text-slate-400">
                   Casa de Apostas
                 </label>
-                <select
+                <BookmakerSelector
                   value={bookmaker}
-                  onChange={(e) => setBookmaker(e.target.value)}
-                  className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 transition-colors"
-                >
-                  {BOOKMAKERS.map((bk) => (
-                    <option key={bk} value={bk} className="bg-[#0e1422] text-white">
-                      {bk}
-                    </option>
-                  ))}
-                  <option value="Outra" className="bg-[#0e1422] text-white">
-                    Outra casa...
-                  </option>
-                </select>
+                  onChange={setBookmaker}
+                  allowCustom
+                  customValue={customBookmaker}
+                />
               </div>
 
               <div className="flex flex-col gap-1.5">
