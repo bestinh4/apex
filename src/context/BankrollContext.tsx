@@ -85,6 +85,7 @@ interface BankrollContextType {
   isCloudAuthenticated: boolean;
   cloudSyncStatus: CloudSyncStatus;
   cloudSyncError: string | null;
+  unauthorizedDomain: string | null;
   lastSyncedAt: Date | null;
   signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   uploadLocalToCloud: () => Promise<boolean>;
@@ -319,6 +320,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const [isCloudAuthenticated, setIsCloudAuthenticated] = useState<boolean>(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>('local');
   const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
@@ -544,6 +546,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       setIsCloudAuthenticated(true);
       setCloudSyncStatus('syncing');
       setCloudSyncError(null);
+      setUnauthorizedDomain(null);
 
       // Capture existing local data BEFORE switching active UID so we can migrate on first sign-in
       const localFallback = readLocalStateForUid(loadedUserRef.current || DEFAULT_USER.id);
@@ -642,6 +645,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   }> => {
     try {
       setCloudSyncError(null);
+      setUnauthorizedDomain(null);
       await signInWithGooglePopup();
       return { success: true };
     } catch (err: any) {
@@ -655,9 +659,20 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           error: 'O navegador bloqueou o pop-up do Google. Permita pop-ups para este site e tente novamente.'
         };
       }
+      if (code === 'auth/unauthorized-domain') {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        const msg = host
+          ? `Domínio "${host}" ainda não autorizado no Firebase Auth. Adicione este domínio em Authentication → Settings → Authorized domains no Console do Firebase.`
+          : 'Domínio não autorizado no Firebase Authentication.';
+        setUnauthorizedDomain(host || 'domínio atual');
+        setCloudSyncError(msg);
+        return { success: false, error: msg };
+      }
+      const fallbackMsg = err?.message || 'Não foi possível conectar com a conta Google.';
+      setCloudSyncError(fallbackMsg);
       return {
         success: false,
-        error: err?.message || 'Não foi possível conectar com a conta Google.'
+        error: fallbackMsg
       };
     }
   }, []);
@@ -1276,6 +1291,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         isCloudAuthenticated,
         cloudSyncStatus,
         cloudSyncError,
+        unauthorizedDomain,
         lastSyncedAt,
         signInWithGoogle,
         uploadLocalToCloud,

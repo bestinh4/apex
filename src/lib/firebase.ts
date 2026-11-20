@@ -38,6 +38,7 @@ import {
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
+export const FIREBASE_PROJECT_ID = firebaseConfig.projectId;
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();

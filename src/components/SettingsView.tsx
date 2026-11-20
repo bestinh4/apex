@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { usePWAInstall } from '../hooks/usePWAInstall';
+import { FIREBASE_PROJECT_ID } from '../lib/firebase';
 
 interface SettingsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -17,6 +18,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     isCloudAuthenticated,
     cloudSyncStatus,
     cloudSyncError,
+    unauthorizedDomain,
     lastSyncedAt,
     signInWithGoogle,
     uploadLocalToCloud,
@@ -107,6 +109,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       onSuccessToast?.('Registros locais enviados e mesclados na sua conta Google!');
     } else {
       onSuccessToast?.('Erro ao enviar registros locais para a nuvem.');
+    }
+  };
+
+  const handleCopyUnauthorizedDomain = async (domain: string) => {
+    try {
+      await navigator.clipboard.writeText(domain);
+      onSuccessToast?.(`Domínio "${domain}" copiado!`);
+    } catch {
+      onSuccessToast?.(`Copie manualmente: ${domain}`);
     }
   };
 
@@ -267,7 +278,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   celular para sincronizar automaticamente na nuvem.
                 </p>
               )}
-              {cloudSyncError && (
+              {cloudSyncError && !unauthorizedDomain && (
                 <p className="text-xs text-rose-400 mt-1.5">{cloudSyncError}</p>
               )}
             </div>
@@ -312,6 +323,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             )}
           </div>
         </div>
+
+        {unauthorizedDomain && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="text-xs text-amber-200 leading-relaxed">
+              <strong className="text-amber-300">Ação necessária no Firebase Auth:</strong> o domínio{' '}
+              <code className="px-1.5 py-0.5 rounded bg-black/40 font-mono text-white">
+                {unauthorizedDomain}
+              </code>{' '}
+              precisa estar listado em{' '}
+              <strong>Authentication → Settings → Authorized domains</strong> no projeto{' '}
+              <code className="font-mono text-white">{FIREBASE_PROJECT_ID}</code>.
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => handleCopyUnauthorizedDomain(unauthorizedDomain)}
+                className="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 text-xs font-semibold whitespace-nowrap"
+              >
+                Copiar Domínio
+              </button>
+              <a
+                href={`https://console.firebase.google.com/project/${FIREBASE_PROJECT_ID}/authentication/settings`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold whitespace-nowrap"
+              >
+                Autorizar no Console
+              </a>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Settings Form */}
