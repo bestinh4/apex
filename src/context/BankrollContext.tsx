@@ -1,5 +1,31 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
-import { BetEntry, TreasuryEntry, FreebetEntry, FreeSpinEntry, AppSettings, BetStatus } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+  ReactNode
+} from 'react';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  where,
+  Unsubscribe
+} from 'firebase/firestore';
+import {
+  BetEntry,
+  TreasuryEntry,
+  FreebetEntry,
+  FreeSpinEntry,
+  AppSettings,
+  BetStatus,
+  BetFundType
+} from '../types';
 import {
   initialBets,
   initialTreasury,
@@ -12,26 +38,30 @@ import {
   defaultSettings
 } from '../data/initialData';
 import {
-  supabase,
-  isSupabaseConfigured,
-  ensureValidUuid,
-  mapRowToBet,
-  fetchAllFromSupabase,
-  upsertBetToSupabase,
-  deleteBetFromSupabase,
-  upsertTreasuryToSupabase,
-  deleteTreasuryFromSupabase,
-  upsertFreebetToSupabase,
-  deleteFreebetFromSupabase,
-  upsertFreeSpinToSupabase,
-  deleteFreeSpinFromSupabase,
-  upsertSettingsToSupabase,
-  pushAllStateToSupabase,
-  clearAllSupabaseTables
-} from '../lib/supabase';
+  auth,
+  db,
+  signInWithGooglePopup,
+  signOutFirebase,
+  ensureUserProfileDoc,
+  updateUserProfileSettings,
+  createBetInFirestore,
+  updateBetInFirestore,
+  deleteBetInFirestore,
+  createTreasuryInFirestore,
+  deleteTreasuryInFirestore,
+  createFreebetInFirestore,
+  updateFreebetStatusInFirestore,
+  deleteFreebetInFirestore,
+  createFreeSpinInFirestore,
+  deleteFreeSpinInFirestore,
+  hasAnyCloudRecords,
+  pushAllStateToFirestore,
+  clearAllUserSubcollectionsInFirestore,
+  sanitizeFirestoreId,
+  timestampToMillis
+} from '../lib/firebase';
 import {
   getCurrentSession,
-  setCurrentSession,
   getOrCreateDefaultSession,
   DEFAULT_USER,
   localLogin,
@@ -44,11 +74,20 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  photoURL?: string;
 }
+
+export type CloudSyncStatus = 'local' | 'syncing' | 'synced' | 'error';
 
 interface BankrollContextType {
   currentUser: AuthUser | null;
   authLoading: boolean;
+  isCloudAuthenticated: boolean;
+  cloudSyncStatus: CloudSyncStatus;
+  cloudSyncError: string | null;
+  lastSyncedAt: Date | null;
+  signInWithGoogle: () => Promise<{ success: boolean; error?: string }>;
+  uploadLocalToCloud: () => Promise<boolean>;
   signIn: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (email: string, pass: string, name?: string) => Promise<{ success: boolean; error?: string }>;
   resetPassword: (email: string) => Promise<{ success: boolean; message?: string; error?: string }>;
@@ -109,7 +148,7 @@ const BankrollContext = createContext<BankrollContextType | undefined>(undefined
 
 const STORAGE_VERSION = 'apex_bankroll_v3_';
 
-const finiteNumber = (v: any, fallback = 0): number => {
+const finiteNumber = (v: unknown, fallback = 0): number => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
@@ -118,8 +157,152 @@ function getStorageKey(userId: string, key: string): string {
   return `${STORAGE_VERSION}${userId}_${key}`;
 }
 
+function normalizeBetEntry(raw: any, fallbackUnitValue = 25): BetEntry {
+  const safeUnit = fallbackUnitValue > 0 ? fallbackUnitValue : 25;
+  const stake = finiteNumber(raw?.stake, 0);
+  const odd = Math.max(1, finiteNumber(raw?.odd, 1));
+  const type: BetFundType =
+    raw?.type === 'Freebet' || raw?.type === 'Bônus Rollover' ? raw.type : 'Saldo Real';
+  const allowedStatuses: BetStatus[] = [
+    'GREEN',
+    'RED',
+    'HALF_GREEN',
+    'HALF_RED',
+    'VOID',
+    'CASHOUT',
+    'PENDENTE'
+  ];
+  const rawStatus = String(raw?.status || 'GREEN').toUpperCase() as BetStatus;
+  const status: BetStatus = allowedStatuses.includes(rawStatus) ? rawStatus : 'GREEN';
+  const gross = finiteNumber(raw?.gross, 0);
+  const pl = finiteNumber(raw?.pl, 0);
+  const units =
+    raw?.units !== undefined && Number.isFinite(Number(raw.units))
+      ? Number(raw.units)
+      : Number((stake / safeUnit).toFixed(2));
+
+  const entry: BetEntry = {
+    id: sanitizeFirestoreId(raw?.id),
+    date: String(raw?.date || new Date().toLocaleDateString('pt-BR')),
+    sport: String(raw?.sport || 'Futebol'),
+    event: String(raw?.event || 'Evento Esportivo'),
+    market: String(raw?.market || 'Mercado Principal'),
+    odd,
+    stake,
+    units,
+    type,
+    status,
+    gross,
+    pl,
+    bookmaker: String(raw?.bookmaker || '1win')
+  };
+
+  if (
+    raw?.closingOdd !== undefined &&
+    Number.isFinite(Number(raw.closingOdd)) &&
+    Number(raw.closingOdd) >= 1
+  ) {
+    entry.closingOdd = Number(raw.closingOdd);
+  }
+  return entry;
+}
+
+function readLocalStateForUid(uid: string): {
+  settings: AppSettings;
+  bets: BetEntry[];
+  treasury: TreasuryEntry[];
+  freebets: FreebetEntry[];
+  freeSpins: FreeSpinEntry[];
+} {
+  try {
+    let savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
+    if (!savedSettings) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('settings') && k !== getStorageKey(uid, 'settings')) {
+          const val = localStorage.getItem(k);
+          if (val) {
+            savedSettings = val;
+            break;
+          }
+        }
+      }
+    }
+    const parsedSettings = savedSettings ? JSON.parse(savedSettings) : null;
+    const userSettings: AppSettings = parsedSettings
+      ? {
+          ...defaultSettings,
+          ...parsedSettings,
+          initialBankroll: finiteNumber(
+            parsedSettings.initialBankroll,
+            defaultSettings.initialBankroll
+          ),
+          unitValue: Math.max(0.01, finiteNumber(parsedSettings.unitValue, defaultSettings.unitValue))
+        }
+      : defaultSettings;
+
+    let savedBets = localStorage.getItem(getStorageKey(uid, 'bets'));
+    let parsedBets = savedBets ? JSON.parse(savedBets) : null;
+    if (!parsedBets || (Array.isArray(parsedBets) && parsedBets.length === 0)) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('bets') && k !== getStorageKey(uid, 'bets')) {
+          try {
+            const candidate = JSON.parse(localStorage.getItem(k) || '');
+            if (Array.isArray(candidate) && candidate.length > 0) {
+              parsedBets = candidate;
+              break;
+            }
+          } catch {}
+        }
+      }
+    }
+    const userBets: BetEntry[] =
+      parsedBets && Array.isArray(parsedBets)
+        ? parsedBets.map((item) => normalizeBetEntry(item, userSettings.unitValue))
+        : initialBets;
+
+    let savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
+    if (!savedTreasury) {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.includes('treasury') && k !== getStorageKey(uid, 'treasury')) {
+          const v = localStorage.getItem(k);
+          if (v) {
+            savedTreasury = v;
+            break;
+          }
+        }
+      }
+    }
+    const userTreasury: TreasuryEntry[] = savedTreasury ? JSON.parse(savedTreasury) : initialTreasury;
+
+    const savedFreebets = localStorage.getItem(getStorageKey(uid, 'freebets'));
+    const userFreebets: FreebetEntry[] = savedFreebets ? JSON.parse(savedFreebets) : initialFreebets;
+
+    const savedSpins = localStorage.getItem(getStorageKey(uid, 'freespins'));
+    const userFreeSpins: FreeSpinEntry[] = savedSpins ? JSON.parse(savedSpins) : initialFreeSpins;
+
+    return {
+      settings: userSettings,
+      bets: Array.isArray(userBets) ? userBets : initialBets,
+      treasury: Array.isArray(userTreasury) ? userTreasury : initialTreasury,
+      freebets: Array.isArray(userFreebets) ? userFreebets : initialFreebets,
+      freeSpins: Array.isArray(userFreeSpins) ? userFreeSpins : initialFreeSpins
+    };
+  } catch {
+    return {
+      settings: defaultSettings,
+      bets: initialBets,
+      treasury: initialTreasury,
+      freebets: initialFreebets,
+      freeSpins: initialFreeSpins
+    };
+  }
+}
+
 export function BankrollProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<AuthUser>(() => {
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
     try {
       const session = getCurrentSession();
       if (session?.user?.id) {
@@ -132,7 +315,11 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     } catch {}
     return DEFAULT_USER;
   });
-  const [authLoading, setAuthLoading] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [isCloudAuthenticated, setIsCloudAuthenticated] = useState<boolean>(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>('local');
+  const [cloudSyncError, setCloudSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [bets, setBets] = useState<BetEntry[]>(initialBets);
@@ -141,121 +328,289 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const [freeSpins, setFreeSpins] = useState<FreeSpinEntry[]>(initialFreeSpins);
 
   const loadedUserRef = useRef<string | null>(null);
+  const firebaseUserRef = useRef<User | null>(null);
+  const unsubscribesRef = useRef<Unsubscribe[]>([]);
+  const authFlowSeqRef = useRef<number>(0);
 
-  const loadUserData = (uid: string) => {
-    try {
-      let savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
-      if (!savedSettings) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.includes('settings') && k !== getStorageKey(uid, 'settings')) {
-            const val = localStorage.getItem(k);
-            if (val) {
-              savedSettings = val;
-              break;
-            }
-          }
-        }
-      }
-      const parsedSettings = savedSettings ? JSON.parse(savedSettings) : null;
-      const userSettings: AppSettings = parsedSettings
-        ? {
-            ...defaultSettings,
-            ...parsedSettings,
-            initialBankroll: finiteNumber(
-              parsedSettings.initialBankroll,
-              defaultSettings.initialBankroll
-            ),
-            unitValue: finiteNumber(parsedSettings.unitValue, defaultSettings.unitValue)
-          }
-        : defaultSettings;
-      setSettings(userSettings);
+  const stateRef = useRef({ bets, treasury, freebets, freeSpins, settings });
+  stateRef.current = { bets, treasury, freebets, freeSpins, settings };
 
-      let savedBets = localStorage.getItem(getStorageKey(uid, 'bets'));
-      let parsedBets = savedBets ? JSON.parse(savedBets) : null;
-      if (!parsedBets || (Array.isArray(parsedBets) && parsedBets.length === 0)) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.includes('bets') && k !== getStorageKey(uid, 'bets')) {
-            try {
-              const candidate = JSON.parse(localStorage.getItem(k) || '');
-              if (Array.isArray(candidate) && candidate.length > 0) {
-                parsedBets = candidate;
-                break;
-              }
-            } catch {}
-          }
-        }
-      }
-      if (parsedBets !== null && Array.isArray(parsedBets)) {
-        setBets(parsedBets.map((item) => mapRowToBet(item, userSettings.unitValue)));
-      } else {
-        setBets(initialBets);
-      }
-
-      let savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
-      if (!savedTreasury) {
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.includes('treasury') && k !== getStorageKey(uid, 'treasury')) {
-            const v = localStorage.getItem(k);
-            if (v) {
-              savedTreasury = v;
-              break;
-            }
-          }
-        }
-      }
-      setTreasury(savedTreasury ? JSON.parse(savedTreasury) : initialTreasury);
-
-      const savedFreebets = localStorage.getItem(getStorageKey(uid, 'freebets'));
-      setFreebets(savedFreebets ? JSON.parse(savedFreebets) : initialFreebets);
-
-      const savedSpins = localStorage.getItem(getStorageKey(uid, 'freespins'));
-      setFreeSpins(savedSpins ? JSON.parse(savedSpins) : initialFreeSpins);
-    } catch {
-      setSettings(defaultSettings);
-      setBets(initialBets);
-      setTreasury(initialTreasury);
-      setFreebets(initialFreebets);
-      setFreeSpins(initialFreeSpins);
-    } finally {
-      loadedUserRef.current = uid;
-    }
-  };
-
-  // Initialize active session on mount with automatic instant access
-  useEffect(() => {
-    try {
-      let session = getCurrentSession();
-      if (!session?.user?.id) {
-        session = getOrCreateDefaultSession();
-      }
-      if (session?.user?.id) {
-        const userObj: AuthUser = {
-          id: session.user.id,
-          email: session.user.email,
-          name: session.user.name
-        };
-        setCurrentUser(userObj);
-        loadUserData(userObj.id);
-      } else {
-        const fallback = getOrCreateDefaultSession();
-        setCurrentUser({
-          id: fallback.user.id,
-          email: fallback.user.email,
-          name: fallback.user.name
-        });
-        loadUserData(fallback.user.id);
-      }
-    } catch (e) {
-      console.warn('Session init fallback:', e);
-    } finally {
-      setAuthLoading(false);
-    }
+  const loadLocalUserData = useCallback((uid: string) => {
+    const localData = readLocalStateForUid(uid);
+    setSettings(localData.settings);
+    setBets(localData.bets);
+    setTreasury(localData.treasury);
+    setFreebets(localData.freebets);
+    setFreeSpins(localData.freeSpins);
+    loadedUserRef.current = uid;
   }, []);
 
-  // Persist user-scoped localStorage on state changes (strictly isolated per user ID)
+  const cleanupFirestoreListeners = useCallback(() => {
+    unsubscribesRef.current.forEach((unsub) => {
+      try {
+        unsub();
+      } catch {}
+    });
+    unsubscribesRef.current = [];
+  }, []);
+
+  const attachCloudListeners = useCallback(
+    (fbUser: User) => {
+      cleanupFirestoreListeners();
+      const uid = fbUser.uid;
+      loadedUserRef.current = uid;
+
+      const handleListenerError = (path: string) => (err: Error) => {
+        console.error(`Firestore snapshot error at ${path}:`, err);
+        setCloudSyncStatus('error');
+        setCloudSyncError(err.message || 'Erro de sincronização com a nuvem.');
+      };
+
+      const unsubUser = onSnapshot(
+        doc(db, 'users', uid),
+        (snap) => {
+          if (snap.exists()) {
+            const d = snap.data();
+            setSettings((prev) => ({
+              ...prev,
+              initialBankroll: finiteNumber(d.initialBankroll, prev.initialBankroll),
+              unitValue: Math.max(0.01, finiteNumber(d.unitValue, prev.unitValue)),
+              kellyFraction: String(d.kellyFraction || prev.kellyFraction),
+              maxDrawdownLimitPct: finiteNumber(d.maxDrawdownLimitPct, prev.maxDrawdownLimitPct),
+              monthlyTargetPct: finiteNumber(d.monthlyTargetPct, prev.monthlyTargetPct)
+            }));
+          }
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}`)
+      );
+
+      const unsubBets = onSnapshot(
+        query(collection(db, 'users', uid, 'bets'), where('userId', '==', uid)),
+        (snap) => {
+          const rows = snap.docs
+            .map((d) => ({
+              data: d.data(),
+              id: d.id,
+              ts: timestampToMillis(d.data().createdAt)
+            }))
+            .sort((a, b) => b.ts - a.ts)
+            .map((item) =>
+              normalizeBetEntry(
+                { ...item.data, id: item.id },
+                stateRef.current.settings.unitValue
+              )
+            );
+          setBets(rows);
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}/bets`)
+      );
+
+      const unsubTreasury = onSnapshot(
+        query(collection(db, 'users', uid, 'treasury'), where('userId', '==', uid)),
+        (snap) => {
+          const rows = snap.docs
+            .map((d) => ({
+              data: d.data(),
+              id: d.id,
+              ts: timestampToMillis(d.data().createdAt)
+            }))
+            .sort((a, b) => b.ts - a.ts)
+            .map((item) => ({
+              id: item.id,
+              date: String(item.data.date || ''),
+              type: item.data.type as TreasuryEntry['type'],
+              desc: String(item.data.desc || ''),
+              details: item.data.details ? String(item.data.details) : undefined,
+              amount: finiteNumber(item.data.amount, 0),
+              status: item.data.status as TreasuryEntry['status']
+            }));
+          setTreasury(rows);
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}/treasury`)
+      );
+
+      const unsubFreebets = onSnapshot(
+        query(collection(db, 'users', uid, 'freebets'), where('userId', '==', uid)),
+        (snap) => {
+          const rows = snap.docs
+            .map((d) => ({
+              data: d.data(),
+              id: d.id,
+              ts: timestampToMillis(d.data().createdAt)
+            }))
+            .sort((a, b) => b.ts - a.ts)
+            .map((item) => ({
+              id: item.id,
+              bookmaker: String(item.data.bookmaker || '1win'),
+              event: String(item.data.event || ''),
+              selection: String(item.data.selection || ''),
+              bonusAmount: finiteNumber(item.data.bonusAmount, 0),
+              odd: finiteNumber(item.data.odd, 1),
+              netReturn: finiteNumber(item.data.netReturn, 0),
+              status: item.data.status as FreebetEntry['status'],
+              date: String(item.data.date || '')
+            }));
+          setFreebets(rows);
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}/freebets`)
+      );
+
+      const unsubFreeSpins = onSnapshot(
+        query(collection(db, 'users', uid, 'free_spins'), where('userId', '==', uid)),
+        (snap) => {
+          const rows = snap.docs
+            .map((d) => ({
+              data: d.data(),
+              id: d.id,
+              ts: timestampToMillis(d.data().createdAt)
+            }))
+            .sort((a, b) => b.ts - a.ts)
+            .map((item) => ({
+              id: item.id,
+              provider: String(item.data.provider || ''),
+              game: String(item.data.game || ''),
+              bookmaker: String(item.data.bookmaker || '1win'),
+              spinsCount: finiteNumber(item.data.spinsCount, 0),
+              netProfit: finiteNumber(item.data.netProfit, 0),
+              date: String(item.data.date || '')
+            }));
+          setFreeSpins(rows);
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}/free_spins`)
+      );
+
+      unsubscribesRef.current = [
+        unsubUser,
+        unsubBets,
+        unsubTreasury,
+        unsubFreebets,
+        unsubFreeSpins
+      ];
+    },
+    [cleanupFirestoreListeners]
+  );
+
+  // Firebase Auth listener with graceful non-blocking local fallback
+  useEffect(() => {
+    // Load local session immediately for zero-lag boot
+    try {
+      const localSession = getCurrentSession() || getOrCreateDefaultSession();
+      setCurrentUser({
+        id: localSession.user.id,
+        email: localSession.user.email,
+        name: localSession.user.name
+      });
+      loadLocalUserData(localSession.user.id);
+    } catch (e) {
+      console.warn('Local session init fallback:', e);
+    }
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      const seq = ++authFlowSeqRef.current;
+
+      if (!fbUser) {
+        cleanupFirestoreListeners();
+        firebaseUserRef.current = null;
+        setIsCloudAuthenticated(false);
+        setCloudSyncStatus('local');
+        setCloudSyncError(null);
+
+        try {
+          const session = getCurrentSession() || getOrCreateDefaultSession();
+          setCurrentUser({
+            id: session.user.id,
+            email: session.user.email,
+            name: session.user.name
+          });
+          loadLocalUserData(session.user.id);
+        } catch {}
+        setAuthLoading(false);
+        return;
+      }
+
+      // User signed in with Google -> connect real-time Firestore sync
+      cleanupFirestoreListeners();
+      firebaseUserRef.current = fbUser;
+      setIsCloudAuthenticated(true);
+      setCloudSyncStatus('syncing');
+      setCloudSyncError(null);
+
+      // Capture existing local data BEFORE switching active UID so we can migrate on first sign-in
+      const localFallback = readLocalStateForUid(loadedUserRef.current || DEFAULT_USER.id);
+      const localSnapshot = {
+        bets: stateRef.current.bets.length > 0 ? stateRef.current.bets : localFallback.bets,
+        treasury:
+          stateRef.current.treasury.length > 0
+            ? stateRef.current.treasury
+            : localFallback.treasury,
+        freebets:
+          stateRef.current.freebets.length > 0
+            ? stateRef.current.freebets
+            : localFallback.freebets,
+        freeSpins:
+          stateRef.current.freeSpins.length > 0
+            ? stateRef.current.freeSpins
+            : localFallback.freeSpins,
+        settings: stateRef.current.settings
+      };
+
+      setCurrentUser({
+        id: fbUser.uid,
+        email: fbUser.email || '',
+        name: fbUser.displayName || fbUser.email?.split('@')[0] || 'Apostador',
+        photoURL: fbUser.photoURL || undefined
+      });
+
+      try {
+        await ensureUserProfileDoc(fbUser, localSnapshot.settings);
+        if (seq !== authFlowSeqRef.current) return;
+
+        const cloudHasData = await hasAnyCloudRecords(fbUser.uid);
+        if (seq !== authFlowSeqRef.current) return;
+
+        const hasLocalRecords =
+          localSnapshot.bets.length > 0 ||
+          localSnapshot.treasury.length > 0 ||
+          localSnapshot.freebets.length > 0 ||
+          localSnapshot.freeSpins.length > 0;
+
+        if (!cloudHasData && hasLocalRecords) {
+          await pushAllStateToFirestore(fbUser, localSnapshot, false);
+          if (seq !== authFlowSeqRef.current) return;
+        }
+
+        attachCloudListeners(fbUser);
+        setCloudSyncStatus('synced');
+        setLastSyncedAt(new Date());
+      } catch (err: any) {
+        if (seq !== authFlowSeqRef.current) return;
+        console.error('Firebase cloud init error:', err);
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Erro ao inicializar sincronização na nuvem.');
+      } finally {
+        if (seq === authFlowSeqRef.current) {
+          setAuthLoading(false);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      cleanupFirestoreListeners();
+    };
+  }, [attachCloudListeners, cleanupFirestoreListeners, loadLocalUserData]);
+
+  // Cache state to user-scoped localStorage for instant reloads & offline resilience
   useEffect(() => {
     if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'bets'), JSON.stringify(bets));
@@ -281,73 +636,80 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(getStorageKey(currentUser.id, 'settings'), JSON.stringify(settings));
   }, [settings, currentUser?.id]);
 
-  // Cloud Sync with Supabase scoped strictly to currentUser.id (gracefully silent if not configured)
-  const syncNow = useCallback(async (): Promise<boolean> => {
-    if (!isSupabaseConfigured || !currentUser?.id) return false;
-    const uid = currentUser.id;
+  const signInWithGoogle = useCallback(async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
     try {
-      const remote = await fetchAllFromSupabase(uid);
-      if (!remote) return false;
-
-      const hasRemoteData =
-        remote.bets.length > 0 ||
-        remote.treasury.length > 0 ||
-        remote.freebets.length > 0 ||
-        remote.freeSpins.length > 0;
-
-      const hasLocalData =
-        bets.length > 0 ||
-        treasury.length > 0 ||
-        freebets.length > 0 ||
-        freeSpins.length > 0;
-
-      if (hasRemoteData) {
-        setBets(remote.bets);
-        setTreasury(remote.treasury);
-        setFreebets(remote.freebets);
-        setFreeSpins(remote.freeSpins);
-        if (remote.settings) {
-          setSettings((prev) => ({
-            ...prev,
-            ...remote.settings
-          }));
-        }
-      } else if (hasLocalData) {
-        await pushAllStateToSupabase(
-          {
-            bets,
-            treasury,
-            freebets,
-            freeSpins,
-            settings
-          },
-          uid
-        );
-      } else if (remote.settings) {
-        setSettings((prev) => ({
-          ...prev,
-          ...remote.settings
-        }));
+      setCloudSyncError(null);
+      await signInWithGooglePopup();
+      return { success: true };
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        return { success: false, error: 'Login com Google cancelado.' };
       }
+      if (code === 'auth/popup-blocked') {
+        return {
+          success: false,
+          error: 'O navegador bloqueou o pop-up do Google. Permita pop-ups para este site e tente novamente.'
+        };
+      }
+      return {
+        success: false,
+        error: err?.message || 'Não foi possível conectar com a conta Google.'
+      };
+    }
+  }, []);
+
+  const uploadLocalToCloud = useCallback(async (): Promise<boolean> => {
+    const fbUser = firebaseUserRef.current;
+    if (!fbUser) return false;
+    try {
+      setCloudSyncStatus('syncing');
+      const localDefault = readLocalStateForUid(DEFAULT_USER.id);
+      const mergedPayload = {
+        bets: stateRef.current.bets.length > 0 ? stateRef.current.bets : localDefault.bets,
+        treasury:
+          stateRef.current.treasury.length > 0
+            ? stateRef.current.treasury
+            : localDefault.treasury,
+        freebets:
+          stateRef.current.freebets.length > 0
+            ? stateRef.current.freebets
+            : localDefault.freebets,
+        freeSpins:
+          stateRef.current.freeSpins.length > 0
+            ? stateRef.current.freeSpins
+            : localDefault.freeSpins,
+        settings: stateRef.current.settings
+      };
+      await pushAllStateToFirestore(fbUser, mergedPayload, false);
+      setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date());
       return true;
-    } catch {
+    } catch (err: any) {
+      setCloudSyncStatus('error');
+      setCloudSyncError(err?.message || 'Erro ao enviar dados locais para a nuvem.');
       return false;
     }
-  }, [currentUser?.id, bets, treasury, freebets, freeSpins, settings]);
+  }, []);
 
-  useEffect(() => {
-    if (!isSupabaseConfigured || !currentUser?.id) return;
-    syncNow().catch(() => {});
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        syncNow().catch(() => {});
-      }
-    };
-    window.addEventListener('visibilitychange', handleVisibility);
-    return () => window.removeEventListener('visibilitychange', handleVisibility);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.id]);
+  const syncNow = useCallback(async (): Promise<boolean> => {
+    const fbUser = firebaseUserRef.current;
+    if (!fbUser) return false;
+    try {
+      setCloudSyncStatus('syncing');
+      await ensureUserProfileDoc(fbUser, stateRef.current.settings);
+      attachCloudListeners(fbUser);
+      setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date());
+      return true;
+    } catch {
+      setCloudSyncStatus('error');
+      return false;
+    }
+  }, [attachCloudListeners]);
 
   const signUp = async (
     email: string,
@@ -365,7 +727,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         name: res.user.name
       };
       setCurrentUser(userObj);
-      loadUserData(userObj.id);
+      loadLocalUserData(userObj.id);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Erro ao criar conta.' };
@@ -387,7 +749,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         name: res.user.name
       };
       setCurrentUser(userObj);
-      loadUserData(userObj.id);
+      loadLocalUserData(userObj.id);
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || 'Erro ao realizar login.' };
@@ -412,19 +774,23 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    cleanupFirestoreListeners();
+    if (firebaseUserRef.current) {
+      try {
+        await signOutFirebase();
+      } catch {}
+      firebaseUserRef.current = null;
+    }
     localSignOut();
     loadedUserRef.current = null;
+    setIsCloudAuthenticated(false);
+    setCloudSyncStatus('local');
+    setCloudSyncError(null);
     const session = getOrCreateDefaultSession();
     setCurrentUser(session.user);
-    setBets(initialBets);
-    setTreasury(initialTreasury);
-    setFreebets(initialFreebets);
-    setFreeSpins(initialFreeSpins);
-    setSettings(defaultSettings);
-    loadUserData(session.user.id);
+    loadLocalUserData(session.user.id);
   };
 
-  // Compute Bet outcomes accurately based on status and fund type
   const calculateGrossAndPL = (stake: number, odd: number, status: BetStatus, type: string) => {
     const s = finiteNumber(stake, 0);
     const o = finiteNumber(odd, 1.0);
@@ -467,7 +833,9 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     return { gross, pl };
   };
 
-  const addBet = (newBet: Omit<BetEntry, 'id' | 'gross' | 'pl'> & { gross?: number; pl?: number }) => {
+  const addBet = (
+    newBet: Omit<BetEntry, 'id' | 'gross' | 'pl'> & { gross?: number; pl?: number }
+  ) => {
     const { gross, pl } =
       newBet.gross !== undefined && newBet.pl !== undefined && Number.isFinite(newBet.pl)
         ? { gross: finiteNumber(newBet.gross, 0), pl: finiteNumber(newBet.pl, 0) }
@@ -476,138 +844,183 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     const safeUnit = settings.unitValue > 0 ? settings.unitValue : 25;
     const entry: BetEntry = {
       ...newBet,
-      id: ensureValidUuid(),
+      id: sanitizeFirestoreId(),
       units: Number((finiteNumber(newBet.stake, 0) / safeUnit).toFixed(2)),
       gross,
       pl
     };
 
     setBets((prev) => [entry, ...prev]);
-    if (currentUser?.id) {
-      upsertBetToSupabase(entry, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      createBetInFirestore(entry, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao salvar aposta na nuvem.');
+      });
     }
   };
 
   const updateBet = (id: string, updated: Partial<BetEntry>) => {
-    setBets((prev) =>
-      prev.map((bet) => {
-        if (bet.id !== id) return bet;
-        const merged = { ...bet, ...updated };
-        const { gross, pl } = calculateGrossAndPL(merged.stake, merged.odd, merged.status, merged.type);
-        const safeUnit = settings.unitValue > 0 ? settings.unitValue : 25;
-        const finalBet: BetEntry = {
-          ...merged,
-          units: Number((finiteNumber(merged.stake, 0) / safeUnit).toFixed(2)),
-          gross,
-          pl
-        };
-        if (currentUser?.id) {
-          upsertBetToSupabase(finalBet, currentUser.id).catch(() => {});
-        }
-        return finalBet;
-      })
-    );
+    const existing = stateRef.current.bets.find((b) => b.id === id);
+    if (!existing) return;
+
+    const merged = { ...existing, ...updated };
+    const { gross, pl } = calculateGrossAndPL(merged.stake, merged.odd, merged.status, merged.type);
+    const safeUnit = settings.unitValue > 0 ? settings.unitValue : 25;
+    const finalBet: BetEntry = {
+      ...merged,
+      units: Number((finiteNumber(merged.stake, 0) / safeUnit).toFixed(2)),
+      gross,
+      pl
+    };
+
+    setBets((prev) => prev.map((bet) => (bet.id === id ? finalBet : bet)));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      updateBetInFirestore(finalBet, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao atualizar aposta na nuvem.');
+      });
+    }
   };
 
   const deleteBet = (id: string) => {
     setBets((prev) => prev.filter((bet) => bet.id !== id));
-    if (currentUser?.id) {
-      deleteBetFromSupabase(id, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      deleteBetInFirestore(id, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao excluir aposta na nuvem.');
+      });
     }
   };
 
   const resolveBet = (id: string, status: BetStatus) => {
-    setBets((prev) =>
-      prev.map((bet) => {
-        if (bet.id !== id) return bet;
-        const { gross, pl } = calculateGrossAndPL(bet.stake, bet.odd, status, bet.type);
-        const finalBet: BetEntry = {
-          ...bet,
-          status,
-          gross,
-          pl
-        };
-        if (currentUser?.id) {
-          upsertBetToSupabase(finalBet, currentUser.id).catch(() => {});
-        }
-        return finalBet;
-      })
-    );
+    const existing = stateRef.current.bets.find((b) => b.id === id);
+    if (!existing) return;
+
+    const { gross, pl } = calculateGrossAndPL(existing.stake, existing.odd, status, existing.type);
+    const finalBet: BetEntry = {
+      ...existing,
+      status,
+      gross,
+      pl
+    };
+
+    setBets((prev) => prev.map((bet) => (bet.id === id ? finalBet : bet)));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      updateBetInFirestore(finalBet, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao liquidar aposta na nuvem.');
+      });
+    }
   };
 
   const addTreasury = (tx: Omit<TreasuryEntry, 'id'>) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const entry: TreasuryEntry = {
       ...tx,
-      id: `TX-${randomSuffix}`,
+      id: `TX-${Date.now().toString(36)}-${randomSuffix}`,
       amount: finiteNumber(tx.amount, 0)
     };
     setTreasury((prev) => [entry, ...prev]);
-    if (currentUser?.id) {
-      upsertTreasuryToSupabase(entry, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      createTreasuryInFirestore(entry, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao salvar movimentação na nuvem.');
+      });
     }
   };
 
   const deleteTreasury = (id: string) => {
     setTreasury((prev) => prev.filter((tx) => tx.id !== id));
-    if (currentUser?.id) {
-      deleteTreasuryFromSupabase(id, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      deleteTreasuryInFirestore(id, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao excluir movimentação na nuvem.');
+      });
     }
   };
 
   const addFreebet = (fb: Omit<FreebetEntry, 'id'>) => {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const entry: FreebetEntry = { ...fb, id: `FB-${randomSuffix}` };
+    const entry: FreebetEntry = { ...fb, id: `FB-${Date.now().toString(36)}-${randomSuffix}` };
     setFreebets((prev) => [entry, ...prev]);
-    if (currentUser?.id) {
-      upsertFreebetToSupabase(entry, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      createFreebetInFirestore(entry, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao salvar freebet na nuvem.');
+      });
     }
   };
 
   const updateFreebetStatus = (id: string, status: FreebetEntry['status']) => {
-    setFreebets((prev) =>
-      prev.map((fb) => {
-        if (fb.id !== id) return fb;
-        const updated = { ...fb, status };
-        if (currentUser?.id) {
-          upsertFreebetToSupabase(updated, currentUser.id).catch(() => {});
-        }
-        return updated;
-      })
-    );
+    const existing = stateRef.current.freebets.find((fb) => fb.id === id);
+    if (!existing) return;
+
+    const updated = { ...existing, status };
+    setFreebets((prev) => prev.map((fb) => (fb.id === id ? updated : fb)));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      updateFreebetStatusInFirestore(id, status, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao atualizar freebet na nuvem.');
+      });
+    }
   };
 
   const deleteFreebet = (id: string) => {
     setFreebets((prev) => prev.filter((fb) => fb.id !== id));
-    if (currentUser?.id) {
-      deleteFreebetFromSupabase(id, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      deleteFreebetInFirestore(id, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao excluir freebet na nuvem.');
+      });
     }
   };
 
   const addFreeSpin = (spin: Omit<FreeSpinEntry, 'id'>) => {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const entry: FreeSpinEntry = { ...spin, id: `FS-${randomSuffix}` };
+    const entry: FreeSpinEntry = {
+      ...spin,
+      id: `FS-${Date.now().toString(36)}-${randomSuffix}`
+    };
     setFreeSpins((prev) => [entry, ...prev]);
-    if (currentUser?.id) {
-      upsertFreeSpinToSupabase(entry, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      createFreeSpinInFirestore(entry, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao salvar giro grátis na nuvem.');
+      });
     }
   };
 
   const deleteFreeSpin = (id: string) => {
     setFreeSpins((prev) => prev.filter((fs) => fs.id !== id));
-    if (currentUser?.id) {
-      deleteFreeSpinFromSupabase(id, currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      deleteFreeSpinInFirestore(id, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao excluir giro grátis na nuvem.');
+      });
     }
   };
 
   const updateSettings = (newSettings: Partial<AppSettings>) => {
-    setSettings((prev) => {
-      const merged = { ...prev, ...newSettings };
-      if (currentUser?.id) {
-        upsertSettingsToSupabase(merged, currentUser.id).catch(() => {});
-      }
-      return merged;
-    });
+    const merged = { ...stateRef.current.settings, ...newSettings };
+    setSettings(merged);
+    const fbUser = firebaseUserRef.current;
+    if (fbUser) {
+      updateUserProfileSettings(fbUser, merged).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao salvar ajustes na nuvem.');
+      });
+    }
   };
 
   const resetData = () => {
@@ -615,31 +1028,40 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     setTreasury([]);
     setFreebets([]);
     setFreeSpins([]);
-    if (currentUser?.id) {
-      clearAllSupabaseTables(currentUser.id).catch(() => {});
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      clearAllUserSubcollectionsInFirestore(uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao limpar dados na nuvem.');
+      });
     }
   };
 
   const loadDemoData = () => {
     const sanitizedDemoBets = demoBets.map((b) => ({
       ...b,
-      id: ensureValidUuid(b.id)
+      id: sanitizeFirestoreId(b.id)
     }));
     setBets(sanitizedDemoBets);
     setTreasury(demoTreasury);
     setFreebets(demoFreebets);
     setFreeSpins(demoFreeSpins);
-    if (currentUser?.id) {
-      pushAllStateToSupabase(
+    const fbUser = firebaseUserRef.current;
+    if (fbUser) {
+      pushAllStateToFirestore(
+        fbUser,
         {
           bets: sanitizedDemoBets,
           treasury: demoTreasury,
           freebets: demoFreebets,
           freeSpins: demoFreeSpins,
-          settings
+          settings: stateRef.current.settings
         },
-        currentUser.id
-      ).catch(() => {});
+        true
+      ).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao carregar exemplo na nuvem.');
+      });
     }
   };
 
@@ -652,14 +1074,20 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   }) => {
     const nextSettings =
       data.settings && typeof data.settings === 'object'
-        ? { ...settings, ...data.settings }
-        : settings;
+        ? { ...stateRef.current.settings, ...data.settings }
+        : stateRef.current.settings;
     const nextBets = Array.isArray(data.bets)
-      ? data.bets.map((b) => mapRowToBet(b, nextSettings.unitValue))
-      : bets;
-    const nextTreasury = Array.isArray(data.treasury) ? data.treasury : treasury;
-    const nextFreebets = Array.isArray(data.freebets) ? data.freebets : freebets;
-    const nextFreeSpins = Array.isArray(data.freeSpins) ? data.freeSpins : freeSpins;
+      ? data.bets.map((b) => normalizeBetEntry(b, nextSettings.unitValue))
+      : stateRef.current.bets;
+    const nextTreasury = Array.isArray(data.treasury)
+      ? data.treasury.map((t) => ({ ...t, id: sanitizeFirestoreId(t.id) }))
+      : stateRef.current.treasury;
+    const nextFreebets = Array.isArray(data.freebets)
+      ? data.freebets.map((f) => ({ ...f, id: sanitizeFirestoreId(f.id) }))
+      : stateRef.current.freebets;
+    const nextFreeSpins = Array.isArray(data.freeSpins)
+      ? data.freeSpins.map((s) => ({ ...s, id: sanitizeFirestoreId(s.id) }))
+      : stateRef.current.freeSpins;
 
     setBets(nextBets);
     setTreasury(nextTreasury);
@@ -667,8 +1095,10 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     setFreeSpins(nextFreeSpins);
     setSettings(nextSettings);
 
-    if (currentUser?.id) {
-      pushAllStateToSupabase(
+    const fbUser = firebaseUserRef.current;
+    if (fbUser) {
+      pushAllStateToFirestore(
+        fbUser,
         {
           bets: nextBets,
           treasury: nextTreasury,
@@ -676,8 +1106,11 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           freeSpins: nextFreeSpins,
           settings: nextSettings
         },
-        currentUser.id
-      ).catch(() => {});
+        true
+      ).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao importar backup para a nuvem.');
+      });
     }
   };
 
@@ -828,15 +1261,24 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   }, [bets, settings.initialBankroll]);
 
   const monthlyTargetAmount =
-    (finiteNumber(settings.initialBankroll, 1000) * finiteNumber(settings.monthlyTargetPct, 30)) / 100;
+    (finiteNumber(settings.initialBankroll, 1000) * finiteNumber(settings.monthlyTargetPct, 30)) /
+    100;
   const stopLossDistance =
-    (finiteNumber(settings.initialBankroll, 1000) * finiteNumber(settings.maxDrawdownLimitPct, 25)) / 100;
+    (finiteNumber(settings.initialBankroll, 1000) *
+      finiteNumber(settings.maxDrawdownLimitPct, 25)) /
+    100;
 
   return (
     <BankrollContext.Provider
       value={{
         currentUser,
         authLoading,
+        isCloudAuthenticated,
+        cloudSyncStatus,
+        cloudSyncError,
+        lastSyncedAt,
+        signInWithGoogle,
+        uploadLocalToCloud,
         signIn,
         signUp,
         resetPassword,

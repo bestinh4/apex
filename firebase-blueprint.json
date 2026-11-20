@@ -1,0 +1,373 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user profile and bankroll configuration settings.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the owner.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address.",
+          "maxLength": 256
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name.",
+          "maxLength": 120
+        },
+        "initialBankroll": {
+          "type": "number",
+          "description": "Starting reference bankroll in BRL."
+        },
+        "unitValue": {
+          "type": "number",
+          "description": "Base value of 1.0 unit stake in BRL."
+        },
+        "kellyFraction": {
+          "type": "string",
+          "description": "Kelly criterion strategy label.",
+          "maxLength": 120
+        },
+        "maxDrawdownLimitPct": {
+          "type": "number",
+          "description": "Maximum drawdown threshold percentage."
+        },
+        "monthlyTargetPct": {
+          "type": "number",
+          "description": "Monthly bankroll growth target percentage."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp."
+        }
+      },
+      "required": [
+        "uid",
+        "email",
+        "name",
+        "initialBankroll",
+        "unitValue",
+        "kellyFraction",
+        "maxDrawdownLimitPct",
+        "monthlyTargetPct",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BetEntry": {
+      "title": "BetEntry",
+      "description": "Individual sports bet record belonging to a user.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted display date.",
+          "maxLength": 40
+        },
+        "sport": {
+          "type": "string",
+          "description": "Sport name.",
+          "maxLength": 80
+        },
+        "event": {
+          "type": "string",
+          "description": "Match or event description.",
+          "maxLength": 200
+        },
+        "market": {
+          "type": "string",
+          "description": "Selected market and line.",
+          "maxLength": 200
+        },
+        "odd": {
+          "type": "number",
+          "description": "Decimal odd."
+        },
+        "stake": {
+          "type": "number",
+          "description": "Wagered stake in BRL."
+        },
+        "units": {
+          "type": "number",
+          "description": "Stake expressed in units."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["Saldo Real", "Freebet", "Bônus Rollover"],
+          "description": "Fund type used for the bet."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["GREEN", "RED", "HALF_GREEN", "HALF_RED", "VOID", "CASHOUT", "PENDENTE"],
+          "description": "Settlement status of the bet."
+        },
+        "gross": {
+          "type": "number",
+          "description": "Gross return amount."
+        },
+        "pl": {
+          "type": "number",
+          "description": "Net profit or loss."
+        },
+        "bookmaker": {
+          "type": "string",
+          "description": "Bookmaker name.",
+          "maxLength": 80
+        },
+        "closingOdd": {
+          "type": "number",
+          "description": "Optional closing odd."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "date",
+        "sport",
+        "event",
+        "market",
+        "odd",
+        "stake",
+        "units",
+        "type",
+        "status",
+        "gross",
+        "pl",
+        "bookmaker",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TreasuryEntry": {
+      "title": "TreasuryEntry",
+      "description": "Deposit, withdrawal, or bonus cashflow entry.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted date string.",
+          "maxLength": 40
+        },
+        "type": {
+          "type": "string",
+          "enum": ["DEPOSIT", "WITHDRAW", "BONUS"],
+          "description": "Transaction type."
+        },
+        "desc": {
+          "type": "string",
+          "description": "Description of transaction.",
+          "maxLength": 200
+        },
+        "details": {
+          "type": "string",
+          "description": "Optional additional details.",
+          "maxLength": 300
+        },
+        "amount": {
+          "type": "number",
+          "description": "Transaction amount in BRL."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Compensado", "Pendente", "Processando"],
+          "description": "Settlement status."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": ["userId", "date", "type", "desc", "amount", "status", "createdAt"]
+    },
+    "FreebetEntry": {
+      "title": "FreebetEntry",
+      "description": "Promotional freebet record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "bookmaker": {
+          "type": "string",
+          "description": "Bookmaker name.",
+          "maxLength": 80
+        },
+        "event": {
+          "type": "string",
+          "description": "Event description.",
+          "maxLength": 200
+        },
+        "selection": {
+          "type": "string",
+          "description": "Bet selection.",
+          "maxLength": 200
+        },
+        "bonusAmount": {
+          "type": "number",
+          "description": "Freebet nominal amount."
+        },
+        "odd": {
+          "type": "number",
+          "description": "Decimal odd."
+        },
+        "netReturn": {
+          "type": "number",
+          "description": "Net return excluding stake."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Ao Vivo", "Creditado", "Pendente", "Expirado"],
+          "description": "Freebet status."
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted date string.",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "bookmaker",
+        "event",
+        "selection",
+        "bonusAmount",
+        "odd",
+        "netReturn",
+        "status",
+        "date",
+        "createdAt"
+      ]
+    },
+    "FreeSpinEntry": {
+      "title": "FreeSpinEntry",
+      "description": "Promotional free spin profit record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "provider": {
+          "type": "string",
+          "description": "Slot provider name.",
+          "maxLength": 100
+        },
+        "game": {
+          "type": "string",
+          "description": "Slot game title.",
+          "maxLength": 150
+        },
+        "bookmaker": {
+          "type": "string",
+          "description": "Bookmaker name.",
+          "maxLength": 80
+        },
+        "spinsCount": {
+          "type": "number",
+          "description": "Number of spins."
+        },
+        "netProfit": {
+          "type": "number",
+          "description": "Net profit in BRL."
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted date string.",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "provider",
+        "game",
+        "bookmaker",
+        "spinsCount",
+        "netProfit",
+        "date",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Per-user bankroll profile and settings document (private PII isolated to owner)."
+    },
+    "/users/{userId}/bets/{betId}": {
+      "schema": {
+        "$ref": "#/entities/BetEntry"
+      },
+      "description": "Sports bets belonging strictly to userId."
+    },
+    "/users/{userId}/treasury/{entryId}": {
+      "schema": {
+        "$ref": "#/entities/TreasuryEntry"
+      },
+      "description": "Cashflow deposits, withdrawals, and bonuses belonging strictly to userId."
+    },
+    "/users/{userId}/freebets/{freebetId}": {
+      "schema": {
+        "$ref": "#/entities/FreebetEntry"
+      },
+      "description": "Promotional freebets belonging strictly to userId."
+    },
+    "/users/{userId}/free_spins/{spinId}": {
+      "schema": {
+        "$ref": "#/entities/FreeSpinEntry"
+      },
+      "description": "Promotional free spin profits belonging strictly to userId."
+    }
+  }
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 48" width="220" height="48">
+  <!-- Up Arrow -->
+  <path d="M23 7L10 21h7v14h12V21h7L23 7z" fill="#111111"/>
+  <!-- Down Arrow -->
+  <path d="M45 41l13-14h-7V13H39v14h-7l13 14z" fill="#111111"/>
+  <!-- betfair wordmark -->
+  <text x="66" y="34" font-family="Arial, Helvetica, sans-serif" font-weight="900" font-size="30" letter-spacing="-0.8" fill="#111111">betfair</text>
+</svg>

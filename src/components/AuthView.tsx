@@ -9,7 +9,7 @@ interface AuthViewProps {
 type AuthMode = 'LOGIN' | 'REGISTER' | 'RESET';
 
 export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
-  const { signIn, signUp, resetPassword } = useBankroll();
+  const { signIn, signUp, resetPassword, signInWithGoogle } = useBankroll();
   const [mode, setMode] = useState<AuthMode>('LOGIN');
   const [name, setName] = useState('Diogo');
   const [email, setEmail] = useState('diiogo49@gmail.com');
@@ -18,8 +18,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
 
-  const translateAuthError = (msg: string): string => {
-    return msg;
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setErrorMsg(null);
+    const res = await signInWithGoogle();
+    setLoading(false);
+    if (res.success) {
+      onSuccessToast?.('Conectado com Google! Sincronização PC ↔ Celular ativada.');
+    } else if (res.error) {
+      setErrorMsg(res.error);
+    }
   };
 
   const handleInstantAccess = async () => {
@@ -93,20 +101,31 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
               Apex Bankroll
             </h1>
             <p className="text-xs text-slate-400 mt-1">
-              Gestão individual de banca esportiva com dados 100% isolados por conta
+              Gestão individual de banca esportiva com sincronização PC ↔ Celular
             </p>
           </div>
         </div>
 
-        {/* 1-Click Instant Access Button */}
+        {/* Google Cloud Sync Button */}
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loading}
+          className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 active:scale-98"
+        >
+          <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
+          <span>Conectar com Google (Sincronizar Nuvem)</span>
+        </button>
+
+        {/* 1-Click Instant Local Access Button */}
         <button
           type="button"
           onClick={handleInstantAccess}
           disabled={loading}
-          className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2 active:scale-98"
+          className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-98"
         >
-          <span className="material-symbols-outlined text-[20px]">bolt</span>
-          <span>Acessar Minha Banca Agora (1 Clique)</span>
+          <span className="material-symbols-outlined text-[18px]">bolt</span>
+          <span>Acesso Local Instantâneo</span>
         </button>
 
         <div className="flex items-center gap-3 text-slate-500 text-xs my-0.5">

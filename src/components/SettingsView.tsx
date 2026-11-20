@@ -2,13 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { usePWAInstall } from '../hooks/usePWAInstall';
-import {
-  isSupabaseConfigured,
-  SUPABASE_PROJECT_REF,
-  SUPABASE_REGION,
-  SUPABASE_SQL_SCHEMA
-} from '../lib/supabase';
-import { localResetPassword } from '../lib/localAuth';
 
 interface SettingsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -21,6 +14,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 }) => {
   const {
     currentUser,
+    isCloudAuthenticated,
+    cloudSyncStatus,
+    cloudSyncError,
+    lastSyncedAt,
+    signInWithGoogle,
+    uploadLocalToCloud,
     signOut,
     bets,
     treasury,
@@ -38,8 +37,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [initialBankroll, setInitialBankroll] = useState(settings.initialBankroll.toString());
   const [unitValue, setUnitValue] = useState(settings.unitValue.toString());
   const [confirmClear, setConfirmClear] = useState(false);
-  const [showSqlModal, setShowSqlModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -73,49 +72,41 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     setUnitValue(calculated);
   };
 
-  const [newPasswordInput, setNewPasswordInput] = useState('');
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!currentUser?.email) return;
-    if (newPasswordInput.trim().length < 6) {
-      onSuccessToast?.('A nova senha deve ter no mínimo 6 caracteres.');
-      return;
-    }
-    const res = await localResetPassword(currentUser.email, newPasswordInput.trim());
+  const handleConnectGoogle = async () => {
+    setIsConnectingGoogle(true);
+    const res = await signInWithGoogle();
+    setIsConnectingGoogle(false);
     if (res.success) {
-      onSuccessToast?.('Senha da sua conta alterada com sucesso!');
-      setNewPasswordInput('');
-      setShowPasswordChange(false);
-    } else {
-      onSuccessToast?.(res.error || 'Erro ao alterar senha.');
+      onSuccessToast?.('Conta Google conectada! Sincronização PC ↔ Celular ativada.');
+    } else if (res.error) {
+      onSuccessToast?.(res.error);
     }
   };
 
   const handleManualSync = async () => {
-    if (!isSupabaseConfigured) {
-      onSuccessToast?.('Modo Local Seguro ativo. Seus dados estão 100% salvos e isolados neste dispositivo.');
+    if (!isCloudAuthenticated) {
+      await handleConnectGoogle();
       return;
     }
     setIsSyncing(true);
     const ok = await syncNow();
     setIsSyncing(false);
     if (ok) {
-      onSuccessToast?.('Seus dados foram sincronizados com a nuvem!');
+      onSuccessToast?.('Dados sincronizados em tempo real com a nuvem!');
     } else {
-      setShowSqlModal(true);
-      onSuccessToast?.('Falha ao conectar com o Supabase. Seus dados continuam seguros localmente.');
+      onSuccessToast?.('Não foi possível sincronizar agora. Verifique sua conexão.');
     }
   };
 
-  const handleCopySql = async () => {
-    try {
-      await navigator.clipboard.writeText(SUPABASE_SQL_SCHEMA);
-      onSuccessToast?.('Script SQL copiado para a área de transferência!');
-    } catch {
-      onSuccessToast?.('Selecione e copie o script SQL abaixo.');
-      setShowSqlModal(true);
+  const handlePushLocalBackupToCloud = async () => {
+    if (!isCloudAuthenticated) return;
+    setIsSyncing(true);
+    const ok = await uploadLocalToCloud();
+    setIsSyncing(false);
+    if (ok) {
+      onSuccessToast?.('Registros locais enviados e mesclados na sua conta Google!');
+    } else {
+      onSuccessToast?.('Erro ao enviar registros locais para a nuvem.');
     }
   };
 
@@ -179,83 +170,149 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {currentUser && (
           <div className="flex items-center justify-between sm:justify-end gap-3 bg-[#080c14] border border-white/[0.07] rounded-xl px-3.5 py-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                {currentUser.name.slice(0, 2)}
-              </div>
+              {currentUser.photoURL ? (
+                <img
+                  src={currentUser.photoURL}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                  {currentUser.name.slice(0, 2)}
+                </div>
+              )}
               <div className="min-w-0">
-                <div className="text-xs font-semibold text-white truncate">
-                  {currentUser.name}
+                <div className="text-xs font-semibold text-white truncate flex items-center gap-1.5">
+                  <span className="truncate">{currentUser.name}</span>
+                  {isCloudAuthenticated && (
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 text-[10px] font-semibold">
+                      Google Nuvem
+                    </span>
+                  )}
                 </div>
                 <div className="text-[11px] text-slate-400 truncate font-mono">
-                  {currentUser.email}
+                  {isCloudAuthenticated ? currentUser.email : 'Modo Local (apenas este aparelho)'}
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setShowPasswordChange((v) => !v)}
-                title="Alterar Senha da Conta"
-                className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[15px]">key</span>
-                <span className="hidden md:inline">Senha</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={signOut}
-                className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 text-xs font-semibold flex items-center gap-1 transition-colors"
-              >
-                <span className="material-symbols-outlined text-[15px]">logout</span>
-                <span>Sair</span>
-              </button>
+              {isCloudAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-400 text-xs font-semibold flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">logout</span>
+                  <span>Desconectar</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConnectGoogle}
+                  disabled={isConnectingGoogle}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[15px]">cloud_sync</span>
+                  <span>{isConnectingGoogle ? 'Conectando...' : 'Conectar Google'}</span>
+                </button>
+              )}
             </div>
           </div>
         )}
       </div>
 
-      {showPasswordChange && currentUser && (
-        <form
-          onSubmit={handleChangePassword}
-          className="bg-[#0e1422]/95 border border-blue-500/30 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-end gap-3 animate-in fade-in duration-150"
-        >
-          <div className="flex-1 flex flex-col gap-1">
-            <label className="text-xs font-semibold text-slate-300">
-              Nova Senha para {currentUser.email}
-            </label>
-            <input
-              type="password"
-              placeholder="Mínimo 6 caracteres"
-              value={newPasswordInput}
-              onChange={(e) => setNewPasswordInput(e.target.value)}
-              className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
-              required
-              minLength={6}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="submit"
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold transition-colors flex items-center gap-1"
+      {/* Firebase Real-time Cloud Sync (PC <-> Mobile) */}
+      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${
+                isCloudAuthenticated
+                  ? cloudSyncStatus === 'error'
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+                    : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+              }`}
             >
-              <span className="material-symbols-outlined text-[15px]">check</span>
-              <span>Salvar Nova Senha</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setShowPasswordChange(false);
-                setNewPasswordInput('');
-              }}
-              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs transition-colors"
-            >
-              Cancelar
-            </button>
+              <span className="material-symbols-outlined text-[22px]">
+                {isCloudAuthenticated
+                  ? cloudSyncStatus === 'error'
+                    ? 'cloud_off'
+                    : 'cloud_done'
+                  : 'devices'}
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
+                Sincronização em Tempo Real (PC ↔ Celular)
+              </h3>
+              {isCloudAuthenticated ? (
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Conectado como{' '}
+                  <span className="text-emerald-300 font-medium">{currentUser?.email}</span>. Toda
+                  aposta, depósito ou ajuste feito no PC aparece instantaneamente no celular e
+                  vice-versa.
+                  {lastSyncedAt && (
+                    <span className="text-slate-500 ml-1.5 font-mono">
+                      (Atualizado às {lastSyncedAt.toLocaleTimeString('pt-BR')})
+                    </span>
+                  )}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Atualmente seus dados ficam salvos apenas no navegador deste aparelho. Conecte a{' '}
+                  <strong className="text-slate-200">mesma conta Google</strong> no computador e no
+                  celular para sincronizar automaticamente na nuvem.
+                </p>
+              )}
+              {cloudSyncError && (
+                <p className="text-xs text-rose-400 mt-1.5">{cloudSyncError}</p>
+              )}
+            </div>
           </div>
-        </form>
-      )}
+
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {isCloudAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={handleManualSync}
+                  disabled={isSyncing}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">sync</span>
+                  <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePushLocalBackupToCloud}
+                  disabled={isSyncing}
+                  className="px-3.5 py-2 bg-[#080c14] hover:bg-slate-800 border border-white/[0.08] text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-blue-400">
+                    cloud_upload
+                  </span>
+                  <span>Enviar Dados Locais</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={handleConnectGoogle}
+                disabled={isConnectingGoogle}
+                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-md shadow-blue-600/20"
+              >
+                <span className="material-symbols-outlined text-[17px]">cloud_sync</span>
+                <span>
+                  {isConnectingGoogle ? 'Conectando Google...' : 'Conectar Conta Google'}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Main Settings Form */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm">
@@ -334,69 +391,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </button>
           </div>
         </form>
-      </div>
-
-      {/* Supabase Cloud Database Integration */}
-      <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col gap-4">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
-          <div>
-            <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
-              Sincronização & Isolamento na Nuvem (Supabase)
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Projeto <span className="font-mono text-slate-200">{SUPABASE_PROJECT_REF}</span> ({SUPABASE_REGION}) · Cada usuário acessa apenas seus próprios registros
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleManualSync}
-              disabled={isSyncing}
-              className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">sync</span>
-              <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopySql}
-              className="px-3.5 py-2 bg-[#080c14] hover:bg-slate-800 border border-white/[0.08] text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px] text-blue-400">content_copy</span>
-              <span>Copiar SQL Multi-Usuário</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setShowSqlModal((v) => !v)}
-              className="px-3 py-2 bg-[#080c14] hover:bg-slate-800 border border-white/[0.08] text-slate-300 rounded-xl text-xs font-semibold transition-colors"
-            >
-              {showSqlModal ? 'Ocultar SQL' : 'Ver SQL'}
-            </button>
-          </div>
-        </div>
-
-        {showSqlModal && (
-          <div className="bg-[#080c14] border border-white/[0.08] rounded-xl p-3.5 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-300">
-                Script SQL com Políticas RLS (Row Level Security) por usuário ({SUPABASE_PROJECT_REF}):
-              </span>
-              <button
-                type="button"
-                onClick={handleCopySql}
-                className="text-[11px] text-blue-400 hover:text-blue-300 font-semibold"
-              >
-                Copiar Tudo
-              </button>
-            </div>
-            <pre className="text-[11px] font-mono text-slate-300 overflow-x-auto max-h-64 p-2 bg-[#05080f] rounded-lg border border-white/[0.05] select-all">
-              {SUPABASE_SQL_SCHEMA}
-            </pre>
-          </div>
-        )}
       </div>
 
       {/* Native App Installation Card (PWA) - only displayed when not yet installed */}

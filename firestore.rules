@@ -1,0 +1,240 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny all reads and writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function hasParentUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // Validation helpers
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll([
+        'uid', 'email', 'name', 'initialBankroll', 'unitValue',
+        'kellyFraction', 'maxDrawdownLimitPct', 'monthlyTargetPct',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'email', 'name', 'initialBankroll', 'unitValue',
+        'kellyFraction', 'maxDrawdownLimitPct', 'monthlyTargetPct',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.uid is string && data.uid == userId && data.uid.size() <= 128 &&
+      data.email is string && data.email.size() <= 256 &&
+      data.name is string && data.name.size() <= 120 &&
+      (data.initialBankroll is int || data.initialBankroll is float) && data.initialBankroll >= 0 &&
+      (data.unitValue is int || data.unitValue is float) && data.unitValue > 0 &&
+      data.kellyFraction is string && data.kellyFraction.size() <= 120 &&
+      (data.maxDrawdownLimitPct is int || data.maxDrawdownLimitPct is float) && data.maxDrawdownLimitPct >= 0 &&
+      (data.monthlyTargetPct is int || data.monthlyTargetPct is float) && data.monthlyTargetPct >= 0 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidBet(data, userId) {
+      return data.keys().hasAll([
+        'userId', 'date', 'sport', 'event', 'market', 'odd', 'stake',
+        'units', 'type', 'status', 'gross', 'pl', 'bookmaker',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'date', 'sport', 'event', 'market', 'odd', 'stake',
+        'units', 'type', 'status', 'gross', 'pl', 'bookmaker',
+        'closingOdd', 'createdAt', 'updatedAt'
+      ]) &&
+      data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+      data.date is string && data.date.size() <= 40 &&
+      data.sport is string && data.sport.size() <= 80 &&
+      data.event is string && data.event.size() <= 200 &&
+      data.market is string && data.market.size() <= 200 &&
+      (data.odd is int || data.odd is float) && data.odd >= 1 &&
+      (data.stake is int || data.stake is float) && data.stake >= 0 &&
+      (data.units is int || data.units is float) && data.units >= 0 &&
+      data.type in ['Saldo Real', 'Freebet', 'Bônus Rollover'] &&
+      data.status in ['GREEN', 'RED', 'HALF_GREEN', 'HALF_RED', 'VOID', 'CASHOUT', 'PENDENTE'] &&
+      (data.gross is int || data.gross is float) &&
+      (data.pl is int || data.pl is float) &&
+      data.bookmaker is string && data.bookmaker.size() <= 80 &&
+      (!('closingOdd' in data) || ((data.closingOdd is int || data.closingOdd is float) && data.closingOdd >= 1)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidTreasury(data, userId) {
+      return data.keys().hasAll(['userId', 'date', 'type', 'desc', 'amount', 'status', 'createdAt']) &&
+      data.keys().hasOnly(['userId', 'date', 'type', 'desc', 'details', 'amount', 'status', 'createdAt']) &&
+      data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+      data.date is string && data.date.size() <= 40 &&
+      data.type in ['DEPOSIT', 'WITHDRAW', 'BONUS'] &&
+      data.desc is string && data.desc.size() <= 200 &&
+      (!('details' in data) || (data.details is string && data.details.size() <= 300)) &&
+      (data.amount is int || data.amount is float) && data.amount >= 0 &&
+      data.status in ['Compensado', 'Pendente', 'Processando'] &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidFreebet(data, userId) {
+      return data.keys().hasAll([
+        'userId', 'bookmaker', 'event', 'selection', 'bonusAmount',
+        'odd', 'netReturn', 'status', 'date', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'bookmaker', 'event', 'selection', 'bonusAmount',
+        'odd', 'netReturn', 'status', 'date', 'createdAt'
+      ]) &&
+      data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+      data.bookmaker is string && data.bookmaker.size() <= 80 &&
+      data.event is string && data.event.size() <= 200 &&
+      data.selection is string && data.selection.size() <= 200 &&
+      (data.bonusAmount is int || data.bonusAmount is float) && data.bonusAmount >= 0 &&
+      (data.odd is int || data.odd is float) && data.odd >= 1 &&
+      (data.netReturn is int || data.netReturn is float) &&
+      data.status in ['Ao Vivo', 'Creditado', 'Pendente', 'Expirado'] &&
+      data.date is string && data.date.size() <= 40 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidFreeSpin(data, userId) {
+      return data.keys().hasAll([
+        'userId', 'provider', 'game', 'bookmaker', 'spinsCount',
+        'netProfit', 'date', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'provider', 'game', 'bookmaker', 'spinsCount',
+        'netProfit', 'date', 'createdAt'
+      ]) &&
+      data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+      data.provider is string && data.provider.size() <= 100 &&
+      data.game is string && data.game.size() <= 150 &&
+      data.bookmaker is string && data.bookmaker.size() <= 80 &&
+      (data.spinsCount is int || data.spinsCount is float) && data.spinsCount >= 0 &&
+      (data.netProfit is int || data.netProfit is float) &&
+      data.date is string && data.date.size() <= 40 &&
+      data.createdAt is timestamp;
+    }
+
+    // User profile & settings (strictly isolated to owner)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow create: if isValidId(userId) &&
+        isVerifiedOwner(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) &&
+        isVerifiedOwner(userId) &&
+        isValidUserProfile(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'email', 'initialBankroll', 'unitValue',
+          'kellyFraction', 'maxDrawdownLimitPct', 'monthlyTargetPct', 'updatedAt'
+        ]);
+      allow delete: if false;
+
+      // Bets subcollection
+      match /bets/{betId} {
+        allow get: if isValidId(userId) && isValidId(betId) && isOwner(userId) && hasParentUser(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(betId) &&
+          isVerifiedOwner(userId) &&
+          isValidBet(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(userId) && isValidId(betId) &&
+          isVerifiedOwner(userId) &&
+          isValidBet(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'date', 'sport', 'event', 'market', 'odd', 'stake',
+            'units', 'type', 'status', 'gross', 'pl', 'bookmaker',
+            'closingOdd', 'updatedAt'
+          ]);
+        allow delete: if isValidId(userId) && isValidId(betId) && isVerifiedOwner(userId) && hasParentUser(userId);
+      }
+
+      // Treasury subcollection
+      match /treasury/{entryId} {
+        allow get: if isValidId(userId) && isValidId(entryId) && isOwner(userId) && hasParentUser(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(entryId) &&
+          isVerifiedOwner(userId) &&
+          isValidTreasury(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(entryId) && isVerifiedOwner(userId) && hasParentUser(userId);
+      }
+
+      // Freebets subcollection
+      match /freebets/{freebetId} {
+        allow get: if isValidId(userId) && isValidId(freebetId) && isOwner(userId) && hasParentUser(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(freebetId) &&
+          isVerifiedOwner(userId) &&
+          isValidFreebet(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().createdAt == request.time;
+        allow update: if isValidId(userId) && isValidId(freebetId) &&
+          isVerifiedOwner(userId) &&
+          isValidFreebet(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+        allow delete: if isValidId(userId) && isValidId(freebetId) && isVerifiedOwner(userId) && hasParentUser(userId);
+      }
+
+      // Free Spins subcollection
+      match /free_spins/{spinId} {
+        allow get: if isValidId(userId) && isValidId(spinId) && isOwner(userId) && hasParentUser(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(spinId) &&
+          isVerifiedOwner(userId) &&
+          isValidFreeSpin(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(spinId) && isVerifiedOwner(userId) && hasParentUser(userId);
+      }
+    }
+  }
+}

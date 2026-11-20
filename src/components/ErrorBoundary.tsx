@@ -1,54 +1,66 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 
-interface Props {
+interface ErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface State {
+interface ErrorBoundaryState {
   hasError: boolean;
-  error: Error | null;
+  errorMessage: string;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
-  public state: State = {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
     hasError: false,
-    error: null
+    errorMessage: ''
   };
 
-  public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return {
+      hasError: true,
+      errorMessage: error?.message || 'Erro inesperado ao sincronizar dados.'
+    };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary capturou erro:', error, errorInfo);
+    console.error('Apex Bankroll ErrorBoundary:', error, errorInfo);
   }
 
-  private handleReset = () => {
-    try {
-      localStorage.removeItem('apex_current_session_v1');
-      sessionStorage.clear();
-    } catch {}
+  private handleReload = () => {
+    this.setState({ hasError: false, errorMessage: '' });
     window.location.reload();
   };
 
   public render() {
     if (this.state.hasError) {
+      let friendlyMessage = 'Ocorreu um erro inesperado na aplicação.';
+      try {
+        const parsed = JSON.parse(this.state.errorMessage);
+        if (parsed?.error) {
+          friendlyMessage = `Erro de sincronização (${parsed.operationType || 'leitura'}): ${parsed.error}`;
+        }
+      } catch {
+        if (this.state.errorMessage) {
+          friendlyMessage = this.state.errorMessage;
+        }
+      }
+
       return (
-        <div className="min-h-screen bg-[#080c14] text-[#e2e8f0] flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mb-4">
-            <span className="material-symbols-outlined text-[32px]">warning</span>
-          </div>
-          <h1 className="text-xl font-bold text-white mb-2">Apex Bankroll - Recuperação Automática</h1>
-          <p className="text-sm text-slate-400 max-w-md mb-6">
-            Ocorreu um imprevisto na renderização. Clique abaixo para reiniciar a interface limpa instantaneamente.
-          </p>
-          <div className="flex gap-3">
+        <div className="min-h-screen bg-[#080c14] text-slate-200 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[#0e1422] border border-rose-500/30 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+              <span className="material-symbols-outlined text-[26px]">warning</span>
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Algo deu errado na sincronização</h2>
+              <p className="text-xs text-slate-400 mt-1.5 break-words">{friendlyMessage}</p>
+            </div>
             <button
-              onClick={this.handleReset}
-              className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl transition-all shadow-lg shadow-blue-600/25 flex items-center gap-2"
+              type="button"
+              onClick={this.handleReload}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">refresh</span>
-              Reiniciar Aplicativo
+              Recarregar Aplicativo
             </button>
           </div>
         </div>
