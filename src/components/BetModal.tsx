@@ -13,7 +13,8 @@ import {
   looksLikeBetLinkInput,
   matchFootballCatalogMarket,
   parseBetLink,
-  ParsedBetLinkResult
+  ParsedBetLinkResult,
+  POPULAR_COMPETITION_PRESETS
 } from '../lib/betLinkParser';
 
 interface BetModalProps {
@@ -679,14 +680,44 @@ export const BetModal: React.FC<BetModalProps> = ({
 
             {/* Partida / Evento */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-slate-400">
-                Evento / Partida
-              </label>
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-[11px] font-semibold text-slate-400">
+                  Evento / Partida
+                </label>
+                <select
+                  aria-label="Adicionar competição e bandeira"
+                  value=""
+                  onChange={(e) => {
+                    const comp = e.target.value;
+                    if (!comp) return;
+                    const trimmed = event.trim();
+                    if (!trimmed) {
+                      setEvent(`${comp} `);
+                    } else if (!trimmed.startsWith(comp)) {
+                      setEvent(`${comp} ${trimmed}`);
+                    }
+                  }}
+                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 max-w-[175px]"
+                >
+                  <option value="" className="bg-[#0e1422] text-slate-400">
+                    + Competição / Bandeira
+                  </option>
+                  {POPULAR_COMPETITION_PRESETS.map((preset) => (
+                    <option
+                      key={preset.value}
+                      value={preset.value}
+                      className="bg-[#0e1422] text-white"
+                    >
+                      {preset.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <input
                 type="text"
                 value={event}
                 onChange={(e) => setEvent(e.target.value)}
-                placeholder="Ex: Real Madrid vs Manchester City"
+                placeholder="Ex: Liga Jupiler 🇧🇪 - 16:45 Mechelen x Club Brugge"
                 className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 transition-colors"
               />
             </div>

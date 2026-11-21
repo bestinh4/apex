@@ -186,6 +186,114 @@ function humanizeSlug(slug?: string): string | undefined {
     .trim();
 }
 
+const SERVER_CATEGORY_FLAGS: Record<string, string> = {
+  belgium: '🇧🇪',
+  brazil: '🇧🇷',
+  england: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  spain: '🇪🇸',
+  italy: '🇮🇹',
+  germany: '🇩🇪',
+  austria: '🇦🇹',
+  france: '🇫🇷',
+  portugal: '🇵🇹',
+  netherlands: '🇳🇱',
+  russia: '🇷🇺',
+  turkey: '🇹🇷',
+  argentina: '🇦🇷',
+  usa: '🇺🇸',
+  mexico: '🇲🇽',
+  scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  switzerland: '🇨🇭',
+  greece: '🇬🇷',
+  poland: '🇵🇱',
+  denmark: '🇩🇰',
+  sweden: '🇸🇪',
+  norway: '🇳🇴',
+  ukraine: '🇺🇦',
+  croatia: '🇭🇷',
+  serbia: '🇷🇸',
+  'czech-republic': '🇨🇿',
+  colombia: '🇨🇴',
+  chile: '🇨🇱',
+  uruguay: '🇺🇾',
+  paraguay: '🇵🇾',
+  ecuador: '🇪🇨',
+  peru: '🇵🇪',
+  japan: '🇯🇵',
+  'south-korea': '🇰🇷',
+  'saudi-arabia': '🇸🇦',
+  china: '🇨🇳',
+  australia: '🇦🇺',
+  europe: '🇪🇺',
+  'south-america': '🌎',
+  international: '🌍',
+  world: '🌍'
+};
+
+function get1winCountryFlag(categorySlug?: string, tournamentSlug?: string): string {
+  const cat = (categorySlug || '').toLowerCase().trim();
+  if (cat && SERVER_CATEGORY_FLAGS[cat]) return SERVER_CATEGORY_FLAGS[cat];
+  const tour = (tournamentSlug || '').toLowerCase();
+  if (tour.includes('champions') || tour.includes('europa') || tour.includes('conference')) return '🇪🇺';
+  if (tour.includes('libertadores') || tour.includes('sudamericana')) return '🌎';
+  if (tour.includes('jupiler')) return '🇧🇪';
+  if (tour.includes('premier-league')) return '🏴󠁧󠁢󠁥󠁮󠁧󠁿';
+  if (tour.includes('laliga')) return '🇪🇸';
+  if (tour.includes('bundesliga')) return '🇩🇪';
+  if (tour.includes('serie-a') && !tour.includes('brazil')) return '🇮🇹';
+  if (tour.includes('ligue-1')) return '🇫🇷';
+  if (tour.includes('eredivisie')) return '🇳🇱';
+  if (tour.includes('brasileir') || tour.includes('copa-do-brasil')) return '🇧🇷';
+  return '';
+}
+
+function format1winTournamentHeader(match?: {
+  category?: { slug?: string };
+  tournament?: { slug?: string };
+  serviceV2?: string;
+  startAt?: number;
+}): { tournamentLabel?: string; prefix: string } {
+  if (!match) return { prefix: '' };
+  const flag = get1winCountryFlag(match.category?.slug, match.tournament?.slug);
+  const name = humanizeSlug(match.tournament?.slug);
+  const isLive = match.serviceV2 === 'live';
+
+  let timeStr = '';
+  if (!isLive && match.startAt) {
+    try {
+      const ms = match.startAt > 1e12 ? match.startAt : match.startAt * 1000;
+      const d = new Date(ms);
+      if (!Number.isNaN(d.getTime())) {
+        timeStr = new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false
+        }).format(d);
+      }
+    } catch {
+      // ignore timezone formatting issues
+    }
+  }
+
+  const base = isLive
+    ? [name || 'Live', flag].filter(Boolean).join(' ')
+    : [name, flag].filter(Boolean).join(' ');
+
+  if (!base && !isLive) return { prefix: '' };
+
+  const prefix = isLive
+    ? name
+      ? `Live ${flag ? `${flag} ` : ''}${name}`.trim()
+      : `Live${flag ? ` ${flag}` : ''}`
+    : `${base}${timeStr ? ` - ${timeStr}` : ''}`.trim();
+
+  return {
+    tournamentLabel: base || undefined,
+    prefix
+  };
+}
+
 function extractUrlFromText(raw: string): string | null {
   const match = raw.match(/https?:\/\/[^\s<>"'`]+/i);
   return match ? match[0].replace(/[),.;!?]+$/, '') : null;
@@ -519,6 +627,7 @@ async function resolve1winSharedBet(
             awayTeam?: { name?: string };
             competitors?: Array<{ name?: string; position?: number }>;
             sport?: { slug?: string; tag?: string; isEsport?: boolean };
+            category?: { slug?: string };
             tournament?: { slug?: string };
             serviceV2?: string;
             startAt?: number;
@@ -540,6 +649,7 @@ async function resolve1winSharedBet(
         awayTeam?: { name?: string };
         competitors?: Array<{ name?: string; position?: number }>;
         sport?: { slug?: string; tag?: string; isEsport?: boolean };
+        category?: { slug?: string };
         tournament?: { slug?: string };
         serviceV2?: string;
         startAt?: number;
@@ -580,16 +690,19 @@ async function resolve1winSharedBet(
 
     const home = match?.homeTeam?.name || match?.competitors?.[0]?.name;
     const away = match?.awayTeam?.name || match?.competitors?.[1]?.name;
-    const eventLabel =
+    const matchupLabel =
       home && away
         ? `${home} vs ${away}`
         : (match?.name || `Partida #${coupon.matchId}`).replace(/\s+-\s+/, ' vs ');
 
+    const { tournamentLabel, prefix } = format1winTournamentHeader(match);
+    const fullEventLabel = prefix ? `${prefix} ${matchupLabel}` : matchupLabel;
+
     legs.push({
       matchId: coupon.matchId,
-      event: eventLabel,
+      event: fullEventLabel,
       sport: map1winSportToAppSport(match?.sport),
-      tournament: humanizeSlug(match?.tournament?.slug),
+      tournament: tournamentLabel,
       marketGroup: matchedGroupName || 'Mercado 1win',
       selection: matchedSelection || 'Seleção encerrada/indisponível',
       odd: matchedOdd,
@@ -660,7 +773,7 @@ async function resolve1winSharedBet(
 
 function cleanServerTipLine(line: string): string {
   return line
-    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u200d\ufe0f]/gu, '')
+    .replace(/[•▪▸►➤✅🔥🎯📌⚽🏀🎾🏐🏓🥊🏒💰📊🏆⏰📅🎖️🏅⚡💎🚀⭐🌟💥🎉💸💵💳📲🔗⏱️🕒]+/gu, '')
     .replace(/^(?:jogo|partida|evento|duelo|match|confronto|mercado|aposta|entrada|tip|pick|linha|sele[cç][aã]o|liga|campeonato|torneio)\s*[:\-–]\s*/i, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -675,7 +788,7 @@ async function parseGenericBetLinkOrText(
 
   let odd: number | null = null;
   let units: number | null = null;
-  let event = '';
+  let matchup = '';
   let market = '';
   let tournament = '';
 
@@ -690,7 +803,7 @@ async function parseGenericBetLinkOrText(
         }
       }
     }
-    event =
+    matchup =
       parsedUrl.searchParams.get('event') ||
       parsedUrl.searchParams.get('match') ||
       '';
@@ -740,12 +853,13 @@ async function parseGenericBetLinkOrText(
     if (!stripped || /^\d{1,2}[:h]\d{2}$/i.test(stripped)) continue;
 
     const isTimeHeader = /\s+[-–]\s+\d{1,2}[:h]\d{2}\b/i.test(line);
-    if (!event && !isTimeHeader && /^.+?\s+(?:x|vs\.?|v)\s+.+$/i.test(stripped)) {
-      event = stripped;
+    const hasFlag = /(?:\p{Regional_Indicator}{2}|🏴󠁧󠁢[a-z]+󠁿)/u.test(stripped);
+    if (!matchup && !isTimeHeader && /^.+?\s+(?:x|vs\.?|v)\s+.+$/i.test(stripped)) {
+      matchup = stripped;
       continue;
     }
-    if (!tournament && isTimeHeader) {
-      tournament = stripped.replace(/\s*[-–]?\s*\d{1,2}[:h]\d{2}\b/gi, '').trim();
+    if (!tournament && (isTimeHeader || hasFlag || /^live\b/i.test(stripped))) {
+      tournament = stripped.replace(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i, ' - $1').trim();
       continue;
     }
     marketParts.push(stripped);
@@ -754,8 +868,14 @@ async function parseGenericBetLinkOrText(
     market = marketParts.join(' · ');
   }
 
+  const event =
+    tournament && matchup
+      ? `${tournament} ${matchup}`
+      : matchup || tournament;
+
   // Fetch public page OpenGraph metadata as fallback when a generic URL is provided
-  if (parsedUrl && (!event || !market)) {
+  let finalEvent = event;
+  if (parsedUrl && (!finalEvent || !market)) {
     try {
       const safeUrl = await validateExternalHttpUrl(parsedUrl.toString());
       const res = await fetch(safeUrl.toString(), {
@@ -774,10 +894,10 @@ async function parseGenericBetLinkOrText(
         const descMatch = html.match(
           /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i
         );
-        if (!event && titleMatch?.[1]) {
+        if (!finalEvent && titleMatch?.[1]) {
           const cleanTitle = titleMatch[1].replace(/\s*[-|].*$/, '').trim();
           if (cleanTitle && !cleanTitle.toLowerCase().includes('1win')) {
-            event = cleanTitle;
+            finalEvent = cleanTitle;
           }
         }
         if (!market && descMatch?.[1]) {
@@ -789,7 +909,7 @@ async function parseGenericBetLinkOrText(
     }
   }
 
-  if (!event && !market && !odd && !stake && !units) {
+  if (!finalEvent && !market && !odd && !stake && !units) {
     throw new Error(
       `Casa identificada (${bookmaker}), mas esse link não expõe os dados públicos da aposta sem login. Cole também o texto do bilhete (ex: Time A x Time B / Mercado) ou use links com código (?sharebet=...).`
     );
@@ -799,7 +919,7 @@ async function parseGenericBetLinkOrText(
     success: true,
     bookmaker,
     sport: 'Futebol',
-    event: event || '',
+    event: finalEvent || '',
     market: market || '',
     tournament: tournament || undefined,
     odd,
@@ -809,10 +929,10 @@ async function parseGenericBetLinkOrText(
     status: 'PENDENTE',
     isMultiple: false,
     selectionsCount: 1,
-    legs: event || market
+    legs: finalEvent || market
       ? [
           {
-            event: event || 'Entrada',
+            event: matchup || finalEvent || 'Entrada',
             sport: 'Futebol',
             tournament: tournament || undefined,
             marketGroup: market || 'Mercado',
@@ -822,7 +942,7 @@ async function parseGenericBetLinkOrText(
         ]
       : [],
     sourceUrl: parsedUrl?.toString(),
-    partial: !event || !market || !odd,
+    partial: !finalEvent || !market || !odd,
     warning:
       'Campos identificados! Confira a Odd e a Stake abaixo antes de confirmar.'
   };
