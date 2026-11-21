@@ -9,6 +9,7 @@ import {
   OTHER_SPORT_MARKETS
 } from '../data/footballMarkets';
 import { BookmakerSelector } from './BookmakerLogo';
+import { MatchCrests } from './TeamCrests';
 import {
   COMPETITION_PRESET_GROUPS,
   looksLikeBetLinkInput,
@@ -556,14 +557,21 @@ export const BetModal: React.FC<BetModalProps> = ({
                           key={`${leg.matchId || i}-${i}`}
                           className="flex flex-wrap items-center justify-between gap-2 bg-black/25 px-2.5 py-1.5 rounded-lg"
                         >
-                          <div className="min-w-0">
-                            <span className="font-semibold text-white">{leg.event}</span>
-                            {leg.tournament && (
-                              <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
-                            )}
-                            {marketText && (
-                              <div className="text-emerald-300/90 truncate">{marketText}</div>
-                            )}
+                          <div className="min-w-0 flex items-center gap-2">
+                            <MatchCrests
+                              event={leg.event}
+                              sport={leg.sport || importedResult.sport}
+                              size="xs"
+                            />
+                            <div className="min-w-0">
+                              <span className="font-semibold text-white">{leg.event}</span>
+                              {leg.tournament && (
+                                <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
+                              )}
+                              {marketText && (
+                                <div className="text-emerald-300/90 truncate">{marketText}</div>
+                              )}
+                            </div>
                           </div>
                           {leg.odd > 1 && (
                             <span className="font-mono text-slate-200 font-semibold shrink-0">
@@ -738,6 +746,16 @@ export const BetModal: React.FC<BetModalProps> = ({
                 placeholder="Ex: Liga Jupiler 🇧🇪 - 16:45 Mechelen x Club Brugge"
                 className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 transition-colors"
               />
+              {event.trim() && (
+                <MatchCrests
+                  event={event}
+                  sport={sport}
+                  size="sm"
+                  showLabels
+                  debounceMs={350}
+                  className="pt-0.5"
+                />
+              )}
             </div>
 
             {/* Odd e Stake */}

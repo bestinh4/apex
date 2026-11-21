@@ -3,6 +3,7 @@ import { useBankroll } from '../context/BankrollContext';
 import { BetEntry, BetStatus } from '../types';
 import { BankrollChart } from './BankrollChart';
 import { BookmakerBadge } from './BookmakerLogo';
+import { MatchCrests } from './TeamCrests';
 
 interface DashboardViewProps {
   onOpenNewBetModal: () => void;
@@ -348,11 +349,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 >
                   {/* Top Row: Event + Status + P&L */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <span className="text-xs sm:text-sm font-semibold text-white block truncate">
-                        {bet.event}
-                      </span>
-                      <span className="text-xs text-slate-400 block truncate mt-0.5">
+                    <div className="min-w-0 flex-1 flex flex-col gap-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <MatchCrests event={bet.event} sport={bet.sport} size="xs" />
+                        <span className="text-xs sm:text-sm font-semibold text-white truncate">
+                          {bet.event}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400 block truncate">
                         {bet.market}
                       </span>
                     </div>
@@ -483,9 +487,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                       </td>
                       <td className="py-3 px-3.5 max-w-md">
-                        <div className="flex flex-col min-w-0">
-                          <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
-                          <span className="text-[11px] text-slate-400 truncate">{bet.market}</span>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <MatchCrests event={bet.event} sport={bet.sport} size="sm" />
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
+                            <span className="text-[11px] text-slate-400 truncate">{bet.market}</span>
+                          </div>
                         </div>
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 whitespace-nowrap tabular-nums">
