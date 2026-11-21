@@ -187,64 +187,195 @@ function humanizeSlug(slug?: string): string | undefined {
 }
 
 const SERVER_CATEGORY_FLAGS: Record<string, string> = {
-  belgium: '🇧🇪',
-  brazil: '🇧🇷',
-  england: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-  spain: '🇪🇸',
-  italy: '🇮🇹',
-  germany: '🇩🇪',
-  austria: '🇦🇹',
-  france: '🇫🇷',
-  portugal: '🇵🇹',
-  netherlands: '🇳🇱',
-  russia: '🇷🇺',
-  turkey: '🇹🇷',
+  albania: '🇦🇱',
   argentina: '🇦🇷',
-  usa: '🇺🇸',
-  mexico: '🇲🇽',
-  scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-  switzerland: '🇨🇭',
-  greece: '🇬🇷',
-  poland: '🇵🇱',
-  denmark: '🇩🇰',
-  sweden: '🇸🇪',
-  norway: '🇳🇴',
-  ukraine: '🇺🇦',
-  croatia: '🇭🇷',
-  serbia: '🇷🇸',
-  'czech-republic': '🇨🇿',
-  colombia: '🇨🇴',
-  chile: '🇨🇱',
-  uruguay: '🇺🇾',
-  paraguay: '🇵🇾',
-  ecuador: '🇪🇨',
-  peru: '🇵🇪',
-  japan: '🇯🇵',
-  'south-korea': '🇰🇷',
-  'saudi-arabia': '🇸🇦',
-  china: '🇨🇳',
+  armenia: '🇦🇲',
+  aruba: '🇦🇼',
+  asia: '🌏',
   australia: '🇦🇺',
+  'australian-open': '🇦🇺',
+  austria: '🇦🇹',
+  azerbaijan: '🇦🇿',
+  belarus: '🇧🇾',
+  belgium: '🇧🇪',
+  bolivia: '🇧🇴',
+  'bosnia-herzegovina': '🇧🇦',
+  brazil: '🇧🇷',
+  bulgaria: '🇧🇬',
+  cambodia: '🇰🇭',
+  canada: '🇨🇦',
+  chile: '🇨🇱',
+  china: '🇨🇳',
+  'chinese-taipei': '🇹🇼',
+  colombia: '🇨🇴',
+  'costa-rica': '🇨🇷',
+  croatia: '🇭🇷',
+  cyprus: '🇨🇾',
+  czechia: '🇨🇿',
+  'czech-republic': '🇨🇿',
+  denmark: '🇩🇰',
+  'dominican-republic': '🇩🇴',
+  ecuador: '🇪🇨',
+  egypt: '🇪🇬',
+  'el-salvador': '🇸🇻',
+  england: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  epl: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  estonia: '🇪🇪',
   europe: '🇪🇺',
-  'south-america': '🌎',
+  finland: '🇫🇮',
+  france: '🇫🇷',
+  germany: '🇩🇪',
+  gibraltar: '🇬🇮',
+  'global-championship': '🌍',
+  greece: '🇬🇷',
+  guatemala: '🇬🇹',
+  'hong-kong': '🇭🇰',
+  'hong-kong-china': '🇭🇰',
+  hungary: '🇭🇺',
+  iceland: '🇮🇸',
+  india: '🇮🇳',
+  indonesia: '🇮🇩',
   international: '🌍',
-  world: '🌍'
+  ipl: '🇮🇳',
+  israel: '🇮🇱',
+  italy: '🇮🇹',
+  jamaica: '🇯🇲',
+  japan: '🇯🇵',
+  jordan: '🇯🇴',
+  kazakhstan: '🇰🇿',
+  kenya: '🇰🇪',
+  kosovo: '🇽🇰',
+  kuwait: '🇰🇼',
+  lebanon: '🇱🇧',
+  lithuania: '🇱🇹',
+  malaysia: '🇲🇾',
+  malta: '🇲🇹',
+  mexico: '🇲🇽',
+  moldova: '🇲🇩',
+  morocco: '🇲🇦',
+  myanmar: '🇲🇲',
+  'national-teams': '🌍',
+  netherlands: '🇳🇱',
+  'new-zealand': '🇳🇿',
+  nicaragua: '🇳🇮',
+  nigeria: '🇳🇬',
+  'north-macedonia': '🇲🇰',
+  'northern-ireland': '🇬🇧',
+  norway: '🇳🇴',
+  oman: '🇴🇲',
+  panama: '🇵🇦',
+  paraguay: '🇵🇾',
+  peru: '🇵🇪',
+  philippines: '🇵🇭',
+  poland: '🇵🇱',
+  portugal: '🇵🇹',
+  'puerto-rico': '🇵🇷',
+  'republic-of-korea': '🇰🇷',
+  'roland-garros': '🇫🇷',
+  romania: '🇷🇴',
+  russia: '🇷🇺',
+  rwanda: '🇷🇼',
+  'saint-kitts-and-nevis': '🇰🇳',
+  'saudi-arabia': '🇸🇦',
+  scotland: '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+  serbia: '🇷🇸',
+  singapore: '🇸🇬',
+  slovakia: '🇸🇰',
+  slovenia: '🇸🇮',
+  'south-africa': '🇿🇦',
+  'south-america': '🌎',
+  'south-korea': '🇰🇷',
+  spain: '🇪🇸',
+  'sri-lanka': '🇱🇰',
+  sweden: '🇸🇪',
+  switzerland: '🇨🇭',
+  thailand: '🇹🇭',
+  tunisia: '🇹🇳',
+  turkey: '🇹🇷',
+  uganda: '🇺🇬',
+  ukraine: '🇺🇦',
+  'united-arab-emirates': '🇦🇪',
+  uruguay: '🇺🇾',
+  'us-open': '🇺🇸',
+  usa: '🇺🇸',
+  uzbekistan: '🇺🇿',
+  venezuela: '🇻🇪',
+  vietnam: '🇻🇳',
+  wales: '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+  wimbledon: '🇬🇧',
+  world: '🌍',
+  zimbabwe: '🇿🇼'
 };
+
+const SERVER_COMPETITION_FLAG_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(jupiler|pro\s*league|belg(?:ium|ica)|belga)\b/i, '🇧🇪'],
+  [/\b(brasileir[aã]o|s[eé]rie\s*[abcd]\b|copa\s*do\s*brasil|paulist[aã]o|carioca|ga[uú]cho|mineiro|nordeste|brazil|brasil|nbb)\b/i, '🇧🇷'],
+  [/\b(futve|venezuela)\b/i, '🇻🇪'],
+  [/\b(betplay|col[oô]mbia)\b/i, '🇨🇴'],
+  [/\b(ligapro|equador|ecuador)\b/i, '🇪🇨'],
+  [/\b(liga\s*profesional|superliga\s*argentina|copa\s*argentina|primera\s*nacional|argentina)\b/i, '🇦🇷'],
+  [/\b(uruguay|uruguai|apertura\s*uruguai)\b/i, '🇺🇾'],
+  [/\b(chile|campeonato\s*chileno)\b/i, '🇨🇱'],
+  [/\b(peru|liga\s*1\s*peru)\b/i, '🇵🇪'],
+  [/\b(paraguai|paraguay|divisi[oó]n\s*profesional)\b/i, '🇵🇾'],
+  [/\b(bol[ií]via)\b/i, '🇧🇴'],
+  [/\b(premier\s*league|championship|efl|fa\s*cup|league\s*(?:one|two)|england|inglaterra)\b/i, '🏴󠁧󠁢󠁥󠁮󠁧󠁿'],
+  [/\b(laliga|la\s*liga|segunda\s*divisi[oó]n|copa\s*del\s*rey|spain|espanha)\b/i, '🇪🇸'],
+  [/\b(serie\s*a|serie\s*b|coppa\s*italia|italy|it[aá]lia)\b/i, '🇮🇹'],
+  [/\b(2\.\s*bundesliga|bundesliga|dfb[-\s]*pokal|germany|alemanha)\b/i, '🇩🇪'],
+  [/\b(austria|[aá]ustria|admiral\s*bundesliga)\b/i, '🇦🇹'],
+  [/\b(ligue\s*1|ligue\s*2|coupe\s*de\s*france|france|fran[cç]a|roland\s*garros)\b/i, '🇫🇷'],
+  [/\b(liga\s*portugal|primeira\s*liga|ta[cç]a\s*de\s*portugal|portugal)\b/i, '🇵🇹'],
+  [/\b(eredivisie|eerste\s*divisie|knvb|netherlands|holanda|pa[ií]ses\s*baixos)\b/i, '🇳🇱'],
+  [/\b(r[uú]ssia|russia|russian\s*premier)\b/i, '🇷🇺'],
+  [/\b(s[uü]per\s*lig|turkey|turquia)\b/i, '🇹🇷'],
+  [/\b(mls|nba|wnba|nfl|nhl|mlb|ncaa|usa|estados\s*unidos|us\s*open)\b/i, '🇺🇸'],
+  [/\b(liga\s*mx|mexico|m[eé]xico)\b/i, '🇲🇽'],
+  [/\b(premiership|scotland|esc[oó]cia)\b/i, '🏴󠁧󠁢󠁳󠁣󠁴󠁿'],
+  [/\b(super\s*league\s*switzerland|switzerland|su[ií][cç]a)\b/i, '🇨🇭'],
+  [/\b(super\s*league\s*greece|greece|gr[eé]cia)\b/i, '🇬🇷'],
+  [/\b(ekstraklasa|poland|pol[oô]nia)\b/i, '🇵🇱'],
+  [/\b(superligaen|denmark|dinamarca)\b/i, '🇩🇰'],
+  [/\b(allsvenskan|sweden|su[eé]cia)\b/i, '🇸🇪'],
+  [/\b(eliteserien|norway|noruega)\b/i, '🇳🇴'],
+  [/\b(ukraine|ucr[aâ]nia)\b/i, '🇺🇦'],
+  [/\b(romania|rom[eê]nia|superliga\s*rom[eê]nia)\b/i, '🇷🇴'],
+  [/\b(croatia|cro[aá]cia|hnl)\b/i, '🇭🇷'],
+  [/\b(serbia|s[eé]rvia|super\s*liga\s*s[eé]rvia)\b/i, '🇷🇸'],
+  [/\b(czechia|rep[uú]blica\s*tcheca|fortuna\s*liga|chance\s*liga)\b/i, '🇨🇿'],
+  [/\b(champions\s*league|europa\s*league|conference\s*league|nations\s*league|uefa|euro(?:copa)?|euroleague)\b/i, '🇪🇺'],
+  [/\b(libertadores|sul[-\s]*americana|sudamericana|conmebol|copa\s*am[eé]rica)\b/i, '🌎'],
+  [/\b(j[-\s]*league|japan|jap[aã]o)\b/i, '🇯🇵'],
+  [/\b(k[-\s]*league|south\s*korea|coreia)\b/i, '🇰🇷'],
+  [/\b(saudi|roshn|ar[aá]bia\s*saudita)\b/i, '🇸🇦'],
+  [/\b(world\s*cup|copa\s*do\s*mundo|fifa|eliminat[oó]rias)\b/i, '🌍']
+];
+
+function inferServerCompetitionFlag(competitionText: string): string {
+  for (const [pattern, flag] of SERVER_COMPETITION_FLAG_PATTERNS) {
+    if (pattern.test(competitionText)) return flag;
+  }
+  return '';
+}
+
+function ensureServerCompetitionHasFlag(competitionText: string): string {
+  const clean = competitionText.trim();
+  if (!clean || /(?:\p{Regional_Indicator}{2}|🏴󠁧󠁢[a-z]+󠁿)/u.test(clean)) return clean;
+  const inferred = inferServerCompetitionFlag(clean);
+  if (!inferred) return clean;
+  const timeSuffix = clean.match(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i);
+  if (timeSuffix) {
+    const base = clean.slice(0, clean.length - timeSuffix[0].length).replace(/[-–\s]+$/, '').trim();
+    return `${base} ${inferred} - ${timeSuffix[1]}`;
+  }
+  return `${clean} ${inferred}`;
+}
 
 function get1winCountryFlag(categorySlug?: string, tournamentSlug?: string): string {
   const cat = (categorySlug || '').toLowerCase().trim();
   if (cat && SERVER_CATEGORY_FLAGS[cat]) return SERVER_CATEGORY_FLAGS[cat];
-  const tour = (tournamentSlug || '').toLowerCase();
-  if (tour.includes('champions') || tour.includes('europa') || tour.includes('conference')) return '🇪🇺';
-  if (tour.includes('libertadores') || tour.includes('sudamericana')) return '🌎';
-  if (tour.includes('jupiler')) return '🇧🇪';
-  if (tour.includes('premier-league')) return '🏴󠁧󠁢󠁥󠁮󠁧󠁿';
-  if (tour.includes('laliga')) return '🇪🇸';
-  if (tour.includes('bundesliga')) return '🇩🇪';
-  if (tour.includes('serie-a') && !tour.includes('brazil')) return '🇮🇹';
-  if (tour.includes('ligue-1')) return '🇫🇷';
-  if (tour.includes('eredivisie')) return '🇳🇱';
-  if (tour.includes('brasileir') || tour.includes('copa-do-brasil')) return '🇧🇷';
-  return '';
+  const tour = (tournamentSlug || '').toLowerCase().replace(/[-_]+/g, ' ');
+  return inferServerCompetitionFlag(tour);
 }
 
 function format1winTournamentHeader(match?: {
@@ -350,8 +481,9 @@ function detectBookmakerFromUrl(parsedUrl: URL | null, rawText: string): string 
   const hay = `${parsedUrl?.hostname || ''} ${rawText}`.toLowerCase();
   if (
     hay.includes('1win') ||
-    /one-[a-z0-9-]+\.(com|pro|xyz|top|win|bet)/i.test(hay) ||
-    /1w[a-z0-9-]+\.(com|pro|xyz|top|win|bet|run|life)/i.test(hay) ||
+    hay.includes('mob1link') ||
+    /one-[a-z0-9-]+\.(com|pro|xyz|top|win|bet|live)/i.test(hay) ||
+    /1w[a-z0-9-]+\.(com|pro|xyz|top|win|bet|run|life|live)/i.test(hay) ||
     hay.includes('sharebet=')
   ) {
     return '1win';
@@ -858,8 +990,10 @@ async function parseGenericBetLinkOrText(
       matchup = stripped;
       continue;
     }
-    if (!tournament && (isTimeHeader || hasFlag || /^live\b/i.test(stripped))) {
-      tournament = stripped.replace(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i, ' - $1').trim();
+    if (!tournament && (isTimeHeader || hasFlag || /^live\b/i.test(stripped) || Boolean(inferServerCompetitionFlag(stripped)))) {
+      tournament = ensureServerCompetitionHasFlag(
+        stripped.replace(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i, ' - $1').trim()
+      );
       continue;
     }
     marketParts.push(stripped);
@@ -871,7 +1005,7 @@ async function parseGenericBetLinkOrText(
   const event =
     tournament && matchup
       ? `${tournament} ${matchup}`
-      : matchup || tournament;
+      : ensureServerCompetitionHasFlag(matchup || tournament);
 
   // Fetch public page OpenGraph metadata as fallback when a generic URL is provided
   let finalEvent = event;

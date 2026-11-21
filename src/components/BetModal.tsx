@@ -10,6 +10,7 @@ import {
 } from '../data/footballMarkets';
 import { BookmakerSelector } from './BookmakerLogo';
 import {
+  COMPETITION_PRESET_GROUPS,
   looksLikeBetLinkInput,
   matchFootballCatalogMarket,
   parseBetLink,
@@ -693,23 +694,40 @@ export const BetModal: React.FC<BetModalProps> = ({
                     const trimmed = event.trim();
                     if (!trimmed) {
                       setEvent(`${comp} `);
-                    } else if (!trimmed.startsWith(comp)) {
+                      return;
+                    }
+                    if (trimmed.startsWith(comp)) return;
+                    const existingPreset = POPULAR_COMPETITION_PRESETS.find((p) =>
+                      trimmed.startsWith(p.value)
+                    );
+                    if (existingPreset) {
+                      const rest = trimmed.slice(existingPreset.value.length).trimStart();
+                      setEvent(rest ? `${comp} ${rest}` : `${comp} `);
+                    } else {
                       setEvent(`${comp} ${trimmed}`);
                     }
                   }}
-                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 max-w-[175px]"
+                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2.5 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 max-w-[195px] sm:max-w-[220px]"
                 >
                   <option value="" className="bg-[#0e1422] text-slate-400">
-                    + Competição / Bandeira
+                    + Competição / Bandeira ({POPULAR_COMPETITION_PRESETS.length})
                   </option>
-                  {POPULAR_COMPETITION_PRESETS.map((preset) => (
-                    <option
-                      key={preset.value}
-                      value={preset.value}
-                      className="bg-[#0e1422] text-white"
+                  {COMPETITION_PRESET_GROUPS.map((group) => (
+                    <optgroup
+                      key={group.group}
+                      label={group.group}
+                      className="bg-[#0e1422] text-slate-400 font-semibold"
                     >
-                      {preset.label}
-                    </option>
+                      {group.items.map((preset) => (
+                        <option
+                          key={`${group.group}-${preset.value}`}
+                          value={preset.value}
+                          className="bg-[#0e1422] text-white font-normal"
+                        >
+                          {preset.label}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>
