@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BankrollProvider, useBankroll } from './context/BankrollContext';
 import { Navbar, TabKey } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
@@ -21,12 +21,41 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabKey>('dashboard');
   const [isBetModalOpen, setIsBetModalOpen] = useState(false);
   const [editingBet, setEditingBet] = useState<BetEntry | null>(null);
+  const [initialShareInput, setInitialShareInput] = useState<string | null>(null);
   const [isCashflowModalOpen, setIsCashflowModalOpen] = useState(false);
   const [isFreeSpinModalOpen, setIsFreeSpinModalOpen] = useState(false);
   const [isFreebetModalOpen, setIsFreebetModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [syncBannerDismissed, setSyncBannerDismissed] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const sharebet = params.get('sharebet');
+      const betUrl = params.get('betUrl') || params.get('url');
+      const sharedText = params.get('text');
+
+      let detectedInput: string | null = null;
+      if (betUrl) {
+        detectedInput = betUrl;
+      } else if (sharedText && /https?:\/\/|sharebet=/i.test(sharedText)) {
+        detectedInput = sharedText;
+      } else if (sharebet) {
+        detectedInput = `https://1win.com/betting?sharebet=${sharebet}`;
+      }
+
+      if (detectedInput) {
+        setEditingBet(null);
+        setInitialShareInput(detectedInput);
+        setIsBetModalOpen(true);
+        const cleanUrl = `${window.location.pathname}${window.location.hash || ''}`;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+    } catch {
+      // ignore URL parsing errors
+    }
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -37,11 +66,13 @@ function AppContent() {
 
   const handleOpenNewBet = () => {
     setEditingBet(null);
+    setInitialShareInput(null);
     setIsBetModalOpen(true);
   };
 
   const handleEditBet = (bet: BetEntry) => {
     setEditingBet(bet);
+    setInitialShareInput(null);
     setIsBetModalOpen(true);
   };
 
@@ -200,8 +231,10 @@ function AppContent() {
           onClose={() => {
             setIsBetModalOpen(false);
             setEditingBet(null);
+            setInitialShareInput(null);
           }}
           initialBet={editingBet}
+          initialShareInput={initialShareInput}
           onSuccessToast={showToast}
         />
       )}

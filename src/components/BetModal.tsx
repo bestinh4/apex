@@ -9,11 +9,18 @@ import {
   OTHER_SPORT_MARKETS
 } from '../data/footballMarkets';
 import { BookmakerSelector } from './BookmakerLogo';
+import {
+  looksLikeBetLinkInput,
+  matchFootballCatalogMarket,
+  parseBetLink,
+  ParsedBetLinkResult
+} from '../lib/betLinkParser';
 
 interface BetModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialBet?: BetEntry | null;
+  initialShareInput?: string | null;
   onSuccessToast?: (msg: string) => void;
 }
 
@@ -21,6 +28,7 @@ export const BetModal: React.FC<BetModalProps> = ({
   isOpen,
   onClose,
   initialBet,
+  initialShareInput,
   onSuccessToast
 }) => {
   const { addBet, updateBet, settings } = useBankroll();
@@ -49,6 +57,12 @@ export const BetModal: React.FC<BetModalProps> = ({
   const [odd, setOdd] = useState('1.90');
   const [stake, setStake] = useState('25.00');
   const [status, setStatus] = useState<BetStatus>('GREEN');
+
+  // Shared bet link importer state
+  const [shareLinkInput, setShareLinkInput] = useState('');
+  const [isParsingLink, setIsParsingLink] = useState(false);
+  const [linkParseError, setLinkParseError] = useState<string | null>(null);
+  const [importedResult, setImportedResult] = useState<ParsedBetLinkResult | null>(null);
 
   const searchClean = marketSearch.trim().toLowerCase();
 
@@ -118,8 +132,112 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd('1.90');
       setStake(settings.unitValue.toFixed(2));
       setStatus('GREEN');
+      setShareLinkInput(initialShareInput || '');
+      setLinkParseError(null);
+      setImportedResult(null);
     }
-  }, [initialBet, isOpen, settings.unitValue]);
+  }, [initialBet, initialShareInput, isOpen, settings.unitValue]);
+
+  const applyParsedBet = (parsed: ParsedBetLinkResult) => {
+    setImportedResult(parsed);
+    setLinkParseError(null);
+
+    if (parsed.bookmaker) {
+      if ((BOOKMAKERS as readonly string[]).includes(parsed.bookmaker)) {
+        setBookmaker(parsed.bookmaker);
+        setCustomBookmaker('');
+      } else {
+        setBookmaker('Outra');
+        setCustomBookmaker(parsed.bookmaker);
+      }
+    }
+
+    const validSport = (SPORTS_LIST as readonly string[]).includes(parsed.sport)
+      ? parsed.sport
+      : 'Futebol';
+    setSport(validSport);
+
+    if (parsed.event) {
+      setEvent(parsed.event);
+    }
+
+    if (parsed.market) {
+      setCustomMarketText(parsed.market);
+      if (validSport === 'Futebol') {
+        const catalogHit = matchFootballCatalogMarket(parsed.market);
+        if (catalogHit) {
+          setSelectedCategory(catalogHit.market.category);
+          setSelectedMarketId(catalogHit.market.id);
+          if (catalogHit.selection) {
+            setSelectedOption(catalogHit.selection);
+          } else if (catalogHit.market.selections.length > 0) {
+            setSelectedOption(catalogHit.market.selections[0]);
+          }
+        }
+      }
+    }
+
+    if (parsed.odd && parsed.odd > 1) {
+      setOdd(parsed.odd.toFixed(2));
+    }
+
+    if (parsed.stake !== null && parsed.stake > 0) {
+      setStake(parsed.stake.toFixed(2));
+    }
+
+    setStatus(parsed.status || 'PENDENTE');
+  };
+
+  const handleImportBetLink = async (overrideInput?: string) => {
+    const raw = (overrideInput ?? shareLinkInput).trim();
+    if (!raw) {
+      setLinkParseError('Cole o link ou código da aposta primeiro.');
+      return;
+    }
+
+    setIsParsingLink(true);
+    setLinkParseError(null);
+    setImportedResult(null);
+
+    try {
+      const parsed = await parseBetLink(raw);
+      applyParsedBet(parsed);
+      onSuccessToast?.(
+        parsed.isMultiple
+          ? `Múltipla (${parsed.selectionsCount} seleções) importada da ${parsed.bookmaker}!`
+          : `Aposta identificada: ${parsed.event || parsed.bookmaker}!`
+      );
+    } catch (err) {
+      setLinkParseError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível identificar a aposta por esse link.'
+      );
+    } finally {
+      setIsParsingLink(false);
+    }
+  };
+
+  const handlePasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        setShareLinkInput(text.trim());
+        await handleImportBetLink(text.trim());
+      } else {
+        setLinkParseError('Sua área de transferência está vazia.');
+      }
+    } catch {
+      setLinkParseError('Permita acesso à área de transferência ou cole o link manualmente no campo.');
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && !initialBet && initialShareInput && initialShareInput.trim()) {
+      void handleImportBetLink(initialShareInput.trim());
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialBet, initialShareInput]);
 
   const handleMarketChange = (marketId: string) => {
     setSelectedMarketId(marketId);
@@ -215,6 +333,9 @@ export const BetModal: React.FC<BetModalProps> = ({
     }
 
     try {
+      const persistedGross = status === 'PENDENTE' ? 0 : gross;
+      const persistedPl = status === 'PENDENTE' ? 0 : pl;
+
       if (initialBet) {
         updateBet(initialBet.id, {
           type: fundType,
@@ -225,8 +346,8 @@ export const BetModal: React.FC<BetModalProps> = ({
           odd: numOdd,
           stake: numStake,
           status,
-          gross,
-          pl
+          gross: persistedGross,
+          pl: persistedPl
         });
         onSuccessToast?.(`Aposta #${initialBet.id} atualizada com sucesso.`);
       } else {
@@ -241,8 +362,8 @@ export const BetModal: React.FC<BetModalProps> = ({
           stake: numStake,
           units: Number(units.toFixed(2)),
           status,
-          gross,
-          pl
+          gross: persistedGross,
+          pl: persistedPl
         });
         onSuccessToast?.(`Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada (${resolvedBookmaker})!`);
       }
@@ -296,6 +417,157 @@ export const BetModal: React.FC<BetModalProps> = ({
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
+
+        {/* Quick Import by Shared Bet Link */}
+        {!initialBet && (
+          <div className="p-3.5 rounded-2xl bg-[#080c14] border border-blue-500/25 flex flex-col gap-2.5 shrink-0">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[16px]">link</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-white leading-tight">
+                    Importar pelo Link Compartilhado da Aposta
+                  </p>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    Suporta links 1win (?sharebet=...), códigos de cupom e colagem rápida
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handlePasteFromClipboard}
+                disabled={isParsingLink}
+                className="px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-semibold text-slate-200 flex items-center gap-1 transition-colors disabled:opacity-50 shrink-0"
+              >
+                <span className="material-symbols-outlined text-[14px]">content_paste</span>
+                <span>Colar e Ler</span>
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={shareLinkInput}
+                  onChange={(e) => setShareLinkInput(e.target.value)}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData('text');
+                    if (pasted && looksLikeBetLinkInput(pasted)) {
+                      e.preventDefault();
+                      setShareLinkInput(pasted.trim());
+                      void handleImportBetLink(pasted.trim());
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleImportBetLink();
+                    }
+                  }}
+                  placeholder="https://one-vv1902.com/betting?p=wjtj&sharebet=xAmj9D45"
+                  className="w-full bg-[#0e1422] border border-white/[0.08] text-white pl-3.5 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono"
+                />
+                {shareLinkInput && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShareLinkInput('');
+                      setLinkParseError(null);
+                      setImportedResult(null);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    aria-label="Limpar link"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">close</span>
+                  </button>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void handleImportBetLink()}
+                disabled={isParsingLink || !shareLinkInput.trim()}
+                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm shadow-blue-600/20"
+              >
+                <span
+                  className={`material-symbols-outlined text-[16px] ${
+                    isParsingLink ? 'animate-spin' : ''
+                  }`}
+                >
+                  {isParsingLink ? 'progress_activity' : 'auto_awesome'}
+                </span>
+                <span>{isParsingLink ? 'Identificando...' : 'Identificar Aposta'}</span>
+              </button>
+            </div>
+
+            {linkParseError && (
+              <div className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] flex items-start gap-2">
+                <span className="material-symbols-outlined text-[15px] shrink-0 mt-0.5">
+                  error_outline
+                </span>
+                <span>{linkParseError}</span>
+              </div>
+            )}
+
+            {importedResult && (
+              <div className="px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs flex flex-col gap-1.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                    <span>
+                      {importedResult.bookmaker} · {importedResult.sport}
+                      {importedResult.isMultiple
+                        ? ` · Múltipla (${importedResult.selectionsCount} seleções)`
+                        : ''}
+                    </span>
+                  </div>
+                  {importedResult.odd && (
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 font-mono text-[11px] font-bold">
+                      Odd {importedResult.odd.toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {importedResult.legs.length > 0 && (
+                  <div className="flex flex-col gap-1 text-[11px] text-slate-200">
+                    {importedResult.legs.map((leg, i) => (
+                      <div
+                        key={`${leg.matchId || i}-${i}`}
+                        className="flex flex-wrap items-center justify-between gap-2 bg-black/25 px-2.5 py-1.5 rounded-lg"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-semibold text-white">{leg.event}</span>
+                          {leg.tournament && (
+                            <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
+                          )}
+                          <div className="text-emerald-300/90 truncate">
+                            {leg.marketGroup}: {leg.selection}
+                          </div>
+                        </div>
+                        {leg.odd > 1 && (
+                          <span className="font-mono text-slate-200 font-semibold shrink-0">
+                            @{leg.odd.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {importedResult.warning && (
+                  <p className="text-[11px] text-amber-200/95 flex items-start gap-1.5 pt-0.5">
+                    <span className="material-symbols-outlined text-[14px] shrink-0 mt-0.5">
+                      info
+                    </span>
+                    <span>{importedResult.warning}</span>
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Form Body - 2-column layout on Desktop (lg), stacked on Mobile */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">

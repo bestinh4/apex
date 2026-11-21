@@ -32,6 +32,15 @@ export default defineConfig(() => {
           scope: '/',
           lang: 'pt-BR',
           categories: ['finance', 'sports', 'productivity'],
+          share_target: {
+            action: '/',
+            method: 'GET',
+            params: {
+              title: 'title',
+              text: 'text',
+              url: 'url'
+            }
+          },
           icons: [
             {
               src: '/pwa-192x192.png',
@@ -56,6 +65,7 @@ export default defineConfig(() => {
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          navigateFallbackDenylist: [/^\/api\//],
           cleanupOutdatedCaches: true,
           clientsClaim: true,
           skipWaiting: true,
