@@ -181,8 +181,11 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd(parsed.odd.toFixed(2));
     }
 
+    const unitBase = settings.unitValue > 0 ? settings.unitValue : 25;
     if (parsed.stake !== null && parsed.stake > 0) {
       setStake(parsed.stake.toFixed(2));
+    } else if (parsed.units && parsed.units > 0) {
+      setStake((parsed.units * unitBase).toFixed(2));
     }
 
     setStatus(parsed.status || 'PENDENTE');
@@ -204,8 +207,8 @@ export const BetModal: React.FC<BetModalProps> = ({
       applyParsedBet(parsed);
       onSuccessToast?.(
         parsed.isMultiple
-          ? `Múltipla (${parsed.selectionsCount} seleções) importada da ${parsed.bookmaker}!`
-          : `Aposta identificada: ${parsed.event || parsed.bookmaker}!`
+          ? `Múltipla (${parsed.selectionsCount} seleções) importada da ${parsed.bookmaker || 'casa'}!`
+          : `Aposta identificada: ${parsed.event || parsed.market || parsed.bookmaker || 'Pronta para conferir'}!`
       );
     } catch (err) {
       setLinkParseError(
@@ -428,10 +431,10 @@ export const BetModal: React.FC<BetModalProps> = ({
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-white leading-tight">
-                    Importar pelo Link Compartilhado da Aposta
+                    Importar Aposta por Link ou Texto da Tip
                   </p>
                   <p className="text-[11px] text-slate-400 truncate">
-                    Suporta links 1win (?sharebet=...), códigos de cupom e colagem rápida
+                    Cole o link da casa (1win) ou a mensagem completa com liga, jogo e mercado
                   </p>
                 </div>
               </div>
@@ -446,28 +449,29 @@ export const BetModal: React.FC<BetModalProps> = ({
               </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-end">
               <div className="relative flex-1">
-                <input
-                  type="text"
+                <textarea
+                  rows={3}
                   value={shareLinkInput}
                   onChange={(e) => setShareLinkInput(e.target.value)}
                   onPaste={(e) => {
                     const pasted = e.clipboardData.getData('text');
                     if (pasted && looksLikeBetLinkInput(pasted)) {
                       e.preventDefault();
-                      setShareLinkInput(pasted.trim());
-                      void handleImportBetLink(pasted.trim());
+                      const trimmed = pasted.trim();
+                      setShareLinkInput(trimmed);
+                      void handleImportBetLink(trimmed);
                     }
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                       e.preventDefault();
                       void handleImportBetLink();
                     }
                   }}
-                  placeholder="https://one-vv1902.com/betting?p=wjtj&sharebet=xAmj9D45"
-                  className="w-full bg-[#0e1422] border border-white/[0.08] text-white pl-3.5 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono"
+                  placeholder={`Cole o link ou a tip em múltiplas linhas, ex:\nLiga Jupiler 🇧🇪 - 16:45\nMechelen x Club Brugge\nBTTS e Over 2.5 Gols @1.80 (1 un)`}
+                  className="w-full bg-[#0e1422] border border-white/[0.08] text-white pl-3.5 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono resize-y leading-relaxed"
                 />
                 {shareLinkInput && (
                   <button
@@ -477,8 +481,8 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setLinkParseError(null);
                       setImportedResult(null);
                     }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                    aria-label="Limpar link"
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white"
+                    aria-label="Limpar texto"
                   >
                     <span className="material-symbols-outlined text-[15px]">close</span>
                   </button>
@@ -489,7 +493,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 type="button"
                 onClick={() => void handleImportBetLink()}
                 disabled={isParsingLink || !shareLinkInput.trim()}
-                className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm shadow-blue-600/20"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm shadow-blue-600/20"
               >
                 <span
                   className={`material-symbols-outlined text-[16px] ${
@@ -517,42 +521,56 @@ export const BetModal: React.FC<BetModalProps> = ({
                   <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
                     <span>
-                      {importedResult.bookmaker} · {importedResult.sport}
+                      {(importedResult.bookmaker || (bookmaker === 'Outra' ? customBookmaker || 'Casa' : bookmaker))} · {importedResult.sport}
+                      {importedResult.tournament ? ` · ${importedResult.tournament}` : ''}
                       {importedResult.isMultiple
                         ? ` · Múltipla (${importedResult.selectionsCount} seleções)`
                         : ''}
                     </span>
                   </div>
-                  {importedResult.odd && (
-                    <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 font-mono text-[11px] font-bold">
-                      Odd {importedResult.odd.toFixed(2)}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-1.5">
+                    {importedResult.odd && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 font-mono text-[11px] font-bold">
+                        Odd {importedResult.odd.toFixed(2)}
+                      </span>
+                    )}
+                    {importedResult.units && (
+                      <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 font-mono text-[11px] font-bold">
+                        {importedResult.units}u
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {importedResult.legs.length > 0 && (
                   <div className="flex flex-col gap-1 text-[11px] text-slate-200">
-                    {importedResult.legs.map((leg, i) => (
-                      <div
-                        key={`${leg.matchId || i}-${i}`}
-                        className="flex flex-wrap items-center justify-between gap-2 bg-black/25 px-2.5 py-1.5 rounded-lg"
-                      >
-                        <div className="min-w-0">
-                          <span className="font-semibold text-white">{leg.event}</span>
-                          {leg.tournament && (
-                            <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
-                          )}
-                          <div className="text-emerald-300/90 truncate">
-                            {leg.marketGroup}: {leg.selection}
+                    {importedResult.legs.map((leg, i) => {
+                      const marketText =
+                        leg.selection && leg.selection !== leg.marketGroup
+                          ? `${leg.marketGroup}: ${leg.selection}`
+                          : leg.marketGroup;
+                      return (
+                        <div
+                          key={`${leg.matchId || i}-${i}`}
+                          className="flex flex-wrap items-center justify-between gap-2 bg-black/25 px-2.5 py-1.5 rounded-lg"
+                        >
+                          <div className="min-w-0">
+                            <span className="font-semibold text-white">{leg.event}</span>
+                            {leg.tournament && (
+                              <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
+                            )}
+                            {marketText && (
+                              <div className="text-emerald-300/90 truncate">{marketText}</div>
+                            )}
                           </div>
+                          {leg.odd > 1 && (
+                            <span className="font-mono text-slate-200 font-semibold shrink-0">
+                              @{leg.odd.toFixed(2)}
+                            </span>
+                          )}
                         </div>
-                        {leg.odd > 1 && (
-                          <span className="font-mono text-slate-200 font-semibold shrink-0">
-                            @{leg.odd.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 

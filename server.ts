@@ -43,8 +43,10 @@ interface ParsedBetResponse {
   sport: string;
   event: string;
   market: string;
+  tournament?: string;
   odd: number | null;
   stake: number | null;
+  units?: number | null;
   stakeIncludedInSource: boolean;
   status: 'PENDENTE';
   isMultiple: boolean;
@@ -656,6 +658,14 @@ async function resolve1winSharedBet(
   };
 }
 
+function cleanServerTipLine(line: string): string {
+  return line
+    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u200d\ufe0f]/gu, '')
+    .replace(/^(?:jogo|partida|evento|duelo|match|confronto|mercado|aposta|entrada|tip|pick|linha|sele[cç][aã]o|liga|campeonato|torneio)\s*[:\-–]\s*/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 async function parseGenericBetLinkOrText(
   rawInput: string,
   parsedUrl: URL | null
@@ -664,8 +674,10 @@ async function parseGenericBetLinkOrText(
   const stake = extractStakeFromRawInput(rawInput, parsedUrl);
 
   let odd: number | null = null;
+  let units: number | null = null;
   let event = '';
   let market = '';
+  let tournament = '';
 
   if (parsedUrl) {
     for (const key of ['odd', 'odds', 'cf', 'price']) {
@@ -688,15 +700,58 @@ async function parseGenericBetLinkOrText(
       '';
   }
 
-  // Try text extraction if pasted slip summary alongside URL
-  const oddMatch = rawInput.match(/(?:odd|cota[cç][aã]o|@)\s*[:=]?\s*(\d+[.,]\d{1,3})/i);
-  if (!odd && oddMatch) {
-    const n = Number(oddMatch[1].replace(',', '.'));
+  // Extract odd & units from text lines
+  const withoutUrls = rawInput.replace(/https?:\/\/[^\s<>"'`]+/gi, '').trim();
+  const atMatch = withoutUrls.match(/@\s*(\d+(?:[.,]\d{1,3})?)/);
+  const labeledOddMatch = withoutUrls.match(
+    /\b(?:odd|odds|cota[cç][aã]o|cot)\s*[:=]?\s*(\d+(?:[.,]\d{1,3})?)/i
+  );
+  const oddToken = atMatch || labeledOddMatch;
+  if (!odd && oddToken) {
+    const n = Number(oddToken[1].replace(',', '.'));
     if (Number.isFinite(n) && n > 1 && n < 10000) odd = Number(n.toFixed(2));
   }
-  const vsMatch = rawInput.match(/([A-Za-zÀ-ÿ0-9 .'-]{2,35}\s+(?:vs?\.?|x)\s+[A-Za-zÀ-ÿ0-9 .'-]{2,35})/i);
-  if (!event && vsMatch) {
-    event = vsMatch[1].trim();
+
+  const unitMatch = withoutUrls.match(
+    /\(?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:unidades?|unid|un|u)\.?\s*\)?/i
+  );
+  if (unitMatch) {
+    const u = Number(unitMatch[1].replace(',', '.'));
+    if (Number.isFinite(u) && u > 0 && u <= 100) units = Number(u.toFixed(2));
+  }
+
+  const rawLines = withoutUrls
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const lines =
+    rawLines.length === 1 && rawLines[0].includes('|')
+      ? rawLines[0].split('|').map((l) => l.trim()).filter(Boolean)
+      : rawLines;
+
+  const marketParts: string[] = [];
+  for (const line of lines) {
+    let stripped = line
+      .replace(/@\s*\d+(?:[.,]\d{1,3})?/g, ' ')
+      .replace(/\b(?:odd|odds|cota[cç][aã]o|cot)\s*[:=]?\s*\d+(?:[.,]\d{1,3})?/gi, ' ')
+      .replace(/R\$\s*\d+(?:[.,]\d{1,2})?/gi, ' ')
+      .replace(/\(?\s*\d+(?:[.,]\d{1,2})?\s*(?:unidades?|unid|un|u)\.?\s*\)?/gi, ' ');
+    stripped = cleanServerTipLine(stripped).replace(/[()|]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    if (!stripped || /^\d{1,2}[:h]\d{2}$/i.test(stripped)) continue;
+
+    const isTimeHeader = /\s+[-–]\s+\d{1,2}[:h]\d{2}\b/i.test(line);
+    if (!event && !isTimeHeader && /^.+?\s+(?:x|vs\.?|v)\s+.+$/i.test(stripped)) {
+      event = stripped;
+      continue;
+    }
+    if (!tournament && isTimeHeader) {
+      tournament = stripped.replace(/\s*[-–]?\s*\d{1,2}[:h]\d{2}\b/gi, '').trim();
+      continue;
+    }
+    marketParts.push(stripped);
+  }
+  if (!market && marketParts.length > 0) {
+    market = marketParts.join(' · ');
   }
 
   // Fetch public page OpenGraph metadata as fallback when a generic URL is provided
@@ -734,9 +789,9 @@ async function parseGenericBetLinkOrText(
     }
   }
 
-  if (!event && !market && !odd && !stake) {
+  if (!event && !market && !odd && !stake && !units) {
     throw new Error(
-      `Casa identificada (${bookmaker}), mas esse link não expõe os dados públicos da aposta sem login. Para leitura automática completa, compartilhe links com código (ex: 1win ?sharebet=...) ou cole o texto do bilhete com evento, mercado e odd.`
+      `Casa identificada (${bookmaker}), mas esse link não expõe os dados públicos da aposta sem login. Cole também o texto do bilhete (ex: Time A x Time B / Mercado) ou use links com código (?sharebet=...).`
     );
   }
 
@@ -746,17 +801,20 @@ async function parseGenericBetLinkOrText(
     sport: 'Futebol',
     event: event || '',
     market: market || '',
+    tournament: tournament || undefined,
     odd,
     stake,
-    stakeIncludedInSource: stake !== null,
+    units,
+    stakeIncludedInSource: stake !== null || units !== null,
     status: 'PENDENTE',
     isMultiple: false,
     selectionsCount: 1,
-    legs: event
+    legs: event || market
       ? [
           {
-            event,
+            event: event || 'Entrada',
             sport: 'Futebol',
+            tournament: tournament || undefined,
             marketGroup: market || 'Mercado',
             selection: market || '',
             odd: odd || 0
@@ -766,7 +824,7 @@ async function parseGenericBetLinkOrText(
     sourceUrl: parsedUrl?.toString(),
     partial: !event || !market || !odd,
     warning:
-      'Alguns campos não estavam presentes no link público — revise e complete o que faltar abaixo.'
+      'Campos identificados! Confira a Odd e a Stake abaixo antes de confirmar.'
   };
 }
 
