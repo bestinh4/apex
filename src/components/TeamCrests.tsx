@@ -33,9 +33,9 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
   }, [crest?.crestUrl]);
 
   const boxSize =
-    size === 'md' ? 'w-7 h-7' : size === 'sm' ? 'w-6 h-6' : 'w-5 h-5';
-  const imgPad = size === 'md' ? 'p-1' : 'p-0.5';
-  const textSize = size === 'md' ? 'text-[10px]' : 'text-[8px]';
+    size === 'md' ? 'w-9 h-9' : size === 'sm' ? 'w-7 h-7' : 'w-6 h-6';
+  const imgPad = size === 'md' ? 'p-[3px]' : 'p-[2px]';
+  const textSize = size === 'md' ? 'text-[11px]' : size === 'sm' ? 'text-[10px]' : 'text-[9px]';
   const url = !imgFailed ? crest?.crestUrl : null;
   const titleText = crest?.matchedName
     ? `${crest.matchedName}${crest.leagueHint ? ` (${crest.leagueHint})` : ''}`
@@ -44,7 +44,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
   if (url) {
     return (
       <span
-        className={`${boxSize} ${imgPad} rounded-full bg-white/[0.08] border border-white/[0.14] inline-flex items-center justify-center shrink-0 overflow-hidden shadow-xs`}
+        className={`${boxSize} ${imgPad} rounded-full bg-white/[0.13] border border-white/20 inline-flex items-center justify-center shrink-0 overflow-hidden shadow-sm`}
         title={titleText}
       >
         <img
@@ -54,7 +54,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
           decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
-          className="w-full h-full object-contain"
+          className="w-full h-full object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
         />
       </span>
     );
@@ -62,7 +62,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
 
   return (
     <span
-      className={`${boxSize} rounded-full bg-slate-800/90 border border-white/[0.12] inline-flex items-center justify-center shrink-0 ${textSize} font-bold text-slate-300 tracking-tighter select-none`}
+      className={`${boxSize} rounded-full bg-slate-800/95 border border-white/[0.16] inline-flex items-center justify-center shrink-0 ${textSize} font-bold text-slate-200 tracking-tighter select-none`}
       title={teamName}
     >
       {getTeamMonogram(teamName)}
@@ -147,6 +147,27 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
 
   if (matchup.teams.length === 0) return null;
 
+  const getDisplayCrest = (team: string): ResolvedTeamCrest | undefined => {
+    const syncCached = getCachedTeamCrest(team, sport, matchup.context);
+    if (syncCached?.crestUrl) return syncCached;
+    if (crests[team] !== undefined) return crests[team];
+    const lower = team.trim().toLowerCase();
+    const firstWord = lower.split(/\s+/)[0] || '';
+    for (const [k, v] of Object.entries(crests)) {
+      if (!v?.crestUrl) continue;
+      const kLower = k.trim().toLowerCase();
+      if (kLower.length < 4 || lower.length < 4) continue;
+      const kFirstWord = kLower.split(/\s+/)[0] || '';
+      if (
+        (lower.startsWith(kLower) || kLower.startsWith(lower)) &&
+        (firstWord.startsWith(kFirstWord) || kFirstWord.startsWith(firstWord))
+      ) {
+        return v;
+      }
+    }
+    return undefined;
+  };
+
   if (showLabels) {
     const pairs: Array<[string, string]> = [];
     for (let i = 0; i < matchup.teams.length; i += 2) {
@@ -155,18 +176,25 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
       }
     }
     return (
-      <div className={`flex flex-wrap items-center gap-2.5 ${className}`}>
+      <div className={`flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full ${className}`}>
         {pairs.map(([home, away], idx) => (
-          <div key={`${home}-${away}-${idx}`} className="inline-flex items-center gap-1.5 min-w-0">
-            <SingleCrest teamName={home} crest={crests[home]} size={size} />
-            <span className="text-[11px] font-medium text-slate-200 truncate max-w-[115px]">
-              {home}
-            </span>
-            <span className="text-[10px] text-slate-500 font-semibold">×</span>
-            <span className="text-[11px] font-medium text-slate-200 truncate max-w-[115px]">
-              {away}
-            </span>
-            <SingleCrest teamName={away} crest={crests[away]} size={size} />
+          <div
+            key={`${home}-${away}-${idx}`}
+            className="flex items-center justify-between sm:justify-start gap-2 min-w-0 w-full sm:w-auto"
+          >
+            <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial">
+              <SingleCrest teamName={home} crest={getDisplayCrest(home)} size={size} />
+              <span className="text-xs font-semibold text-slate-100 truncate sm:max-w-[140px]">
+                {home}
+              </span>
+            </div>
+            <span className="text-[11px] text-slate-400 font-bold shrink-0 px-0.5">×</span>
+            <div className="flex items-center justify-end sm:justify-start gap-2 min-w-0 flex-1 sm:flex-initial">
+              <span className="text-xs font-semibold text-slate-100 truncate text-right sm:text-left sm:max-w-[140px]">
+                {away}
+              </span>
+              <SingleCrest teamName={away} crest={getDisplayCrest(away)} size={size} />
+            </div>
           </div>
         ))}
       </div>
@@ -174,15 +202,15 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
   }
 
   return (
-    <span className={`inline-flex items-center shrink-0 gap-1 ${className}`}>
+    <span className={`inline-flex items-center shrink-0 gap-1.5 ${className}`}>
       {matchup.teams.slice(0, 2).map((team, idx) => (
         <React.Fragment key={`${team}-${idx}`}>
           {idx === 1 && (
-            <span className="text-[9px] font-bold text-slate-500 select-none" aria-hidden="true">
+            <span className="text-[10px] font-bold text-slate-400 select-none" aria-hidden="true">
               ×
             </span>
           )}
-          <SingleCrest teamName={team} crest={crests[team]} size={size} />
+          <SingleCrest teamName={team} crest={getDisplayCrest(team)} size={size} />
         </React.Fragment>
       ))}
     </span>

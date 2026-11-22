@@ -555,19 +555,21 @@ export const BetModal: React.FC<BetModalProps> = ({
                       return (
                         <div
                           key={`${leg.matchId || i}-${i}`}
-                          className="flex flex-wrap items-center justify-between gap-2 bg-black/25 px-2.5 py-1.5 rounded-lg"
+                          className="flex items-center justify-between gap-2.5 bg-black/25 px-2.5 py-2 rounded-lg"
                         >
-                          <div className="min-w-0 flex items-center gap-2">
+                          <div className="min-w-0 flex-1 flex items-center gap-2.5">
                             <MatchCrests
                               event={leg.event}
                               sport={leg.sport || importedResult.sport}
-                              size="xs"
+                              size="sm"
                             />
-                            <div className="min-w-0">
-                              <span className="font-semibold text-white">{leg.event}</span>
-                              {leg.tournament && (
-                                <span className="text-slate-400 ml-1.5">({leg.tournament})</span>
-                              )}
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-white truncate">
+                                {leg.event}
+                                {leg.tournament && (
+                                  <span className="text-slate-400 font-normal ml-1.5">({leg.tournament})</span>
+                                )}
+                              </div>
                               {marketText && (
                                 <div className="text-emerald-300/90 truncate">{marketText}</div>
                               )}
@@ -689,8 +691,8 @@ export const BetModal: React.FC<BetModalProps> = ({
 
             {/* Partida / Evento */}
             <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between gap-2">
-                <label className="text-[11px] font-semibold text-slate-400">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-[11px] font-semibold text-slate-400 shrink-0">
                   Evento / Partida
                 </label>
                 <select
@@ -715,7 +717,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setEvent(`${comp} ${trimmed}`);
                     }
                   }}
-                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2.5 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 max-w-[195px] sm:max-w-[220px]"
+                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2.5 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 min-w-0 w-full sm:w-auto sm:max-w-[230px]"
                 >
                   <option value="" className="bg-[#0e1422] text-slate-400">
                     + Competição / Bandeira ({POPULAR_COMPETITION_PRESETS.length})
@@ -750,10 +752,10 @@ export const BetModal: React.FC<BetModalProps> = ({
                 <MatchCrests
                   event={event}
                   sport={sport}
-                  size="sm"
+                  size="md"
                   showLabels
                   debounceMs={350}
-                  className="pt-0.5"
+                  className="pt-1"
                 />
               )}
             </div>

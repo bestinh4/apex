@@ -465,47 +465,47 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 key={bet.id}
                 className="bg-[#0e1422]/95 border border-white/[0.07] rounded-xl p-3.5 flex flex-col gap-2.5"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1 flex flex-col gap-1">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <MatchCrests event={bet.event} sport={bet.sport} size="xs" />
-                      <span className="text-xs sm:text-sm font-semibold text-white truncate">
-                        {bet.event}
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <MatchCrests event={bet.event} sport={bet.sport} size="sm" />
+                    <div className="flex items-center shrink-0 gap-2">
+                      {getStatusBadge(bet.status)}
+                      <span
+                        className={`font-mono font-bold text-sm tabular-nums ${
+                          bet.status === 'PENDENTE'
+                            ? 'text-amber-400'
+                            : bet.pl >= 0
+                            ? 'text-emerald-400'
+                            : 'text-rose-400'
+                        }`}
+                      >
+                        {bet.status === 'PENDENTE'
+                          ? 'Em aberto'
+                          : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
                       </span>
                     </div>
+                  </div>
+                  <div className="min-w-0 flex flex-col gap-0.5">
+                    <span className="text-[13px] sm:text-sm font-semibold text-white leading-snug line-clamp-2 break-words">
+                      {bet.event}
+                    </span>
                     <span className="text-xs text-slate-400 block truncate">
                       {bet.market} · {bet.sport}
                     </span>
                   </div>
-                  <div className="flex flex-col items-end shrink-0 gap-1">
-                    <span
-                      className={`font-mono font-bold text-sm tabular-nums ${
-                        bet.status === 'PENDENTE'
-                          ? 'text-amber-400'
-                          : bet.pl >= 0
-                          ? 'text-emerald-400'
-                          : 'text-rose-400'
-                      }`}
-                    >
-                      {bet.status === 'PENDENTE'
-                        ? 'Em aberto'
-                        : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
-                    </span>
-                    {getStatusBadge(bet.status)}
-                  </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
-                  <div className="flex items-center gap-1.5 font-mono tabular-nums">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
+                  <div className="flex items-center gap-1.5 font-mono tabular-nums shrink-0">
                     <span className="text-blue-400 font-semibold">@{Number(bet.odd || 1).toFixed(2)}</span>
                     <span>·</span>
                     <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                     <span>({bet.units}u)</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 truncate">
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-400 min-w-0 truncate">
                     <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                     <span>·</span>
-                    <span className="font-mono">{bet.date}</span>
+                    <span className="font-mono shrink-0">{bet.date}</span>
                   </div>
                 </div>
 
@@ -536,10 +536,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <span className="text-[11px] text-slate-500 font-mono">{bet.id}</span>
+                    <span className="text-[11px] text-slate-500 font-mono truncate min-w-0 flex-1">{bet.id}</span>
                   )}
 
-                  <div className="flex items-center gap-1.5 ml-auto">
+                  <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     <button
                       type="button"
                       onClick={() => onEditBet(bet)}
@@ -602,8 +602,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                     </td>
                     <td className="py-3 px-3.5 max-w-md">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <MatchCrests event={bet.event} sport={bet.sport} size="sm" />
+                      <div className="flex items-center gap-3 min-w-[220px]">
+                        <MatchCrests event={bet.event} sport={bet.sport} size="md" />
                         <div className="flex flex-col min-w-0">
                           <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
                           <span className="text-[11px] text-slate-400 truncate">
