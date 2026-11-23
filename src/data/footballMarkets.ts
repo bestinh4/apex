@@ -102,7 +102,9 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Mais de 3.5 Gols (Over 3.5)',
       'Menos de 3.5 Gols (Under 3.5)',
       'Mais de 4.5 Gols (Over 4.5)',
-      'Menos de 4.5 Gols (Under 4.5)'
+      'Menos de 4.5 Gols (Under 4.5)',
+      'Mais de 5.5 Gols (Over 5.5)',
+      'Menos de 5.5 Gols (Under 5.5)'
     ]
   },
   {
@@ -113,6 +115,19 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     selections: [
       'Sim (Ambas Marcam)',
       'Não (Ambas Não Marcam)'
+    ]
+  },
+  {
+    id: 'btts-over-under',
+    name: 'Ambas Marcam + Total de Gols (BTTS & O/U)',
+    category: 'Gols & BTTS',
+    popular: true,
+    selections: [
+      'Ambas Marcam Sim & Mais de 2.5 Gols',
+      'Ambas Marcam Sim & Menos de 2.5 Gols',
+      'Ambas Marcam Sim & Mais de 1.5 Gols',
+      'Ambas Marcam Sim & Mais de 3.5 Gols',
+      'Ambas Marcam Não & Menos de 2.5 Gols'
     ]
   },
   {
@@ -294,6 +309,9 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     category: 'Escanteios',
     popular: true,
     selections: [
+      'Mais de 6.5 Escanteios',
+      'Mais de 7.5 Escanteios',
+      'Menos de 7.5 Escanteios',
       'Mais de 8.5 Escanteios',
       'Menos de 8.5 Escanteios',
       'Mais de 9.5 Escanteios',
@@ -302,7 +320,8 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
       'Menos de 10.5 Escanteios',
       'Mais de 11.5 Escanteios',
       'Menos de 11.5 Escanteios',
-      'Mais de 12.5 Escanteios'
+      'Mais de 12.5 Escanteios',
+      'Menos de 12.5 Escanteios'
     ]
   },
   {
@@ -372,13 +391,15 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     category: 'Cartões',
     popular: true,
     selections: [
+      'Mais de 2.5 Cartões',
       'Mais de 3.5 Cartões',
       'Menos de 3.5 Cartões',
       'Mais de 4.5 Cartões',
       'Menos de 4.5 Cartões',
       'Mais de 5.5 Cartões',
       'Menos de 5.5 Cartões',
-      'Mais de 6.5 Cartões'
+      'Mais de 6.5 Cartões',
+      'Menos de 6.5 Cartões'
     ]
   },
   {

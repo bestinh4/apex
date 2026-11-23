@@ -342,41 +342,86 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <>
             {/* MOBILE CARD LIST (< md) */}
             <div className="flex flex-col gap-2.5 md:hidden">
-              {filteredBets.map((bet) => (
+              {filteredBets.map((bet) => {
+                const isMultipleBet =
+                  /^m[uú]ltipla\s*\(/i.test(bet.event) ||
+                  (bet.event.includes(' + ') && /\s(?:x|vs\.?|v)\s/i.test(bet.event));
+                return (
                 <div
                   key={bet.id}
                   className="bg-[#080c14] border border-white/[0.06] rounded-xl p-3.5 flex flex-col gap-2.5"
                 >
                   {/* Top Row: Crests + Status + P&L, then full-width Event + Market */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <MatchCrests event={bet.event} sport={bet.sport} size="sm" />
-                      <div className="flex items-center shrink-0 gap-2">
-                        {getStatusBadge(bet.status)}
-                        <span
-                          className={`font-mono font-bold text-sm tabular-nums ${
-                            bet.status === 'PENDENTE'
-                              ? 'text-amber-400'
-                              : bet.pl >= 0
-                              ? 'text-emerald-400'
-                              : 'text-rose-400'
-                          }`}
-                        >
-                          {bet.status === 'PENDENTE'
-                            ? 'Em aberto'
-                            : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
+                  {isMultipleBet ? (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-blue-300 uppercase tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[14px]">layers</span>
+                          <span>Entrada Múltipla</span>
+                        </span>
+                        <div className="flex items-center shrink-0 gap-2">
+                          {getStatusBadge(bet.status)}
+                          <span
+                            className={`font-mono font-bold text-sm tabular-nums ${
+                              bet.status === 'PENDENTE'
+                                ? 'text-amber-400'
+                                : bet.pl >= 0
+                                ? 'text-emerald-400'
+                                : 'text-rose-400'
+                            }`}
+                          >
+                            {bet.status === 'PENDENTE'
+                              ? 'Em aberto'
+                              : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
+                          </span>
+                        </div>
+                      </div>
+                      <MatchCrests
+                        event={bet.event}
+                        sport={bet.sport}
+                        size="sm"
+                        showLabels
+                        maxScrollHeightClass="max-h-[168px]"
+                      />
+                      {bet.market && (
+                        <div className="rounded-lg bg-[#05080f]/80 border border-white/[0.05] px-2.5 py-1.5 max-h-16 overflow-y-auto overscroll-contain text-[11px] text-slate-400 leading-relaxed space-y-0.5">
+                          {bet.market.split(' | ').map((line, i) => (
+                            <p key={i} className="break-words">{line}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <MatchCrests event={bet.event} sport={bet.sport} size="sm" />
+                        <div className="flex items-center shrink-0 gap-2">
+                          {getStatusBadge(bet.status)}
+                          <span
+                            className={`font-mono font-bold text-sm tabular-nums ${
+                              bet.status === 'PENDENTE'
+                                ? 'text-amber-400'
+                                : bet.pl >= 0
+                                ? 'text-emerald-400'
+                                : 'text-rose-400'
+                            }`}
+                          >
+                            {bet.status === 'PENDENTE'
+                              ? 'Em aberto'
+                              : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex flex-col gap-0.5">
+                        <span className="text-[13px] sm:text-sm font-semibold text-white leading-snug line-clamp-2 break-words">
+                          {bet.event}
+                        </span>
+                        <span className="text-xs text-slate-400 block truncate">
+                          {bet.market}
                         </span>
                       </div>
                     </div>
-                    <div className="min-w-0 flex flex-col gap-0.5">
-                      <span className="text-[13px] sm:text-sm font-semibold text-white leading-snug line-clamp-2 break-words">
-                        {bet.event}
-                      </span>
-                      <span className="text-xs text-slate-400 block truncate">
-                        {bet.market}
-                      </span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Middle Metadata Row: Odd · Stake · Bookmaker · Date */}
                   <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-400 pt-2 border-t border-white/[0.05]">
@@ -459,7 +504,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* DESKTOP TABLE (md and up) */}
@@ -486,14 +532,34 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <td className="py-3 px-3.5 font-medium text-slate-200 whitespace-nowrap">
                         <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
                       </td>
-                      <td className="py-3 px-3.5 max-w-md">
-                        <div className="flex items-center gap-3 min-w-[220px]">
-                          <MatchCrests event={bet.event} sport={bet.sport} size="md" />
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
-                            <span className="text-[11px] text-slate-400 truncate">{bet.market}</span>
+                      <td className="py-3 px-3.5 max-w-lg">
+                        {(/^m[uú]ltipla\s*\(/i.test(bet.event) ||
+                          (bet.event.includes(' + ') && /\s(?:x|vs\.?|v)\s/i.test(bet.event))) ? (
+                          <div className="flex flex-col gap-1.5 min-w-[290px]">
+                            <MatchCrests
+                              event={bet.event}
+                              sport={bet.sport}
+                              size="md"
+                              showLabels
+                              maxScrollHeightClass="max-h-[156px]"
+                            />
+                            {bet.market && (
+                              <div className="rounded-lg bg-[#05080f]/80 border border-white/[0.05] px-2.5 py-1 max-h-14 overflow-y-auto overscroll-contain text-[11px] text-slate-400 leading-snug space-y-0.5">
+                                {bet.market.split(' | ').map((line, i) => (
+                                  <p key={i} className="truncate">{line}</p>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
+                        ) : (
+                          <div className="flex items-center gap-3 min-w-[220px]">
+                            <MatchCrests event={bet.event} sport={bet.sport} size="md" />
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-slate-100 truncate">{bet.event}</span>
+                              <span className="text-[11px] text-slate-400 truncate">{bet.market}</span>
+                            </div>
+                          </div>
+                        )}
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono font-semibold text-blue-400 whitespace-nowrap tabular-nums">
                         @{Number(bet.odd || 1).toFixed(2)}

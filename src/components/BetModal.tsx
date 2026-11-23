@@ -16,7 +16,8 @@ import {
   matchFootballCatalogMarket,
   parseBetLink,
   ParsedBetLinkResult,
-  POPULAR_COMPETITION_PRESETS
+  POPULAR_COMPETITION_PRESETS,
+  splitEventAndInlineMarket
 } from '../lib/betLinkParser';
 
 interface BetModalProps {
@@ -66,6 +67,12 @@ export const BetModal: React.FC<BetModalProps> = ({
   const [isParsingLink, setIsParsingLink] = useState(false);
   const [linkParseError, setLinkParseError] = useState<string | null>(null);
   const [importedResult, setImportedResult] = useState<ParsedBetLinkResult | null>(null);
+  const [autoMatchedHint, setAutoMatchedHint] = useState<string | null>(null);
+  const [inlineDetectedMarket, setInlineDetectedMarket] = useState<{
+    cleanEvent: string;
+    label: string;
+  } | null>(null);
+  const [manualMarketOverride, setManualMarketOverride] = useState(false);
 
   const searchClean = marketSearch.trim().toLowerCase();
 
@@ -109,11 +116,37 @@ export const BetModal: React.FC<BetModalProps> = ({
       setStake(initialBet.stake.toString());
       setStatus(initialBet.status);
       setMarketSearch('');
+      setManualMarketOverride(true);
+      setInlineDetectedMarket(null);
 
-      const matched = FOOTBALL_MARKETS.find((m) => initialBet.market.includes(m.name));
-      if (matched) {
-        setSelectedMarketId(matched.id);
-        setSelectedCategory(matched.category);
+      if (initialBet.sport === 'Futebol') {
+        const matched =
+          matchFootballCatalogMarket(initialBet.market, initialBet.event) ||
+          (() => {
+            const byName = FOOTBALL_MARKETS.find((m) => initialBet.market.includes(m.name));
+            return byName ? { market: byName, selection: undefined } : null;
+          })();
+        if (matched) {
+          setSelectedCategory(matched.market.category);
+          setSelectedMarketId(matched.market.id);
+          if (matched.selection) {
+            setSelectedOption(matched.selection);
+          } else {
+            const exactOpt = matched.market.selections.find((s) =>
+              initialBet.market.toLowerCase().includes(s.toLowerCase())
+            );
+            if (exactOpt) setSelectedOption(exactOpt);
+          }
+          setAutoMatchedHint(
+            matched.selection
+              ? `${matched.market.name} → ${matched.selection}`
+              : matched.market.name
+          );
+        } else {
+          setAutoMatchedHint(null);
+        }
+      } else {
+        setAutoMatchedHint(null);
       }
     } else {
       setFundType('Saldo Real');
@@ -138,12 +171,46 @@ export const BetModal: React.FC<BetModalProps> = ({
       setShareLinkInput(initialShareInput || '');
       setLinkParseError(null);
       setImportedResult(null);
+      setAutoMatchedHint(null);
+      setInlineDetectedMarket(null);
+      setManualMarketOverride(false);
     }
   }, [initialBet, initialShareInput, isOpen, settings.unitValue]);
+
+  const syncFootballCatalogFromText = (
+    rawMarket: string,
+    rawEvent: string,
+    options?: { updateSummaryText?: boolean; isMultiple?: boolean }
+  ): boolean => {
+    const catalogHit = matchFootballCatalogMarket(rawMarket, rawEvent);
+    if (!catalogHit) return false;
+
+    setMarketSearch('');
+    setSelectedCategory(catalogHit.market.category);
+    setSelectedMarketId(catalogHit.market.id);
+    const resolvedSelection =
+      catalogHit.selection || catalogHit.market.selections[0] || '';
+    if (resolvedSelection) {
+      setSelectedOption(resolvedSelection);
+    }
+
+    if (options?.updateSummaryText && !options.isMultiple && catalogHit.selection) {
+      setCustomMarketText(`${catalogHit.market.name}: ${catalogHit.selection}`);
+    }
+
+    setAutoMatchedHint(
+      catalogHit.selection
+        ? `${catalogHit.market.name} → ${catalogHit.selection}`
+        : catalogHit.market.name
+    );
+    return true;
+  };
 
   const applyParsedBet = (parsed: ParsedBetLinkResult) => {
     setImportedResult(parsed);
     setLinkParseError(null);
+    setMarketSearch('');
+    setInlineDetectedMarket(null);
 
     if (parsed.bookmaker) {
       if ((BOOKMAKERS as readonly string[]).includes(parsed.bookmaker)) {
@@ -160,22 +227,35 @@ export const BetModal: React.FC<BetModalProps> = ({
       : 'Futebol';
     setSport(validSport);
 
-    if (parsed.event) {
-      setEvent(parsed.event);
+    const { eventPart: splitEv, marketPart: splitMkt } = splitEventAndInlineMarket(parsed.event || '');
+    const effectiveEvent = parsed.isMultiple ? parsed.event : splitEv || parsed.event;
+    if (effectiveEvent) {
+      setEvent(effectiveEvent);
     }
 
-    if (parsed.market) {
-      setCustomMarketText(parsed.market);
+    const firstLegMarket =
+      parsed.legs[0]
+        ? `${parsed.legs[0].marketGroup}: ${parsed.legs[0].selection}`.trim()
+        : '';
+    const candidateMarket = parsed.market || splitMkt || firstLegMarket;
+
+    if (candidateMarket) {
+      setCustomMarketText(candidateMarket);
       if (validSport === 'Futebol') {
-        const catalogHit = matchFootballCatalogMarket(parsed.market);
-        if (catalogHit) {
-          setSelectedCategory(catalogHit.market.category);
-          setSelectedMarketId(catalogHit.market.id);
-          if (catalogHit.selection) {
-            setSelectedOption(catalogHit.selection);
-          } else if (catalogHit.market.selections.length > 0) {
-            setSelectedOption(catalogHit.market.selections[0]);
-          }
+        const hit =
+          syncFootballCatalogFromText(candidateMarket, effectiveEvent, {
+            updateSummaryText: !parsed.isMultiple,
+            isMultiple: parsed.isMultiple
+          }) ||
+          (firstLegMarket &&
+            syncFootballCatalogFromText(firstLegMarket, effectiveEvent, {
+              updateSummaryText: !parsed.isMultiple,
+              isMultiple: parsed.isMultiple
+            }));
+        if (!hit) {
+          setAutoMatchedHint(null);
+        } else {
+          setManualMarketOverride(false);
         }
       }
     }
@@ -192,6 +272,66 @@ export const BetModal: React.FC<BetModalProps> = ({
     }
 
     setStatus(parsed.status || 'PENDENTE');
+  };
+
+  const handleEventInputChange = (nextEvent: string) => {
+    setEvent(nextEvent);
+    if (sport !== 'Futebol') {
+      setInlineDetectedMarket(null);
+      return;
+    }
+
+    const { eventPart, marketPart } = splitEventAndInlineMarket(nextEvent);
+    if (!marketPart) {
+      setInlineDetectedMarket(null);
+      return;
+    }
+
+    const catalogHit = matchFootballCatalogMarket(marketPart, eventPart);
+    if (catalogHit) {
+      const resolvedSelection = catalogHit.selection || catalogHit.market.selections[0] || '';
+      const label = catalogHit.selection
+        ? `${catalogHit.market.name} → ${catalogHit.selection}`
+        : catalogHit.market.name;
+      setInlineDetectedMarket({ cleanEvent: eventPart, label });
+
+      setMarketSearch('');
+      setSelectedCategory(catalogHit.market.category);
+      setSelectedMarketId(catalogHit.market.id);
+      if (resolvedSelection) setSelectedOption(resolvedSelection);
+      setAutoMatchedHint(label);
+
+      if (!manualMarketOverride) {
+        setCustomMarketText(
+          catalogHit.selection
+            ? `${catalogHit.market.name}: ${catalogHit.selection}`
+            : marketPart
+        );
+      }
+    } else {
+      setInlineDetectedMarket(null);
+    }
+  };
+
+  const handleCustomMarketChange = (nextVal: string) => {
+    setCustomMarketText(nextVal);
+    setManualMarketOverride(true);
+    if (sport === 'Futebol') {
+      const hit = matchFootballCatalogMarket(nextVal, event);
+      if (hit) {
+        setMarketSearch('');
+        setSelectedCategory(hit.market.category);
+        setSelectedMarketId(hit.market.id);
+        if (hit.selection) {
+          setSelectedOption(hit.selection);
+        }
+        setAutoMatchedHint(
+          hit.selection ? `${hit.market.name} → ${hit.selection}` : hit.market.name
+        );
+      } else {
+        setAutoMatchedHint(null);
+      }
+    }
   };
 
   const handleImportBetLink = async (overrideInput?: string) => {
@@ -246,6 +386,8 @@ export const BetModal: React.FC<BetModalProps> = ({
   }, [isOpen, initialBet, initialShareInput]);
 
   const handleMarketChange = (marketId: string) => {
+    setManualMarketOverride(true);
+    setAutoMatchedHint(null);
     setSelectedMarketId(marketId);
     const m = FOOTBALL_MARKETS.find((item) => item.id === marketId);
     if (m && m.selections.length > 0) {
@@ -256,6 +398,8 @@ export const BetModal: React.FC<BetModalProps> = ({
   };
 
   const handleOptionChange = (opt: string) => {
+    setManualMarketOverride(true);
+    setAutoMatchedHint(null);
     setSelectedOption(opt);
     if (activeMarket) {
       setSelectedMarketId(activeMarket.id);
@@ -546,7 +690,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 </div>
 
                 {importedResult.legs.length > 0 && (
-                  <div className="flex flex-col gap-1 text-[11px] text-slate-200">
+                  <div className="flex flex-col gap-1.5 text-[11px] text-slate-200 max-h-60 overflow-y-auto overscroll-contain pr-1">
                     {importedResult.legs.map((leg, i) => {
                       const marketText =
                         leg.selection && leg.selection !== leg.marketGroup
@@ -555,7 +699,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                       return (
                         <div
                           key={`${leg.matchId || i}-${i}`}
-                          className="flex items-center justify-between gap-2.5 bg-black/25 px-2.5 py-2 rounded-lg"
+                          className="flex items-center justify-between gap-2.5 bg-[#0b101b]/95 border border-white/[0.07] px-3 py-2 rounded-xl"
                         >
                           <div className="min-w-0 flex-1 flex items-center gap-2.5">
                             <MatchCrests
@@ -744,10 +888,42 @@ export const BetModal: React.FC<BetModalProps> = ({
               <input
                 type="text"
                 value={event}
-                onChange={(e) => setEvent(e.target.value)}
+                onChange={(e) => handleEventInputChange(e.target.value)}
+                onPaste={(e) => {
+                  const pasted = e.clipboardData.getData('text');
+                  if (
+                    pasted &&
+                    (/https?:\/\//i.test(pasted) ||
+                      /sharebet[=:]/i.test(pasted) ||
+                      pasted.includes('\n') ||
+                      /@\s*\d/.test(pasted))
+                  ) {
+                    e.preventDefault();
+                    setShareLinkInput(pasted.trim());
+                    void handleImportBetLink(pasted.trim());
+                  }
+                }}
                 placeholder="Ex: Liga Jupiler 🇧🇪 - 16:45 Mechelen x Club Brugge"
                 className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 transition-colors"
               />
+              {inlineDetectedMarket && (
+                <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px]">
+                  <span className="text-emerald-300 font-medium truncate flex items-center gap-1.5 min-w-0">
+                    <span className="material-symbols-outlined text-[14px] shrink-0">auto_awesome</span>
+                    <span className="truncate">Mercado: {inlineDetectedMarket.label}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEvent(inlineDetectedMarket.cleanEvent);
+                      setInlineDetectedMarket(null);
+                    }}
+                    className="text-[10px] font-semibold text-emerald-200 hover:text-white px-2 py-0.5 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors shrink-0"
+                  >
+                    Deixar só o jogo
+                  </button>
+                </div>
+              )}
               {event.trim() && (
                 <MatchCrests
                   event={event}
@@ -755,6 +931,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                   size="md"
                   showLabels
                   debounceMs={350}
+                  maxScrollHeightClass="max-h-48"
                   className="pt-1"
                 />
               )}
@@ -1035,13 +1212,21 @@ export const BetModal: React.FC<BetModalProps> = ({
 
                 {/* 4. Campo de confirmação ou personalização livre */}
                 <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-medium text-slate-400">
-                    Resumo Final do Mercado (editável para adicionar jogador/time):
-                  </label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-[11px] font-medium text-slate-400">
+                      Resumo Final do Mercado (editável para adicionar jogador/time):
+                    </label>
+                    {autoMatchedHint && (
+                      <span className="text-[10px] font-semibold text-emerald-300 flex items-center gap-1 truncate max-w-full">
+                        <span className="material-symbols-outlined text-[13px] shrink-0">check_circle</span>
+                        <span className="truncate">Auto: {autoMatchedHint}</span>
+                      </span>
+                    )}
+                  </div>
                   <input
                     type="text"
                     value={customMarketText}
-                    onChange={(e) => setCustomMarketText(e.target.value)}
+                    onChange={(e) => handleCustomMarketChange(e.target.value)}
                     placeholder="Ex: Total de Gols FT: Mais de 2.5 Gols (Over 2.5)"
                     className="bg-[#0e1422] border border-emerald-500/30 text-emerald-400 font-medium px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-400"
                   />

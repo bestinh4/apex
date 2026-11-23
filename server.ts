@@ -360,7 +360,7 @@ function inferServerCompetitionFlag(competitionText: string): string {
 
 function ensureServerCompetitionHasFlag(competitionText: string): string {
   const clean = competitionText.trim();
-  if (!clean || /(?:\p{Regional_Indicator}{2}|🏴󠁧󠁢[a-z]+󠁿)/u.test(clean)) return clean;
+  if (!clean || /(?:\p{Regional_Indicator}{2}|🏴[\u{E0020}-\u{E007F}]+)/u.test(clean)) return clean;
   const inferred = inferServerCompetitionFlag(clean);
   if (!inferred) return clean;
   const timeSuffix = clean.match(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i);
@@ -974,6 +974,9 @@ async function parseGenericBetLinkOrText(
       ? rawLines[0].split('|').map((l) => l.trim()).filter(Boolean)
       : rawLines;
 
+  const SERVER_INLINE_MARKET_SPLIT =
+    /\s+(?:[:|]|[-–]\s+(?=(?:over|under|btts|ambas|ambos|ml|moneyline|vencedor|empate|casa|fora|mais|menos|acima|abaixo|handicap|h\.?\s*a\.?|ha\b|escanteios?|cantos?|cart[oõ]es|gols?|dupla\s+(?:chance|hip[oó]tese)|dnb|empate\s+anula|total\b|1x2\b|ht|ft|[+-]\d)))|\s+(?=(?:over\b|under\b|btts\b|ambas\b|ambos\b|mais\s+de\b|menos\s+de\b|acima\s+de\b|abaixo\s+de\b|total\s+de\b|handicap\b|h\.?\s*a\.?(?:\s|$)|ha\b|escanteios?\b|cantos?\b|cart[oõ]es\b|1x2\b|dupla\s+(?:chance|hip[oó]tese)\b|dnb\b|empate\s+anula\b|moneyline\b|\bml\b|\bgg\b|\bng\b|\bo\d+(?:[.,]\d+)?\b|\bu\d+(?:[.,]\d+)?\b|[+-]\d+(?:[.,]\d+)?(?:\s|$)))/i;
+
   const marketParts: string[] = [];
   for (const line of lines) {
     let stripped = line
@@ -985,9 +988,19 @@ async function parseGenericBetLinkOrText(
     if (!stripped || /^\d{1,2}[:h]\d{2}$/i.test(stripped)) continue;
 
     const isTimeHeader = /\s+[-–]\s+\d{1,2}[:h]\d{2}\b/i.test(line);
-    const hasFlag = /(?:\p{Regional_Indicator}{2}|🏴󠁧󠁢[a-z]+󠁿)/u.test(stripped);
+    const hasFlag = /(?:\p{Regional_Indicator}{2}|🏴[\u{E0020}-\u{E007F}]+)/u.test(stripped);
     if (!matchup && !isTimeHeader && /^.+?\s+(?:x|vs\.?|v)\s+.+$/i.test(stripped)) {
-      matchup = stripped;
+      const sepMatch = stripped.match(/\s+(?:×|x|vs\.?|v\.?)\s+/i);
+      const sepEnd = sepMatch && sepMatch.index !== undefined ? sepMatch.index + sepMatch[0].length : 0;
+      const afterSep = stripped.slice(sepEnd);
+      const splitHit = afterSep.match(SERVER_INLINE_MARKET_SPLIT);
+      if (splitHit && splitHit.index && splitHit.index > 1) {
+        matchup = stripped.slice(0, sepEnd + splitHit.index).replace(/[\s\-–|:·]+$/, '').trim();
+        const inlineMkt = afterSep.slice(splitHit.index).replace(/^[\s\-–|:·]+/, '').trim();
+        if (inlineMkt) marketParts.push(inlineMkt);
+      } else {
+        matchup = stripped;
+      }
       continue;
     }
     if (!tournament && (isTimeHeader || hasFlag || /^live\b/i.test(stripped) || Boolean(inferServerCompetitionFlag(stripped)))) {

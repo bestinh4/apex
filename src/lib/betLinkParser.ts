@@ -37,7 +37,7 @@ export interface ParsedBetLinkResult {
 const DEFAULT_1WIN_API_URL = 'https://api-gateway.top-parser.com';
 const DEFAULT_1WIN_PARTNER_ID = '44ba10e5-7df2-47ab-a44d-dc93803c7a6e';
 
-const FLAG_REGEX = /(?:\p{Regional_Indicator}{2}|🏴󠁧󠁢[a-z]+󠁿)/gu;
+const FLAG_REGEX = /(?:\p{Regional_Indicator}{2}|🏴[\u{E0020}-\u{E007F}]+)/gu;
 
 export const CATEGORY_COUNTRY_FLAGS: Record<string, string> = {
   albania: '🇦🇱',
@@ -510,6 +510,42 @@ function isLeagueOrHeaderLine(line: string): boolean {
   return false;
 }
 
+const INLINE_MARKET_SPLIT_REGEX =
+  /\s+(?:[:|]|[-–]\s+(?=(?:over|under|btts|ambas|ambos|ml|moneyline|vencedor|empate|casa|fora|mais|menos|acima|abaixo|handicap|h\.?\s*a\.?|ha\b|escanteios?|cantos?|cart[oõ]es|gols?|dupla\s+(?:chance|hip[oó]tese)|dnb|empate\s+anula|total\b|1x2\b|ht|ft|[+-]\d)))|\s+(?=(?:over\b|under\b|btts\b|ambas\b|ambos\b|mais\s+de\b|menos\s+de\b|acima\s+de\b|abaixo\s+de\b|total\s+de\b|handicap\b|h\.?\s*a\.?(?:\s|$)|ha\b|escanteios?\b|cantos?\b|cart[oõ]es\b|1x2\b|dupla\s+(?:chance|hip[oó]tese)\b|dnb\b|empate\s+anula\b|moneyline\b|\bml\b|\bgg\b|\bng\b|\bo\d+(?:[.,]\d+)?\b|\bu\d+(?:[.,]\d+)?\b|[+-]\d+(?:[.,]\d+)?(?:\s|$)))/i;
+
+export function splitEventAndInlineMarket(rawLine: string): {
+  eventPart: string;
+  marketPart: string;
+} {
+  const clean = (rawLine || '').trim();
+  if (!clean) return { eventPart: '', marketPart: '' };
+  // Never split pre-formatted Múltipla summaries that already aggregate legs
+  if (/^m[uú]ltipla\s*\(/i.test(clean) || clean.includes(' + ')) {
+    return { eventPart: clean, marketPart: '' };
+  }
+
+  const hasSeparator = /\s+(?:×|x|vs\.?|v\.?|-)\s+/i.test(clean);
+  if (!hasSeparator) return { eventPart: clean, marketPart: '' };
+
+  const sepMatch = clean.match(/\s+(?:×|x|vs\.?|v\.?)\s+/i) || clean.match(/\s+[-–]\s+/);
+  const sepEndIdx = sepMatch && sepMatch.index !== undefined ? sepMatch.index + sepMatch[0].length : 0;
+
+  const afterMatchup = clean.slice(sepEndIdx);
+  const marketHit = afterMatchup.match(INLINE_MARKET_SPLIT_REGEX);
+  if (marketHit && marketHit.index && marketHit.index > 1) {
+    const leftSide = clean.slice(0, sepEndIdx + marketHit.index).replace(/[\s\-–|:·]+$/, '').trim();
+    const rightMarket = afterMatchup
+      .slice(marketHit.index)
+      .replace(/^[\s\-–|:·]+/, '')
+      .trim();
+    if (leftSide.length >= 4 && rightMarket.length >= 2) {
+      return { eventPart: leftSide, marketPart: rightMarket };
+    }
+  }
+
+  return { eventPart: clean, marketPart: '' };
+}
+
 export function parseBetTipText(rawInput: string): ParsedBetLinkResult | null {
   const withoutUrls = rawInput.replace(/https?:\/\/[^\s<>"'`]+/gi, '').trim();
   if (!withoutUrls) return null;
@@ -534,34 +570,130 @@ export function parseBetTipText(rawInput: string): ParsedBetLinkResult | null {
   const bookmaker = detectBookmakerInText(rawInput);
   const sport = detectSportFromText(rawInput);
 
-  let tournament = '';
-  let matchup = '';
-  const marketCandidates: string[] = [];
+  interface ParsedTipBlock {
+    tournament: string;
+    matchup: string;
+    markets: string[];
+    legOdd: number | null;
+  }
+
+  const blocks: ParsedTipBlock[] = [];
+  let pendingTournament = '';
+  let currentBlock: ParsedTipBlock | null = null;
 
   for (const originalLine of lines) {
-    const step1 = extractOddFromText(originalLine).cleaned;
-    const step2 = extractStakeOrUnitsFromText(step1).cleaned;
+    const lineOddInfo = extractOddFromText(originalLine);
+    const step2 = extractStakeOrUnitsFromText(lineOddInfo.cleaned).cleaned;
     const cleanLine = stripDecorativeEmojisKeepFlags(stripLeadingDecorations(step2));
 
     if (!cleanLine) continue;
     if (/^\d{1,2}[:h]\d{2}$/i.test(cleanLine)) continue;
 
-    if (!matchup && isMatchupLine(cleanLine)) {
-      matchup = cleanLine.replace(/\s+/g, ' ').trim();
+    if (isMatchupLine(cleanLine)) {
+      const { eventPart, marketPart } = splitEventAndInlineMarket(cleanLine);
+      if (currentBlock && currentBlock.matchup) {
+        blocks.push(currentBlock);
+      }
+      currentBlock = {
+        tournament: pendingTournament,
+        matchup: eventPart.replace(/\s+/g, ' ').trim(),
+        markets: marketPart ? [marketPart] : [],
+        legOdd: lineOddInfo.odd
+      };
+      pendingTournament = '';
       continue;
     }
 
-    if (!tournament && isLeagueOrHeaderLine(originalLine)) {
+    if (isLeagueOrHeaderLine(originalLine)) {
       const normalizedHeader = stripDecorativeEmojisKeepFlags(stripLeadingDecorations(originalLine))
         .replace(/\s*(?:[-–]\s*)?(\d{1,2}[:h]\d{2})$/i, ' - $1')
         .replace(/\s{2,}/g, ' ')
         .trim();
-      tournament = ensureCompetitionHasFlag(normalizedHeader);
+      const formattedComp = ensureCompetitionHasFlag(normalizedHeader);
+      if (currentBlock && !currentBlock.tournament && currentBlock.markets.length === 0) {
+        currentBlock.tournament = formattedComp;
+      } else {
+        if (currentBlock && currentBlock.matchup) {
+          blocks.push(currentBlock);
+          currentBlock = null;
+        }
+        pendingTournament = formattedComp;
+      }
       continue;
     }
 
-    marketCandidates.push(cleanLine);
+    if (currentBlock) {
+      currentBlock.markets.push(cleanLine);
+      if (!currentBlock.legOdd && lineOddInfo.odd) currentBlock.legOdd = lineOddInfo.odd;
+    } else {
+      blocks.push({
+        tournament: pendingTournament,
+        matchup: '',
+        markets: [cleanLine],
+        legOdd: lineOddInfo.odd
+      });
+      pendingTournament = '';
+    }
   }
+
+  if (currentBlock) {
+    blocks.push(currentBlock);
+  } else if (pendingTournament) {
+    blocks.push({ tournament: pendingTournament, matchup: '', markets: [], legOdd: null });
+  }
+
+  const matchupBlocks = blocks.filter((b) => b.matchup);
+  const isMultiple = matchupBlocks.length > 1;
+
+  if (isMultiple) {
+    const legs: ParsedBetLeg[] = matchupBlocks.map((b) => {
+      const fullEv = b.tournament ? `${b.tournament} ${b.matchup}` : ensureCompetitionHasFlag(b.matchup);
+      const legMarket = b.markets.join(' · ').trim();
+      return {
+        event: fullEv,
+        sport,
+        tournament: b.tournament || undefined,
+        marketGroup: legMarket || 'Mercado',
+        selection: legMarket,
+        odd: b.legOdd || 0
+      };
+    });
+
+    const formattedEvent = `Múltipla (${legs.length}x): ${legs.map((l) => l.event).join(' + ')}`;
+    const marketSummary = legs
+      .map(
+        (l, idx) =>
+          `${idx + 1}) ${l.event}: ${l.marketGroup}${l.odd > 1 ? ` @ ${l.odd.toFixed(2)}` : ''}`
+      )
+      .join(' | ');
+
+    return {
+      success: true,
+      bookmaker,
+      sport,
+      event: formattedEvent,
+      market: marketSummary,
+      tournament: legs[0]?.tournament,
+      odd,
+      stake,
+      units,
+      stakeIncludedInSource: stake !== null || units !== null,
+      status: 'PENDENTE',
+      isMultiple: true,
+      selectionsCount: legs.length,
+      legs,
+      partial: odd === null,
+      warning:
+        odd === null
+          ? 'Múltipla identificada! Confira a Odd total e a Stake abaixo antes de confirmar.'
+          : undefined
+    };
+  }
+
+  const single = blocks[0] || { tournament: '', matchup: '', markets: [], legOdd: null };
+  let tournament = single.tournament;
+  const matchup = single.matchup;
+  const marketCandidates = [...single.markets];
 
   if (!matchup && marketCandidates.length >= 2 && !tournament) {
     tournament = ensureCompetitionHasFlag(marketCandidates.shift() || '');
@@ -1069,84 +1201,604 @@ export async function parseBetLink(rawInput: string): Promise<ParsedBetLinkResul
 
 function normalizeStr(s: string): string {
   return s
+    .replace(/(\d),(\d)/g, '$1.$2')
+    .replace(/[ºª°]/g, 'o')
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+export interface CatalogMarketMatch {
+  market: FootballMarket;
+  selection?: string;
+}
+
+function extractSimpleTeamsFromEvent(eventText?: string): { homeNorm: string; awayNorm: string } {
+  if (!eventText) return { homeNorm: '', awayNorm: '' };
+  const clean = eventText
+    .replace(/^m[uú]ltipla\s*\(\d+x\)\s*:\s*/i, '')
+    .split(/\s+\+\s+/)[0]
+    .trim();
+  const sep = clean.match(/^(.+?)\s+(?:×|x|vs\.?|v\.?)\s+(.+)$/i) || clean.match(/^(.+?)\s+-\s+(.+)$/);
+  if (!sep) return { homeNorm: '', awayNorm: '' };
+  const left = normalizeStr(sep[1])
+    .replace(/^.*?\b\d{1,2}[:h]\d{2}\b[\s\-:]*/, '')
+    .replace(/^(?:ao vivo|live|premier league|laliga|serie [ab]|bundesliga|ligue 1|brasileirao[^a-z]*|premiership|allsvenskan|liga jupiler)[\s\-:]*/g, '')
+    .trim();
+  const right = normalizeStr(sep[2]).split(/\s+(?:over|under|btts|ambas|mais de|menos de)\b/)[0].trim();
+  return { homeNorm: left, awayNorm: right };
+}
+
+function detectSideInMarket(
+  n: string,
+  homeNorm: string,
+  awayNorm: string
+): 'home' | 'away' | 'draw' | null {
+  const checkTeamTokens = (teamNorm: string): boolean => {
+    if (!teamNorm || teamNorm.length < 3) return false;
+    const tokens = teamNorm
+      .split(/\s+/)
+      .filter((t) => t.length >= 4 && !/^(?:club|fc|sc|ac|united|city|real|sporting|atletico)$/i.test(t));
+    if (teamNorm.length >= 4 && n.includes(teamNorm)) return true;
+    return tokens.some((tok) => new RegExp(`\\b${tok.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).test(n));
+  };
+
+  if (
+    /\b(?:casa|home|mandante|local|w1|time\s*1|equipe\s*1|competitor\s*1)\b/.test(n) ||
+    /(?:^|:\s*|—\s*|-\s+)1(?:\s*$|\s+\([+-]?\d)/.test(n)
+  ) {
+    return 'home';
+  }
+  if (
+    /\b(?:fora|away|visitante|w2|time\s*2|equipe\s*2|competitor\s*2)\b/.test(n) ||
+    /(?:^|:\s*|—\s*|-\s+)2(?:\s*$|\s+\([+-]?\d)/.test(n)
+  ) {
+    return 'away';
+  }
+  if (checkTeamTokens(homeNorm) && !checkTeamTokens(awayNorm)) return 'home';
+  if (checkTeamTokens(awayNorm) && !checkTeamTokens(homeNorm)) return 'away';
+
+  const nWithoutDnbOrCombo = n
+    .replace(/\b(?:empate\s*anula|draw\s*no\s*bet|empate\s*devolve|ou\s*empate)\b/g, ' ');
+  if (/\b(?:empate|draw)\b/.test(nWithoutDnbOrCombo)) return 'draw';
+  return null;
+}
+
+function detectDirectionInMarket(n: string): 'under' | 'over' | null {
+  if (/\b(?:abaixo|menos|under|sub)\b|\bu\s*\d+(?:\.\d+)?\b/i.test(n)) return 'under';
+  if (/\b(?:acima|mais|over)\b|\bo\s*\d+(?:\.\d+)?\b/i.test(n)) return 'over';
+  if (/(?:^|\s)-\s*\d+(?:\.\d+)?\s*(?:gol|gols|canto|cantos|escanteio|escanteios|cart|ht|ft)\b/i.test(n)) {
+    return 'under';
+  }
+  if (/(?:^|\s)\+\s*\d+(?:\.\d+)?\s*(?:gol|gols|canto|cantos|escanteio|escanteios|cart|ht|ft)\b/i.test(n)) {
+    return 'over';
+  }
+  return null;
+}
+
+function pickLineSelection(
+  market: FootballMarket,
+  lineNumberStr: string,
+  dir: 'under' | 'over' | null
+): string | undefined {
+  const escaped = lineNumberStr.replace('.', '\\.');
+  const numRegex = new RegExp(`(^|\\D)${escaped}(\\D|$)`);
+  const candidates = market.selections.filter((sel) => numRegex.test(sel));
+  if (candidates.length === 0) return undefined;
+  if (dir === 'under') {
+    return candidates.find((s) => /menos|under/i.test(s)) || candidates[0];
+  }
+  if (dir === 'over') {
+    return candidates.find((s) => /mais|over/i.test(s)) || candidates[0];
+  }
+  return candidates[0];
 }
 
 export function matchFootballCatalogMarket(
-  marketText: string
-): { market: FootballMarket; selection?: string } | null {
-  const n = normalizeStr(marketText);
+  marketText: string,
+  eventText?: string
+): CatalogMarketMatch | null {
+  const n = normalizeStr(marketText || '');
   if (!n) return null;
 
   const findById = (id: string) => FOOTBALL_MARKETS.find((m) => m.id === id);
+  const { homeNorm, awayNorm } = extractSimpleTeamsFromEvent(eventText);
+  const side = detectSideInMarket(n, homeNorm, awayNorm);
+  const dir = detectDirectionInMarket(n);
 
-  if (
-    (n.includes('ambas') || n.includes('ambos') || n.includes('btts')) &&
-    (n.includes('total') ||
-      n.includes('acima') ||
-      n.includes('abaixo') ||
-      n.includes('over') ||
-      n.includes('under') ||
-      n.includes('vence') ||
-      n.includes('empate'))
-  ) {
-    const m = findById('btts-resultado') || findById('btts');
-    if (m) return { market: m };
-  }
-  if (n.includes('ambos os times marcam') || n.includes('ambas marcam') || n.includes('btts')) {
-    const m = findById('btts');
+  const isHT = /\b(?:1t|1o\s*tempo|1\s*tempo|primeiro\s*tempo|1st\s*half|half\s*time|ht)\b/i.test(n) &&
+    !/\bht\s*\/\s*ft\b/i.test(n);
+  const is2T = /\b(?:2t|2o\s*tempo|2\s*tempo|segundo\s*tempo|2nd\s*half)\b/i.test(n);
+  const hasBTTS = /\b(?:btts|ambas|ambos|gg|ng)\b/i.test(n) ||
+    /amb(?:as|os)\s+(?:as\s+)?(?:equipes|times)\s+marc/i.test(n);
+  const hasTotalKeyword =
+    /\b(?:total|totais|acima|abaixo|over|under|mais|menos)\b|\b[ou]\s*\d+(?:\.\d+)?\b|[+-]\s*\d+\.\d+\s*gols?/i.test(n);
+
+  // 1. Combos: BTTS + Over/Under Goals
+  if (hasBTTS && hasTotalKeyword && !/\b(?:vence|vitoria|ganha|empate|resultado)\b/i.test(n)) {
+    const m = findById('btts-over-under');
     if (m) {
-      const sel = n.includes('nao') ? m.selections[1] : m.selections[0];
+      const bttsNo = /\b(?:nao|no|ng)\b/i.test(n);
+      const lineMatch = n.match(/\b(1\.5|2\.5|3\.5)\b/);
+      let sel: string | undefined;
+      if (bttsNo) {
+        sel = m.selections.find((s) => s.includes('Não'));
+      } else if (lineMatch) {
+        sel = m.selections.find(
+          (s) =>
+            s.includes('Sim') &&
+            s.includes(lineMatch[1]) &&
+            (dir === 'under' ? s.includes('Menos') : s.includes('Mais'))
+        );
+      }
+      return { market: m, selection: sel || m.selections[0] };
+    }
+  }
+
+  // 2. Combo: BTTS + Result
+  if (
+    hasBTTS &&
+    (/\b(?:vence|vitoria|ganha|resultado|1x2|combo|w1|w2)\b/i.test(n) || side !== null)
+  ) {
+    const m = findById('btts-resultado');
+    if (m) {
+      const bttsNo = /\bnao\b/i.test(n);
+      let sel: string | undefined;
+      if (side === 'draw') {
+        sel = m.selections.find((s) => s.includes('Empate'));
+      } else if (side === 'away') {
+        sel = m.selections.find((s) => s.includes('Fora') && (bttsNo ? s.includes('Não') : s.includes('Sim')));
+      } else if (side === 'home') {
+        sel = m.selections.find((s) => s.includes('Casa') && (bttsNo ? s.includes('Não') : s.includes('Sim')));
+      }
       return { market: m, selection: sel };
     }
   }
-  if (n.includes('escanteio') || n.includes('canto') || n.includes('corner')) {
-    const m = findById('escanteios-over-under');
-    if (m) return { market: m };
-  }
-  if (n.includes('cartao') || n.includes('cartoes') || n.includes('card')) {
-    const m = findById('cartoes-over-under');
-    if (m) return { market: m };
-  }
-  if (n.includes('handicap asiatico') || n.includes('asian handicap') || /\bha\b/.test(n)) {
-    const m = findById('ha-meias-linhas') || findById('ha-linhas-inteiras');
-    if (m) return { market: m };
-  }
-  if (n.includes('dupla chance') || n.includes('hipotese dupla') || n.includes('double chance')) {
-    const m = findById('dupla-chance');
-    if (m) return { market: m };
-  }
-  if (n.includes('empate anula') || n.includes('draw no bet') || n.includes('dnb')) {
-    const m = findById('dnb');
-    if (m) return { market: m };
-  }
-  if (n.includes('1x2') || n.includes('vencedor') || n.includes('resultado final') || n.includes('ml')) {
-    const m = findById('1x2');
-    if (m) return { market: m };
-  }
-  if (
-    n.includes('total') ||
-    n.includes('totais') ||
-    n.includes('acima') ||
-    n.includes('abaixo') ||
-    n.includes('over') ||
-    n.includes('under') ||
-    n.includes('mais de') ||
-    n.includes('menos de')
-  ) {
-    const m = findById('gols-over-under');
+
+  // 3. BTTS 1st Half & BTTS FT
+  if (hasBTTS && isHT) {
+    const m = findById('ambas-marcam-1t');
     if (m) {
-      const lineMatch = n.match(/(0\.5|1\.5|2\.5|3\.5|4\.5)/);
-      if (lineMatch) {
-        const isUnder = n.includes('abaixo') || n.includes('menos') || n.includes('under');
+      const sel = /\b(?:nao|no|ng)\b/i.test(n) ? m.selections[1] : m.selections[0];
+      return { market: m, selection: sel };
+    }
+  }
+  if (hasBTTS) {
+    const m = findById('btts');
+    if (m) {
+      const sel = /\b(?:nao|no|ng)\b/i.test(n) ? m.selections[1] : m.selections[0];
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 4. Escanteios (Corners)
+  if (/\b(?:escanteio|escanteios|canto|cantos|corner|corners)\b/i.test(n)) {
+    if (/\b(?:corrida|primeiro\s*a|race\s*to)\b/i.test(n)) {
+      const m = findById('corrida-escanteios');
+      if (m) {
+        const num = n.match(/\b(5|7|9)\b/)?.[1];
+        const sideWord = side === 'away' ? 'Fora' : 'Casa';
+        const sel = num ? m.selections.find((s) => s.includes(sideWord) && s.includes(num)) : undefined;
+        return { market: m, selection: sel };
+      }
+    }
+    if (/\b(?:handicap|h\.?\s*a\.?|ha)\b/i.test(n) || /[+-]\s*(?:1\.5|2\.5)\s*(?:escanteio|canto)/i.test(n)) {
+      const m = findById('handicap-escanteios');
+      if (m) {
+        const line = n.match(/([+-]?\s*(?:1\.5|2\.5))/)?.[1]?.replace(/\s+/g, '');
+        const sideWord = side === 'away' ? 'Fora' : 'Casa';
+        const sel = m.selections.find((s) => s.includes(sideWord) && (!line || s.includes(line.replace(/^[+-]/, ''))));
+        return { market: m, selection: sel };
+      }
+    }
+    if (isHT) {
+      const m = findById('escanteios-1t');
+      if (m) {
+        const line = n.match(/\b(4\.5|5\.5)\b/)?.[1];
+        const sel = line ? pickLineSelection(m, line, dir) : undefined;
+        return { market: m, selection: sel };
+      }
+    }
+    if (side === 'home' || side === 'away') {
+      const m = findById('escanteios-equipe');
+      if (m) {
+        const line = n.match(/\b(3\.5|4\.5|5\.5)\b/)?.[1];
+        const sideWord = side === 'away' ? 'Fora' : 'Casa';
+        const sel = m.selections.find((s) => s.includes(sideWord) && (!line || s.includes(line)));
+        return { market: m, selection: sel };
+      }
+    }
+    const asianCornerMatch = n.match(/(?:^|[^\d.])(9\.0|10\.0|11\.0|9|10|11)(?=$|[^\d.])/);
+    const asianCornerLine = asianCornerMatch?.[1];
+    if (/\basiatic/i.test(n) || asianCornerLine) {
+      const m = findById('escanteios-asiaticos');
+      if (m) {
+        const normalizedLine = asianCornerLine
+          ? asianCornerLine.includes('.')
+            ? asianCornerLine
+            : `${asianCornerLine}.0`
+          : '';
+        const sel = normalizedLine ? pickLineSelection(m, normalizedLine, dir) : undefined;
+        return { market: m, selection: sel };
+      }
+    }
+    const m = findById('escanteios-over-under');
+    if (m) {
+      const line = n.match(/\b(6\.5|7\.5|8\.5|9\.5|10\.5|11\.5|12\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 5. Cartões (Cards)
+  if (/\b(?:cartao|cartoes|amarelo|amarelos|vermelho|expulsao|card|cards|bookings?)\b/i.test(n)) {
+    if (/\b(?:vermelho|expulsao|red\s*card)\b/i.test(n)) {
+      const m = findById('cartao-vermelho');
+      if (m) {
+        return { market: m, selection: /\bnao\b/i.test(n) ? m.selections[1] : m.selections[0] };
+      }
+    }
+    if (/\b(?:jogador|player|receber\s*cartao|para\s*levar\s*cartao)\b/i.test(n)) {
+      const m = findById('jogador-receber-cartao');
+      if (m) return { market: m, selection: m.selections[0] };
+    }
+    if (isHT) {
+      const m = findById('cartoes-1t');
+      if (m) {
+        const line = n.match(/\b(1\.5|2\.5)\b/)?.[1];
+        const sel = line ? pickLineSelection(m, line, dir) : undefined;
+        return { market: m, selection: sel };
+      }
+    }
+    if (side === 'home' || side === 'away') {
+      const m = findById('cartoes-equipe');
+      if (m) {
+        const line = n.match(/\b(1\.5|2\.5)\b/)?.[1];
+        const sideWord = side === 'away' ? 'Fora' : 'Casa';
+        const sel = m.selections.find((s) => s.includes(sideWord) && (!line || s.includes(line)));
+        return { market: m, selection: sel };
+      }
+    }
+    const asianCardLine = n.match(/\b(4\.0|5\.0)\b/)?.[1];
+    if (/\basiatic/i.test(n) || asianCardLine) {
+      const m = findById('cartoes-asiaticos');
+      if (m) {
+        const sel = asianCardLine ? pickLineSelection(m, asianCardLine, dir) : undefined;
+        return { market: m, selection: sel };
+      }
+    }
+    const m = findById('cartoes-over-under');
+    if (m) {
+      const line = n.match(/\b(2\.5|3\.5|4\.5|5\.5|6\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 6. Player Props
+  if (/\b(?:chutes?\s*(?:no|ao)\s*(?:gol|alvo)|shots?\s*on\s*target|sot)\b/i.test(n)) {
+    const m = findById('chutes-no-gol');
+    if (m) {
+      const line = n.match(/\b(0\.5|1\.5|2\.5)\b/)?.[1];
+      return { market: m, selection: line ? pickLineSelection(m, line, 'over') : m.selections[0] };
+    }
+  }
+  if (/\b(?:finalizac(?:ao|oes)|chutes?\s*totais|total\s*shots)\b/i.test(n)) {
+    const m = findById('finalizacoes-totais');
+    if (m) {
+      const line = n.match(/\b(1\.5|2\.5|3\.5)\b/)?.[1];
+      return { market: m, selection: line ? pickLineSelection(m, line, 'over') : undefined };
+    }
+  }
+  if (/\b(?:desarmes?|tackles?)\b/i.test(n)) {
+    const m = findById('desarmes-jogador');
+    if (m) {
+      const line = n.match(/\b(1\.5|2\.5|3\.5)\b/)?.[1];
+      return { market: m, selection: line ? pickLineSelection(m, line, 'over') : undefined };
+    }
+  }
+  if (/\bfaltas?\b/i.test(n)) {
+    const m = findById('faltas-jogador');
+    if (m) {
+      const sel = /\bsofrer\b/i.test(n)
+        ? m.selections[2]
+        : /\b2\b/.test(n)
+        ? m.selections[1]
+        : m.selections[0];
+      return { market: m, selection: sel };
+    }
+  }
+  if (/\b(?:assistencia|assistencias|assist)\b/i.test(n)) {
+    const m = findById('assistencia-jogador');
+    if (m) return { market: m, selection: m.selections[0] };
+  }
+  if (/\b(?:marcador|anytime\s*goalscorer|marcar\s*(?:a\s*qualquer|gol)|primeiro\s*a\s*marcar|doblete|hat[-\s]*trick)\b/i.test(n)) {
+    const m = findById('marcador-gol');
+    if (m) {
+      const sel = /\bprimeiro\b/i.test(n)
+        ? m.selections[1]
+        : /\bultimo\b/i.test(n)
+        ? m.selections[2]
+        : /\b(?:2|doblete)\b/i.test(n)
+        ? m.selections[3]
+        : /\b(?:3|hat)\b/i.test(n)
+        ? m.selections[4]
+        : m.selections[0];
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 7. Specials & Correct Score & Live
+  if (/\b(?:placar\s*exato|resultado\s*(?:exato|correto)|correct\s*score)\b/i.test(n)) {
+    const m = findById('placar-exato');
+    if (m) {
+      const scoreMatch = n.match(/\b(\d)\s*[x:\-]\s*(\d)\b/);
+      const formatted = scoreMatch ? `${scoreMatch[1]} x ${scoreMatch[2]}` : '';
+      const sel = formatted ? m.selections.find((s) => s === formatted) || 'Qualquer Outro Resultado' : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+  if (/\bpenalt(?:i|y)\b/i.test(n)) {
+    const m = findById('penalti-partida');
+    if (m) {
+      const sel = /\bconvertid/i.test(n) ? m.selections[2] : /\bnao\b/i.test(n) ? m.selections[1] : m.selections[0];
+      return { market: m, selection: sel };
+    }
+  }
+  if (/\b(?:impar|par|odd\s*\/\s*even)\b/i.test(n)) {
+    const m = findById('impar-par');
+    if (m) {
+      return { market: m, selection: /\bimpar\b/i.test(n) ? m.selections[0] : m.selections[1] };
+    }
+  }
+  if (/\bproximo\s*gol\b/i.test(n)) {
+    const m = findById('proximo-gol-live');
+    if (m) {
+      const sel = /\bsem\s*mais\b/i.test(n)
+        ? m.selections[2]
+        : side === 'away'
+        ? m.selections[1]
+        : side === 'home'
+        ? m.selections[0]
+        : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+  if (/\bresto\s*da\s*partida\b/i.test(n)) {
+    const m = findById('resto-partida-live');
+    if (m) {
+      const sel = side === 'draw' ? m.selections[1] : side === 'away' ? m.selections[2] : side === 'home' ? m.selections[0] : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 8. HT/FT, Win to Nil, Clean Sheet
+  if (/\b(?:intervalo\s*\/\s*final|ht\s*\/\s*ft)\b/i.test(n)) {
+    const m = findById('ht-ft');
+    if (m) {
+      const codeMatch = n.match(/\b([12x])\s*\/\s*([12x])\b/i);
+      const sel = codeMatch
+        ? m.selections.find((s) => s.toLowerCase().includes(`(${codeMatch[1].toLowerCase()}/${codeMatch[2].toLowerCase()})`))
+        : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+  if (/\b(?:win\s*to\s*nil|vencer\s*sem\s*sofrer|sem\s*sofrer\s*gols?\s*e\s*venc|vitoria\s*sem\s*levar)\b/i.test(n)) {
+    const m = findById('win-to-nil');
+    if (m) {
+      return { market: m, selection: side === 'away' ? m.selections[1] : side === 'home' ? m.selections[0] : undefined };
+    }
+  }
+  if (/\b(?:clean\s*sheet|sem\s*sofrer\s*gols?|nao\s*sofre\s*gols?)\b/i.test(n)) {
+    const m = findById('clean-sheet');
+    if (m) {
+      return { market: m, selection: side === 'away' ? m.selections[1] : side === 'home' ? m.selections[0] : undefined };
+    }
+  }
+
+  // 9. Handicaps (Asian & European)
+  if (/\b(?:handicap|h\.?\s*a\.?|ha|asian\s*handicap|spread)\b/i.test(n)) {
+    const cleanedForLine = n
+      .replace(/\b(?:time|equipe|competitor)\s*[12]\b/g, ' ')
+      .replace(/\b(?:1o|1|2o|2)\s*(?:tempo|t)\b/g, ' ')
+      .replace(/\b1st\s*half\b|\b3\s*opcoes\b/g, ' ');
+    const lineMatch =
+      cleanedForLine.match(/([+-]\s*\d+(?:\.(?:0|25|5|75))?)(?=$|[^\d.])/) ||
+      cleanedForLine.match(/(?:^|[^\d.])(\d+\.(?:0|25|5|75))(?=$|[^\d.])/) ||
+      cleanedForLine.match(/(?:^|[^\d.])(0|[12])(?=$|[^\d.])/);
+    const rawLine = lineMatch ? lineMatch[1].replace(/\s+/g, '') : '';
+
+    if (/\beuropeu\b|\b3\s*opcoes\b/i.test(n)) {
+      const m = findById('handicap-europeu');
+      if (m) {
+        const sideLabel = side === 'draw' ? 'Empate' : side === 'away' ? 'Fora' : side === 'home' ? 'Casa' : '';
         const sel = m.selections.find(
-          (s) => s.includes(lineMatch[1]) && (isUnder ? s.includes('Menos') : s.includes('Mais'))
+          (s) => (!sideLabel || s.includes(sideLabel)) && (!rawLine || s.includes(rawLine.replace(/[+-]/, '')))
         );
         return { market: m, selection: sel };
       }
-      return { market: m };
+    }
+
+    if (isHT) {
+      const m = findById('ha-1t');
+      if (m) {
+        const sideWord = side === 'away' ? 'Fora' : side === 'home' ? 'Casa' : '';
+        const absLine = rawLine.replace(/^[+-]/, '');
+        const sel =
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && (!rawLine || s.includes(rawLine))) ||
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && (!absLine || s.includes(absLine)));
+        return { market: m, selection: sel };
+      }
+    }
+
+    if (/\.(?:25|75)$/.test(rawLine)) {
+      const m = findById('ha-quartos-linha');
+      if (m) {
+        const sideWord = side === 'away' ? 'Fora' : side === 'home' ? 'Casa' : '';
+        const absLine = rawLine.replace(/^[+-]/, '');
+        const sel =
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(rawLine)) ||
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(absLine));
+        return { market: m, selection: sel };
+      }
+    }
+
+    if (/\.5$/.test(rawLine)) {
+      const m = findById('ha-meias-linhas');
+      if (m) {
+        const sideWord = side === 'away' ? 'Fora' : side === 'home' ? 'Casa' : '';
+        const absLine = rawLine.replace(/^[+-]/, '');
+        const sel =
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(rawLine)) ||
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(absLine));
+        return { market: m, selection: sel };
+      }
+    }
+
+    if (/^[+-]?(?:0|1|2)(?:\.0)?$/.test(rawLine)) {
+      const m = findById('ha-linhas-inteiras');
+      if (m) {
+        const unsigned = rawLine.replace(/^[+-]/, '');
+        const cleanInt = unsigned.includes('.') ? unsigned : `${unsigned}.0`;
+        const signed = rawLine.startsWith('+') || rawLine.startsWith('-') ? `${rawLine[0]}${cleanInt}` : cleanInt;
+        const sideWord = side === 'away' ? 'Fora' : side === 'home' ? 'Casa' : '';
+        const sel =
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(signed)) ||
+          m.selections.find((s) => (!sideWord || s.includes(sideWord)) && s.includes(cleanInt));
+        return { market: m, selection: sel };
+      }
+    }
+
+    const m = findById('ha-meias-linhas') || findById('ha-linhas-inteiras');
+    if (m) return { market: m };
+  }
+
+  // 10. Dupla Chance (Double Chance)
+  if (/\b(?:dupla\s*(?:chance|hipotese)|hipotese\s*dupla|chance\s*dupla|double\s*chance|1x|x2|12)\b/i.test(n) ||
+      /\bou\s*empate\b/i.test(n)) {
+    const m = findById('dupla-chance');
+    if (m) {
+      const sel =
+        /\b1x\b|\bcasa\s*ou\s*empate\b|\b(?:time|equipe)\s*1\s*(?:ou\s*empate|nao\s*perde)/i.test(n)
+          ? m.selections[0]
+          : /\bx2\b|\bempate\s*ou\s*fora\b|\b(?:time|equipe)\s*2\s*(?:ou\s*empate|nao\s*perde)/i.test(n)
+          ? m.selections[1]
+          : /\b12\b|\bcasa\s*ou\s*fora\b/i.test(n)
+          ? m.selections[2]
+          : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 11. Draw No Bet (DNB)
+  if (/\b(?:empate\s*anula|draw\s*no\s*bet|dnb|empate\s*devolve)\b/i.test(n)) {
+    const m = findById('dnb');
+    if (m) {
+      const sel = side === 'away' ? m.selections[1] : side === 'home' ? m.selections[0] : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 12. 1st / 2nd Half Winner (1X2 HT / 2T)
+  if (isHT && /\b(?:1x2|resultado|vencedor|vitoria|ml|casa|fora|empate|draw|w1|w2)\b/i.test(n) && !hasTotalKeyword) {
+    const m = findById('resultado-1t');
+    if (m) {
+      const sel = side === 'draw' ? m.selections[1] : side === 'away' ? m.selections[2] : side === 'home' ? m.selections[0] : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+  if (is2T && /\b(?:1x2|resultado|vencedor|vitoria|ml|casa|fora|empate|draw|w1|w2)\b/i.test(n) && !hasTotalKeyword) {
+    const m = findById('resultado-2t');
+    if (m) {
+      const sel = side === 'draw' ? m.selections[1] : side === 'away' ? m.selections[2] : side === 'home' ? m.selections[0] : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 13. Multigols
+  if (/\bmultigol/i.test(n) || /\b(?:1\s*(?:a|-)\s*2|2\s*(?:a|-)\s*3|2\s*(?:a|-)\s*4|3\s*(?:a|-)\s*5)\s*gols?\b/i.test(n)) {
+    const m = findById('multigols');
+    if (m) {
+      const rangeMatch = n.match(/\b(\d)\s*(?:a|-)\s*(\d)\b/);
+      const sel = rangeMatch
+        ? m.selections.find((s) => s.includes(`${rangeMatch[1]} a ${rangeMatch[2]}`))
+        : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 14. Team Totals (Home / Away goals)
+  if (
+    hasTotalKeyword &&
+    (side === 'home' || side === 'away') &&
+    !/\b(?:escanteio|canto|cartao|cartoes)\b/i.test(n)
+  ) {
+    const m = findById(side === 'away' ? 'gols-equipe-fora' : 'gols-equipe-casa');
+    if (m) {
+      const line = n.match(/\b(0\.5|1\.5|2\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 15. 1st Half Goals (HT Over/Under)
+  if (isHT && hasTotalKeyword) {
+    const m = findById('gols-1t');
+    if (m) {
+      const line = n.match(/\b(0\.5|1\.0|1\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 16. 2nd Half Goals (2T Over/Under)
+  if (is2T && hasTotalKeyword) {
+    const m = findById('gols-2t');
+    if (m) {
+      const line = n.match(/\b(0\.5|1\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 17. Asian Goals (2.0 / 2.25 / 2.75 / 3.0)
+  const asianGoalLine = n.match(/\b(2\.0|2\.25|2\.75|3\.0)\b/)?.[1];
+  if (hasTotalKeyword && (/\basiatic/i.test(n) || asianGoalLine)) {
+    const m = findById('gols-asiaticos');
+    if (m) {
+      const sel = asianGoalLine ? pickLineSelection(m, asianGoalLine, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 18. Full Time Total Goals (Over / Under FT)
+  if (hasTotalKeyword) {
+    const m = findById('gols-over-under');
+    if (m) {
+      const line = n.match(/\b(0\.5|1\.5|2\.5|3\.5|4\.5|5\.5)\b/)?.[1];
+      const sel = line ? pickLineSelection(m, line, dir) : undefined;
+      return { market: m, selection: sel };
+    }
+  }
+
+  // 19. 1X2 / Moneyline (Result FT)
+  if (
+    /\b(?:1x2|vencedor|resultado\s*final|moneyline|ml|w1|w2|vitoria)\b/i.test(n) ||
+    side !== null
+  ) {
+    const m = findById('1x2');
+    if (m) {
+      const sel =
+        side === 'draw'
+          ? m.selections[1]
+          : side === 'away'
+          ? m.selections[2]
+          : side === 'home'
+          ? m.selections[0]
+          : undefined;
+      return { market: m, selection: sel };
     }
   }
 
