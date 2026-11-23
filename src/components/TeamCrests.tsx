@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   extractEventMatchup,
   getCachedTeamCrest,
+  normalizeTeamName,
+  resolveCanonicalTeamId,
   ResolvedTeamCrest,
   resolveTeamCrest
 } from '../lib/teamCrestService';
@@ -80,8 +82,9 @@ interface MatchCrestsProps {
   className?: string;
 }
 
-function makeLegCrestKey(team: string, ctx: string): string {
-  return `${team}@@${ctx}`;
+function makeLegCrestKey(team: string, sport: string, ctx: string): string {
+  const canonicalId = resolveCanonicalTeamId(team, sport, ctx);
+  return `${canonicalId || team.trim().toLowerCase()}@@${ctx}`;
 }
 
 export const MatchCrests: React.FC<MatchCrestsProps> = ({
@@ -105,7 +108,7 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
       const ctx = leg.context || matchup.context;
       for (const t of [leg.home, leg.away]) {
         const cached = getCachedTeamCrest(t, sport, ctx);
-        if (cached) initial[makeLegCrestKey(t, ctx)] = cached;
+        if (cached) initial[makeLegCrestKey(t, sport, ctx)] = cached;
       }
     }
     return initial;
@@ -125,7 +128,7 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
     for (const leg of matchup.legs) {
       const ctx = leg.context || matchup.context;
       for (const t of [leg.home, leg.away]) {
-        const stateKey = makeLegCrestKey(t, ctx);
+        const stateKey = makeLegCrestKey(t, sport, ctx);
         if (seenKeys.has(stateKey)) continue;
         seenKeys.add(stateKey);
 
@@ -174,19 +177,18 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
     const syncCached = getCachedTeamCrest(team, sport, ctx);
     if (syncCached?.crestUrl) return syncCached;
 
-    const exactKey = makeLegCrestKey(team, ctx);
+    const exactKey = makeLegCrestKey(team, sport, ctx);
     if (crests[exactKey] !== undefined) return crests[exactKey];
 
-    const lower = team.trim().toLowerCase();
-    const firstWord = lower.split(/\s+/)[0] || '';
+    const norm = normalizeTeamName(team);
+    const firstWord = norm.split(/\s+/)[0] || '';
     for (const [k, v] of Object.entries(crests)) {
       if (!v?.crestUrl) continue;
-      const kTeam = k.split('@@')[0] || '';
-      const kLower = kTeam.trim().toLowerCase();
-      if (kLower.length < 4 || lower.length < 4) continue;
-      const kFirstWord = kLower.split(/\s+/)[0] || '';
+      const kId = (k.split('@@')[0] || '').replace(/-/g, ' ');
+      if (kId.length < 4 || norm.length < 4) continue;
+      const kFirstWord = kId.split(/\s+/)[0] || '';
       if (
-        (lower.startsWith(kLower) || kLower.startsWith(lower)) &&
+        (norm.startsWith(kId) || kId.startsWith(norm)) &&
         (firstWord.startsWith(kFirstWord) || kFirstWord.startsWith(firstWord))
       ) {
         return v;

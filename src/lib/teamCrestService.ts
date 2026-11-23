@@ -1,10 +1,20 @@
 import { POPULAR_COMPETITION_PRESETS } from './betLinkParser';
+import {
+  damerauLevenshtein,
+  hasBrazilianStateSuffix,
+  normalizeTeamName,
+  stripDiacritics,
+  toCanonicalSlug
+} from './teamNormalization';
+
+export { normalizeTeamName, stripDiacritics, toCanonicalSlug } from './teamNormalization';
 
 export interface ResolvedTeamCrest {
   queryName: string;
   matchedName: string;
   crestUrl: string | null;
   leagueHint?: string;
+  canonicalId?: string;
 }
 
 export interface MatchupLeg {
@@ -283,111 +293,10 @@ export function extractEventMatchup(rawEvent: string): ExtractedMatchup {
   };
 }
 
-const TEAM_QUERY_ALIASES: Array<[RegExp, string]> = [
-  [/\butd\b\.?/gi, 'United'],
-  [/\batl\.?\s+/gi, 'Atletico '],
-  [/\bind\.?\s+/gi, 'Independiente '],
-  [/\bdep\.?\s+/gi, 'Deportivo '],
-  [/\bsheff\.?\s+/gi, 'Sheffield '],
-  [/\bwolves\b/gi, 'Wolverhampton Wanderers'],
-  [/\bnott['’]?m\b/gi, 'Nottingham'],
-  [/\blp\b/gi, 'La Plata'],
-  [/\bst\.?\s*pauli\b/gi, 'St. Pauli'],
-  [/\bbusan\s+i['’]?park\b/gi, "Busan I'Park"],
-  [/\bsuwon\s+samsung(?:\s+bluewings)?\b/gi, 'Suwon Bluewings'],
-  [/\bjunior\s+barranquilla\b/gi, 'Atletico Junior'],
-  [/\bnacional\s+montevideo\b/gi, 'Nacional'],
-  [/\bnewells\s+old\s+boys\b/gi, "Newell's Old Boys"],
-  [/\bmoskow\b/gi, 'Moscow'],
-  [/\bmoscou\b/gi, 'Moscow'],
-  [/\bmunique\b/gi, 'Munich'],
-  [/\bbayern\s+(?:de\s+)?munique\b/gi, 'Bayern Munich'],
-  [/\bmil[aã]o\b/gi, 'Milan'],
-  [/\binter\s+(?:de\s+)?mil[aã]o\b/gi, 'Internazionale'],
-  [/\binter\s*milan\b/gi, 'Internazionale'],
-  [/\binternacional\s+de\s+porto\s+alegre\b/gi, 'Internacional'],
-  [/\bsporting\s+(?:de\s+portugal|lisboa|lisbon)\b/gi, 'Sporting CP'],
-  [/\bsporting\s+braga\b|\bsc\s+braga\b/gi, 'Braga'],
-  [/\bolympique\s+(?:de\s+)?marseille\b|\bolympique\s+(?:de\s+)?marselha\b|\bmarselha\b/gi, 'Marseille'],
-  [/\bolympique\s+lyonnais\b|\bolympique\s+lyon\b/gi, 'Lyon'],
-  [/\bred\s*bull\s+salzburg\b|\brb\s+salzburg\b|\brb\s+salzburgo\b|\bsalzburgo\b/gi, 'Salzburg'],
-  [/\broyal\s+antwerp\b|\bantu[eé]rpia\b/gi, 'Antwerp'],
-  [/\bestrela\s+(?:da\s+)?amadora\b/gi, 'Estrela'],
-  [/\bestrela\s+vermelha\b/gi, 'Red Star Belgrade'],
-  [/\bd[ií]namo\s+(?:de\s+)?kiev\b/gi, 'Dynamo Kyiv'],
-  [/\bzenit\s+(?:saint\s+petersburg|s[aã]o\s+petersburgo)\b/gi, 'Zenit'],
-  [/\bs[aã]o\s+petersburgo\b/gi, 'St Petersburg'],
-  [/\bcol[oô]nia\b|\bk[oö]ln\b/gi, 'Cologne'],
-  [/\bmonchengladbach\b|\bm['’]?gladbach\b/gi, 'Borussia Monchengladbach'],
-  [/\bpsg\b|\bparis\s+sg\b/gi, 'Paris Saint-Germain'],
-  [/\bman\s*city\b/gi, 'Manchester City'],
-  [/\bman\s*united\b/gi, 'Manchester United'],
-  [/\batl[eé]tico[-\s]*mg\b|\bca\s+mineiro\b/gi, 'Atletico Mineiro'],
-  [/\bathletico[-\s]*pr\b|\batl[eé]tico[-\s]*pr\b/gi, 'Athletico Paranaense'],
-  [/\batl[eé]tico[-\s]*go\b|\batl[eé]tico\s+clube\s+goianiense\b/gi, 'Atletico Goianiense'],
-  [/\bam[eé]rica[-\s]*mg\b/gi, 'America Mineiro'],
-  [/\brb\s+bragantino\b/gi, 'Red Bull Bragantino'],
-  [/\bloko\s+moscow\b/gi, 'Lokomotiv Moscow'],
-  // Portuguese club & city exonyms
-  [/\bveneza\b/gi, 'Venezia'],
-  [/\bgotemburgo\b/gi, 'Goteborg'],
-  [/\bn[aá]poles\b/gi, 'Napoli'],
-  [/\bturim\b/gi, 'Torino'],
-  [/\bfloren[cç]a\b/gi, 'Fiorentina'],
-  [/\bbolonha\b/gi, 'Bologna'],
-  [/\bg[eê]nova\b/gi, 'Genoa'],
-  [/\bp[aá]dua\b/gi, 'Padova'],
-  [/\bsevilha\b/gi, 'Sevilla'],
-  [/\bsarago[cç]a\b/gi, 'Zaragoza'],
-  [/\bcorunha\b/gi, 'Coruna'],
-  [/\bbasileia\b/gi, 'Basel'],
-  [/\bzurique\b/gi, 'Zurich'],
-  [/\bgenebra\b/gi, 'Geneva'],
-  [/\bvars[oó]via\b/gi, 'Warsaw'],
-  [/\bcrac[oó]via\b/gi, 'Krakow'],
-  [/\bpraga\b/gi, 'Prague'],
-  [/\bbelgrado\b/gi, 'Belgrade'],
-  [/\batenas\b/gi, 'Athens'],
-  [/\bsal[oô]nica\b/gi, 'Thessaloniki'],
-  [/\bbucareste\b/gi, 'Bucharest'],
-  [/\bhamburgo\b/gi, 'Hamburg'],
-  [/\bestugarda\b/gi, 'Stuttgart'],
-  [/\bestrasburgo\b/gi, 'Strasbourg'],
-  [/\bbord[eé]us\b/gi, 'Bordeaux'],
-  [/\bbruxelas\b/gi, 'Brussels'],
-  [/\bcopenhague\b/gi, 'Copenhagen'],
-  [/\bestocolmo\b/gi, 'Stockholm'],
-  [/\bviena\b/gi, 'Vienna'],
-  // Portuguese country / national team names
-  [/^brasil$/i, 'Brazil'],
-  [/^espanha$/i, 'Spain'],
-  [/^fran[cç]a$/i, 'France'],
-  [/^alemanha$/i, 'Germany'],
-  [/^it[aá]lia$/i, 'Italy'],
-  [/^inglaterra$/i, 'England'],
-  [/^holanda$|^pa[ií]ses\s+baixos$/i, 'Netherlands'],
-  [/^b[eé]lgica$/i, 'Belgium'],
-  [/^su[ií][cç]a$/i, 'Switzerland'],
-  [/^su[eé]cia$/i, 'Sweden'],
-  [/^dinamarca$/i, 'Denmark'],
-  [/^noruega$/i, 'Norway'],
-  [/^pol[oô]nia$/i, 'Poland'],
-  [/^esc[oó]cia$/i, 'Scotland'],
-  [/^[aá]ustria$/i, 'Austria'],
-  [/^turquia$/i, 'Turkey'],
-  [/^gr[eé]cia$/i, 'Greece'],
-  [/^r[uú]ssia$/i, 'Russia'],
-  [/^ucr[aâ]nia$/i, 'Ukraine'],
-  [/^coreia\s+do\s+sul$/i, 'South Korea'],
-  [/^jap[aã]o$/i, 'Japan'],
-  [/^marrocos$/i, 'Morocco'],
-  [/^estados\s+unidos$/i, 'USA']
-];
-
-const CLUB_ACRONYM_REGEX =
+const AGGRESSIVE_CLUB_ACRONYM_REGEX =
   /\b(?:fc|cf|ec|sc|ac|cr|se|ca|ce|aa|ad|sd|cd|ud|rc|rcd|as|us|ss|ssc|sl|ogc|krc|kaa|rsc|pfc|bfc|afc|fsv|tsg|vfb|vfl|rb|nk|gnk|hnk|sk|fk|sv|kv|jk|bk|ik|if|fbpa|fr|bc|sfc|gfc|cfc|lfc|mufc|thfc|whufc|bha|om|ol|hsc|sco|aj|losc|alsace)\b\.?/gi;
 
-const CLUB_BOILERPLATE_REGEX =
+const AGGRESSIVE_CLUB_BOILERPLATE_REGEX =
   /\b(?:clube|club|esporte|sociedade|esportiva|regatas|athletic|balompi[eé]|f[uú]tbol|football|calcio|association|royale|royal|deportivo|stade)\b/gi;
 
 const CLUB_NUMBER_REGEX = /(?:^|\s)(?:1\.|0[4579]|9[68]|1[89]\d{2}|20[0-2]\d)(?=\s|$)/g;
@@ -409,12 +318,12 @@ const CONNECTOR_WORDS = new Set([
   'der'
 ]);
 
-function stripClubDecorations(raw: string, stripBoilerplate = false): string {
+function stripAggressiveClubDecorations(raw: string, stripBoilerplate = false): string {
   let out = raw
     .replace(CLUB_NUMBER_REGEX, ' ')
-    .replace(CLUB_ACRONYM_REGEX, ' ');
+    .replace(AGGRESSIVE_CLUB_ACRONYM_REGEX, ' ');
   if (stripBoilerplate) {
-    out = out.replace(CLUB_BOILERPLATE_REGEX, ' ');
+    out = out.replace(AGGRESSIVE_CLUB_BOILERPLATE_REGEX, ' ');
   }
   return out
     .replace(/\s*-\s*(?:mg|sp|rj|rs|pr|ba|pe|ce|go|df|sc)\b/gi, '')
@@ -423,19 +332,7 @@ function stripClubDecorations(raw: string, stripBoilerplate = false): string {
 }
 
 function stripAccentChars(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/ø/g, 'o')
-    .replace(/Ø/g, 'O')
-    .replace(/ł/g, 'l')
-    .replace(/Ł/g, 'L')
-    .replace(/ı/g, 'i')
-    .replace(/æ/g, 'ae')
-    .replace(/Æ/g, 'AE')
-    .replace(/œ/g, 'oe')
-    .replace(/Œ/g, 'OE')
-    .replace(/ß/g, 'ss');
+  return stripDiacritics(s);
 }
 
 function buildSearchCandidates(teamName: string, context: string): string[] {
@@ -448,36 +345,38 @@ function buildSearchCandidates(teamName: string, context: string): string[] {
   };
 
   const original = teamName.trim();
-  let aliased = original;
-  for (const [regex, replacement] of TEAM_QUERY_ALIASES) {
-    aliased = aliased.replace(regex, replacement);
-  }
+  const expandedExact = normalizeTeamName(original, {
+    expandAbbreviations: true,
+    stripDecorations: false
+  });
+  const expandedCore = normalizeTeamName(original, {
+    expandAbbreviations: true,
+    stripDecorations: true
+  });
 
   const ctxLower = context.toLowerCase();
-  if (/^sporting$/i.test(aliased) && (ctxLower.includes('portugal') || context.includes('🇵🇹'))) {
+  if (/^sporting$/i.test(expandedExact) && (ctxLower.includes('portugal') || context.includes('🇵🇹'))) {
     push('Sporting CP');
   }
-  if (/^roma$/i.test(aliased)) {
+  if (/^roma$/i.test(expandedExact)) {
     push('AS Roma');
   }
-  if (/^inter$/i.test(aliased)) {
+  if (/^inter$/i.test(expandedExact)) {
     push(context.includes('🇮🇹') || ctxLower.includes('serie a') ? 'Internazionale' : 'Internacional');
   }
 
-  // 1. Aliased & original full query (+ de-hyphenated variant for clubs like "Al-Qadsiah")
-  push(aliased);
+  // 1. Forma normalizada/expandida primeiro (ex.: 'Man. City' -> 'manchester city'), depois original
+  push(expandedCore);
+  push(expandedExact);
   push(original);
-  if (aliased.includes('-')) push(aliased.replace(/-/g, ' '));
   if (original.includes('-')) push(original.replace(/-/g, ' '));
 
-  // 2. Strip acronyms & foundation numbers (e.g., "1. FSV Mainz 05" -> "Mainz", "CR Flamengo" -> "Flamengo")
-  const noAcronymsAliased = stripClubDecorations(aliased, false);
-  const noAcronymsOrig = stripClubDecorations(original, false);
-  push(noAcronymsAliased);
+  // 2. Remove siglas e números de fundação do texto original e normalizado
+  const noAcronymsOrig = stripAggressiveClubDecorations(original, false);
   push(noAcronymsOrig);
 
-  // 3. Strip club boilerplate words too ("Sport Club do Recife" -> "Sport do Recife" -> "Sport Recife")
-  const noBoilerplate = stripClubDecorations(aliased, true);
+  // 3. Remove termos genéricos adicionais (útil para fallback em APIs externas)
+  const noBoilerplate = stripAggressiveClubDecorations(expandedExact || original, true);
   push(noBoilerplate);
   const noConnectors = noBoilerplate
     .split(/\s+/)
@@ -485,8 +384,8 @@ function buildSearchCandidates(teamName: string, context: string): string[] {
     .join(' ');
   push(noConnectors);
 
-  // 4. Strip trailing geographic qualifier like "de Avellaneda", "de Fútbol", "Paulista", "de Porto Alegre"
-  const withoutTrailingDe = noAcronymsAliased
+  // 4. Remove qualificadores geográficos finais ("de Avellaneda", "Paulista", etc.)
+  const withoutTrailingDe = (expandedExact || noAcronymsOrig)
     .replace(/\s+(?:de|da|do|del)\s+.+$/i, '')
     .trim();
   push(withoutTrailingDe);
@@ -495,26 +394,25 @@ function buildSearchCandidates(teamName: string, context: string): string[] {
     .trim();
   push(withoutTrailingQualifier);
 
-  // 5. Accent-free versions for queries that fail on ESPN's strict diacritic search
-  for (const base of [aliased, noAcronymsAliased, noConnectors]) {
-    const plain = stripAccentChars(base);
-    if (plain !== base) push(plain);
-  }
+  // 5. Versões sem acento do nome original
+  const plainOrig = stripAccentChars(noAcronymsOrig);
+  if (plainOrig !== noAcronymsOrig) push(plainOrig);
 
-  // 6. Progressive prefix reduction on multi-word names (3+ words -> first 2 words, then first 1 word >= 4 chars)
-  const coreWords = noConnectors.split(/\s+/).filter((w) => w.length >= 2);
+  // 6. Redução progressiva de prefixo em nomes longos
+  const coreWords = (expandedCore || noConnectors).split(/\s+/).filter((w) => w.length >= 2);
   if (coreWords.length >= 3) {
     push(coreWords.slice(0, 2).join(' '));
-    push(stripAccentChars(coreWords.slice(0, 2).join(' ')));
   }
   if (coreWords.length >= 2) {
     const first = coreWords[0];
     const second = coreWords[1];
-    // Try dropping generic leading word ("Real Sociedad" already above; e.g. "Club Athletico Paranaense" -> "Athletico Paranaense")
-    if (coreWords.length >= 2 && /^(?:real|atl[eé]tico|sporting|olympique|deportivo|uni[oó]n)$/i.test(first) && second.length >= 4) {
+    if (
+      /^(?:real|atl[eé]tico|atletico|sporting|olympique|deportivo|uni[oó]n|union)$/i.test(first) &&
+      second.length >= 4
+    ) {
       push(coreWords.slice(1).join(' '));
     }
-    if (first.length >= 4 && !/^(?:real|club|sport|inter|atl[eé]tico|olympique|city|united)$/i.test(first)) {
+    if (first.length >= 4 && !/^(?:real|club|sport|inter|atletico|olympique|city|united)$/i.test(first)) {
       push(first);
     }
   }
@@ -649,7 +547,7 @@ function scoreEspnCandidate(
   const display = normalizeText(item.displayName || '');
   const sub = normalizeText(item.subtitle || item.description || '');
   const target = normalizeText(queryUsed);
-  const origTarget = normalizeText(stripClubDecorations(originalTeamName, true) || originalTeamName);
+  const origTarget = normalizeText(stripAggressiveClubDecorations(originalTeamName, true) || originalTeamName);
   const itemSport = (item.sport || '').toLowerCase();
 
   const nameEval = evaluateNameMatch(display, target, origTarget);
@@ -720,7 +618,7 @@ function scoreEspnCandidate(
 
 const VERIFIED_CLUB_ENTRIES: Array<[string[], string, number, string]> = [
   // Premier League / Championship
-  [['newcastle', 'newcastle united', 'newcastle utd', 'newcastl'], 'Newcastle United', 361, 'Premier League'],
+  [['newcastle', 'newcastle united', 'newcastle utd'], 'Newcastle United', 361, 'Premier League'],
   [['arsenal'], 'Arsenal', 359, 'Premier League'],
   [['liverpool'], 'Liverpool', 364, 'Premier League'],
   [['manchester city', 'man city'], 'Manchester City', 382, 'Premier League'],
@@ -832,7 +730,7 @@ const VERIFIED_CLUB_ENTRIES: Array<[string[], string, number, string]> = [
   [['bayern munich', 'bayern munchen', 'bayern de munique', 'fc bayern munich', 'bayern'], 'Bayern München', 132, 'Bundesliga'],
   [['borussia dortmund', 'dortmund', 'bvb'], 'Borussia Dortmund', 124, 'Bundesliga'],
   [['bayer leverkusen', 'bayer 04 leverkusen', 'leverkusen'], 'Bayer Leverkusen', 131, 'Bundesliga'],
-  [['rb leipzig'], 'RB Leipzig', 11420, 'Bundesliga'],
+  [['rb leipzig', 'red bull leipzig'], 'RB Leipzig', 11420, 'Bundesliga'],
   [['eintracht frankfurt', 'frankfurt'], 'Eintracht Frankfurt', 125, 'Bundesliga'],
   [['stuttgart', 'vfb stuttgart', 'estugarda'], 'VfB Stuttgart', 134, 'Bundesliga'],
   [['freiburg', 'sc freiburg'], 'SC Freiburg', 126, 'Bundesliga'],
@@ -928,7 +826,7 @@ const VERIFIED_365_ENTRIES: Array<[string[], string, number, number, string]> = 
   [['jeonbuk', 'jeonbuk hyundai', 'jeonbuk hyundai motors', 'jeonbuk motors'], 'Jeonbuk Hyundai Motors', 8592, 2, 'K League 1'],
   [['fc seoul', 'seoul'], 'FC Seoul', 9820, 1, 'K League 1'],
   [['pohang', 'pohang steelers'], 'Pohang Steelers', 9822, 1, 'K League 1'],
-  [['suwon fc'], 'Suwon FC', 12765, 1, 'K League 1'],
+  [['suwon fc', 'suwon football club'], 'Suwon FC', 12765, 1, 'K League 1'],
   [['suwon bluewings', 'suwon samsung', 'suwon samsung bluewings', 'bluewings'], 'Suwon Bluewings', 8595, 1, 'K League 2'],
   [['incheon', 'incheon united', 'incheon utd'], 'Incheon United', 9819, 1, 'K League 1'],
   [['gangwon', 'gangwon fc'], 'Gangwon FC', 9825, 1, 'K League 1'],
@@ -965,51 +863,226 @@ const VERIFIED_365_ENTRIES: Array<[string[], string, number, number, string]> = 
   [['novorizontino', 'gremio novorizontino'], 'Novorizontino', 1785, 1, 'Brazil Serie B']
 ];
 
-const VERIFIED_CLUB_MAP = new Map<string, { matchedName: string; crestUrl: string; leagueHint: string }>();
+interface VerifiedClubRecord {
+  canonicalId: string;
+  matchedName: string;
+  crestUrl: string;
+  leagueHint: string;
+}
+
+const AMBIGUOUS_BARE_KEYS = new Set([
+  'suwon',
+  'racing',
+  'sporting',
+  'real',
+  'inter',
+  'united',
+  'city',
+  'atletico',
+  'athletic',
+  'america',
+  'vitoria',
+  'nacional',
+  'independiente',
+  'dinamo',
+  'dynamo'
+]);
+
+const VERIFIED_CLUB_MAP = new Map<string, VerifiedClubRecord>();
+const registerVerifiedClubAliases = (aliases: string[], record: VerifiedClubRecord) => {
+  for (const alias of aliases) {
+    const rawClean = normalizeText(alias);
+    if (rawClean) VERIFIED_CLUB_MAP.set(rawClean, record);
+
+    const exactNorm = normalizeTeamName(alias, {
+      expandAbbreviations: true,
+      stripDecorations: false
+    });
+    if (exactNorm) VERIFIED_CLUB_MAP.set(exactNorm, record);
+
+    const coreNorm = normalizeTeamName(alias, {
+      expandAbbreviations: true,
+      stripDecorations: true
+    });
+    if (coreNorm && !AMBIGUOUS_BARE_KEYS.has(coreNorm)) {
+      VERIFIED_CLUB_MAP.set(coreNorm, record);
+    }
+  }
+};
+
 for (const [aliases, matchedName, espnId, leagueHint] of VERIFIED_CLUB_ENTRIES) {
   const crestUrl = `https://a.espncdn.com/i/teamlogos/soccer/500/${espnId}.png`;
-  for (const alias of aliases) {
-    VERIFIED_CLUB_MAP.set(alias, { matchedName, crestUrl, leagueHint });
-  }
+  const canonicalId = toCanonicalSlug(matchedName);
+  registerVerifiedClubAliases(aliases, { canonicalId, matchedName, crestUrl, leagueHint });
 }
 for (const [aliases, matchedName, compId, imgVer, leagueHint] of VERIFIED_365_ENTRIES) {
   const crestUrl = `https://imagecache.365scores.com/image/upload/f_png,w_160,h_160,c_limit/v${imgVer}/Competitors/${compId}`;
-  for (const alias of aliases) {
-    VERIFIED_CLUB_MAP.set(alias, { matchedName, crestUrl, leagueHint });
-  }
+  const canonicalId = toCanonicalSlug(matchedName);
+  registerVerifiedClubAliases(aliases, { canonicalId, matchedName, crestUrl, leagueHint });
 }
 
 function disambiguateVerifiedByContext(
   key: string,
   teamName: string,
   context: string
-): { handled: boolean; result: ResolvedTeamCrest | null } {
+): { handled: boolean; result: ResolvedTeamCrest | null; canonicalOverride?: string } {
   if (key === 'inter') {
-    const isItaly = context.includes('🇮🇹') || /serie\s*a|mil[aã]o|italia/i.test(context);
-    const hit = VERIFIED_CLUB_MAP.get(isItaly ? 'inter milan' : 'internacional');
-    return { handled: true, result: hit ? { queryName: teamName, ...hit } : null };
+    const isItaly = context.includes('🇮🇹') || /serie\s*a|mil[aã]o|italia|it[aá]lia/i.test(context);
+    const hit = VERIFIED_CLUB_MAP.get(isItaly ? 'internazionale' : 'internacional');
+    return {
+      handled: true,
+      result: hit ? { queryName: teamName, ...hit } : null,
+      canonicalOverride: hit?.canonicalId
+    };
   }
-  if (key === 'vitoria' && (context.includes('🇵🇹') || /portugal|guimaraes/i.test(context))) {
+  if (key === 'vitoria' && (context.includes('🇵🇹') || /portugal|guimar[aã]es|guimaraes/i.test(context))) {
     const hit = VERIFIED_CLUB_MAP.get('vitoria de guimaraes');
-    return { handled: true, result: hit ? { queryName: teamName, ...hit } : null };
+    return {
+      handled: true,
+      result: hit ? { queryName: teamName, ...hit } : null,
+      canonicalOverride: hit?.canonicalId
+    };
   }
   if (key === 'everton' && (context.includes('🇨🇱') || /chile/i.test(context))) {
-    return { handled: true, result: null };
+    return { handled: true, result: null, canonicalOverride: 'everton-cl' };
   }
   if (key === 'nacional') {
     if (context.includes('🇺🇾') || /uruguay|uruguai/i.test(context)) {
       const hit = VERIFIED_CLUB_MAP.get('nacional montevideo');
-      return { handled: true, result: hit ? { queryName: teamName, ...hit } : null };
+      return {
+        handled: true,
+        result: hit ? { queryName: teamName, ...hit } : null,
+        canonicalOverride: hit?.canonicalId
+      };
     }
-    return { handled: true, result: null };
+    return { handled: true, result: null, canonicalOverride: 'nacional-other' };
   }
   if (key === 'barcelona' && (context.includes('🇪🇨') || /ligapro|equador|ecuador|guayaquil/i.test(context))) {
-    return { handled: true, result: null };
+    return { handled: true, result: null, canonicalOverride: 'barcelona-ec' };
   }
-  if (key === 'athletic club' && (context.includes('🇧🇷') || /brasileir|mineiro|serie\s*b/i.test(context))) {
-    return { handled: true, result: null };
+  if (
+    (key === 'athletic club' || key === 'athletic') &&
+    (context.includes('🇧🇷') || /brasileir|mineiro|serie\s*b/i.test(context))
+  ) {
+    return { handled: true, result: null, canonicalOverride: 'athletic-club-br' };
+  }
+  if (key === 'sporting') {
+    if (context.includes('🇵🇹') || /portugal|primeira\s*liga|liga\s*portugal/i.test(context)) {
+      const hit = VERIFIED_CLUB_MAP.get('sporting cp');
+      return {
+        handled: true,
+        result: hit ? { queryName: teamName, ...hit } : null,
+        canonicalOverride: hit?.canonicalId
+      };
+    }
   }
   return { handled: false, result: null };
+}
+
+function findFuzzyVerifiedMatch(
+  probes: string[],
+  teamName: string,
+  context: string,
+  hasUnresolvedBrazilState: boolean
+): VerifiedClubRecord | null {
+  if (hasUnresolvedBrazilState) return null;
+
+  for (const probe of probes) {
+    if (probe.length < 6) continue;
+    const probeWords = probe.split(/\s+/).filter(Boolean);
+    if (probeWords.length === 0) continue;
+
+    let bestRecord: VerifiedClubRecord | null = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+    let ambiguousTie = false;
+
+    for (const [candidateKey, record] of VERIFIED_CLUB_MAP.entries()) {
+      if (candidateKey.length < 6) continue;
+      if (AMBIGUOUS_BARE_KEYS.has(candidateKey)) continue;
+
+      const candWords = candidateKey.split(/\s+/).filter(Boolean);
+      if (candWords.length !== probeWords.length) continue;
+      if (probeWords[0][0] !== candWords[0][0]) continue;
+
+      // Impede que palavras diferentes como "Newcastle Jets" x "Newcastle United" colidam
+      let perWordSafe = true;
+      for (let i = 0; i < probeWords.length; i++) {
+        const pw = probeWords[i];
+        const cw = candWords[i];
+        if (pw === cw) continue;
+        if (pw.length < 4 || cw.length < 4 || damerauLevenshtein(pw, cw) > 2) {
+          perWordSafe = false;
+          break;
+        }
+      }
+      if (!perWordSafe) continue;
+
+      const dist = damerauLevenshtein(probe, candidateKey);
+      const maxDist = probe.length >= 10 && candidateKey.length >= 10 ? 2 : 1;
+      const isTruncatedPrefix =
+        probeWords.length === 1 &&
+        candidateKey.startsWith(probe) &&
+        candidateKey.length - probe.length <= 2;
+
+      if (dist > maxDist && !isTruncatedPrefix) continue;
+
+      // Garante que o candidato não conflite com regras de contexto (ex.: Inter / Barcelona / Athletic)
+      const ctxCheck = disambiguateVerifiedByContext(candidateKey, teamName, context);
+      if (ctxCheck.handled && !ctxCheck.result) continue;
+
+      // Score menor é melhor; prioriza menor distância e menor diferença de tamanho
+      const score = dist * 10 + Math.abs(candidateKey.length - probe.length);
+      if (score < bestScore) {
+        bestScore = score;
+        bestRecord = record;
+        ambiguousTie = false;
+      } else if (score === bestScore && bestRecord && bestRecord.canonicalId !== record.canonicalId) {
+        ambiguousTie = true;
+      }
+    }
+
+    if (bestRecord && !ambiguousTie) {
+      return bestRecord;
+    }
+  }
+
+  return null;
+}
+
+function buildProbeKeys(teamName: string): {
+  probes: string[];
+  hasUnresolvedBrazilState: boolean;
+} {
+  const exactNorm = normalizeTeamName(teamName, {
+    expandAbbreviations: true,
+    stripDecorations: false
+  });
+  const coreNorm = normalizeTeamName(teamName, {
+    expandAbbreviations: true,
+    stripDecorations: true
+  });
+  const plainRaw = normalizeTeamName(teamName, {
+    expandAbbreviations: false,
+    stripDecorations: false
+  });
+
+  const probes: string[] = [];
+  const pushProbe = (val: string) => {
+    const clean = val.trim();
+    if (clean && !probes.includes(clean)) probes.push(clean);
+  };
+
+  pushProbe(exactNorm);
+  pushProbe(coreNorm);
+  pushProbe(plainRaw);
+
+  const hasUnresolvedBrazilState =
+    hasBrazilianStateSuffix(teamName) &&
+    /\s(?:mg|sp|rj|rs|pr|ba|pe|ce|go|df|sc|pb|pa|rn|al|se|ma|pi|mt|ms|to|es|am|ro|ac|ap|rr)$/.test(
+      coreNorm
+    );
+
+  return { probes, hasUnresolvedBrazilState };
 }
 
 function lookupVerifiedClubCrest(
@@ -1020,31 +1093,9 @@ function lookupVerifiedClubCrest(
   const normSport = normalizeText(sport || '');
   if (normSport && !/(?:futebol|soccer|football|futsal)/i.test(normSport)) return null;
 
-  // Do not drop Brazilian state suffixes like Botafogo-SP / Botafogo-PB onto Botafogo RJ
-  const hasBrazilStateSuffix = /\s*-\s*(?:mg|sp|rj|rs|pr|ba|pe|ce|go|df|sc|pb|pa|rn|al|se|ma|pi|mt|ms|to|es|am|ro|ac|ap|rr)\b/i.test(
-    teamName
-  );
+  const { probes, hasUnresolvedBrazilState } = buildProbeKeys(teamName);
 
-  let aliasedTeam = teamName.trim();
-  for (const [regex, replacement] of TEAM_QUERY_ALIASES) {
-    aliasedTeam = aliasedTeam.replace(regex, replacement);
-  }
-
-  const probeKeys: string[] = [];
-  const pushProbe = (val: string) => {
-    const cleaned = normalizeText(val).replace(/\./g, ' ').replace(/\s{2,}/g, ' ').trim();
-    if (cleaned && !probeKeys.includes(cleaned)) probeKeys.push(cleaned);
-  };
-
-  pushProbe(teamName);
-  pushProbe(aliasedTeam);
-  if (!hasBrazilStateSuffix) {
-    pushProbe(stripClubDecorations(teamName, false));
-    pushProbe(stripClubDecorations(aliasedTeam, false));
-    pushProbe(stripClubDecorations(aliasedTeam, true));
-  }
-
-  for (const k of probeKeys) {
+  for (const k of probes) {
     const disambig = disambiguateVerifiedByContext(k, teamName, context);
     if (disambig.handled) return disambig.result;
 
@@ -1052,10 +1103,62 @@ function lookupVerifiedClubCrest(
     if (hit) return { queryName: teamName, ...hit };
   }
 
+  const fuzzyHit = findFuzzyVerifiedMatch(probes, teamName, context, hasUnresolvedBrazilState);
+  if (fuzzyHit) {
+    return { queryName: teamName, ...fuzzyHit };
+  }
+
   return null;
 }
 
-const CACHE_STORAGE_KEY = 'apex_team_crests_v6';
+/**
+ * Resolve o identificador canônico de um time após executar o pipeline completo de normalização
+ * (remoção de acentos, minúsculas, pontuação, expansão de abreviações e tolerância a variações
+ * como 'Newcastle' e 'Newcastl'). Usado como chave antes da busca pelos escudos.
+ */
+export function resolveCanonicalTeamId(
+  teamName: string,
+  sport = 'Futebol',
+  context = ''
+): string {
+  const cleanName = (teamName || '').trim();
+  if (!cleanName) return '';
+
+  const normSport = normalizeText(sport || '');
+  const isSoccer = !normSport || /(?:futebol|soccer|football|futsal)/i.test(normSport);
+
+  if (isSoccer) {
+    const { probes, hasUnresolvedBrazilState } = buildProbeKeys(cleanName);
+
+    for (const k of probes) {
+      const disambig = disambiguateVerifiedByContext(k, cleanName, context);
+      if (disambig.handled) {
+        if (disambig.canonicalOverride) return disambig.canonicalOverride;
+        if (disambig.result?.canonicalId) return disambig.result.canonicalId;
+      }
+
+      const hit = VERIFIED_CLUB_MAP.get(k);
+      if (hit) return hit.canonicalId;
+    }
+
+    const fuzzyHit = findFuzzyVerifiedMatch(probes, cleanName, context, hasUnresolvedBrazilState);
+    if (fuzzyHit) return fuzzyHit.canonicalId;
+
+    const preferredCore = probes[1] || probes[0] || cleanName;
+    return toCanonicalSlug(preferredCore) || toCanonicalSlug(cleanName);
+  }
+
+  const sportSlug = toCanonicalSlug(mapAppSportToEspn(sport)) || 'sport';
+  const normOther = normalizeTeamName(cleanName, {
+    expandAbbreviations: true,
+    stripDecorations: true
+  });
+  return `${sportSlug}:${toCanonicalSlug(normOther) || toCanonicalSlug(cleanName)}`;
+}
+
+export const getCanonicalTeamIdentifier = resolveCanonicalTeamId;
+
+const CACHE_STORAGE_KEY = 'apex_team_crests_v7';
 const HIT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
 const MISS_TTL_MS = 15 * 1000;
 
@@ -1105,7 +1208,9 @@ function score365Candidate(
   const display = normalizeText(comp.name);
   const shortDisplay = normalizeText(comp.shortName || '');
   const target = normalizeText(queryUsed);
-  const origTarget = normalizeText(stripClubDecorations(originalTeamName, true) || originalTeamName);
+  const origTarget = normalizeText(
+    stripAggressiveClubDecorations(originalTeamName, true) || originalTeamName
+  );
 
   const mainEval = evaluateNameMatch(display, target, origTarget);
   const shortEval = shortDisplay ? evaluateNameMatch(shortDisplay, target, origTarget) : { matched: false, score: -999 };
@@ -1200,8 +1305,9 @@ function persistStorageCache(): void {
 }
 
 function makeCacheKey(teamName: string, sport: string, context: string): string {
+  const canonicalId = resolveCanonicalTeamId(teamName, sport, context);
   const flagsOnly = (context.match(FLAG_REGEX) || []).join('');
-  return `${normalizeText(teamName)}|${normalizeText(sport)}|${flagsOnly}`;
+  return `${canonicalId}|${normalizeText(sport)}|${flagsOnly}`;
 }
 
 export function getCachedTeamCrest(
@@ -1212,6 +1318,7 @@ export function getCachedTeamCrest(
   const verified = lookupVerifiedClubCrest(teamName, sport, context);
   if (verified) return verified;
 
+  const canonicalId = resolveCanonicalTeamId(teamName, sport, context);
   loadStorageCacheOnce();
   const key = makeCacheKey(teamName, sport, context);
   const hit = memoryCache.get(key);
@@ -1225,7 +1332,8 @@ export function getCachedTeamCrest(
     queryName: teamName,
     matchedName: hit.matchedName,
     crestUrl: hit.crestUrl,
-    leagueHint: hit.leagueHint
+    leagueHint: hit.leagueHint,
+    canonicalId
   };
 }
 
@@ -1242,6 +1350,7 @@ export async function resolveTeamCrest(
   const verified = lookupVerifiedClubCrest(cleanName, sport, context);
   if (verified) return verified;
 
+  const canonicalId = resolveCanonicalTeamId(cleanName, sport, context);
   const cached = getCachedTeamCrest(cleanName, sport, context);
   if (cached) return cached;
 
@@ -1342,12 +1451,14 @@ export async function resolveTeamCrest(
             queryName: cleanName,
             matchedName: bestCandidate.matchedName,
             crestUrl: bestCandidate.crestUrl,
-            leagueHint: bestCandidate.leagueHint
+            leagueHint: bestCandidate.leagueHint,
+            canonicalId
           }
         : {
             queryName: cleanName,
             matchedName: cleanName,
-            crestUrl: null
+            crestUrl: null,
+            canonicalId
           };
 
     if (resolved.crestUrl || !hadHttpOrNetworkError) {
