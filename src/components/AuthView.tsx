@@ -89,18 +89,18 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-[#e2e8f0] flex flex-col justify-center items-center px-4 py-8 bg-ambient-glow selection:bg-blue-500 selection:text-white">
-      <div className="w-full max-w-md bg-[#0e1422]/95 border border-white/[0.08] rounded-2xl p-6 sm:p-8 shadow-2xl flex flex-col gap-5">
+    <div className="min-h-screen bg-[#f4f7fb] text-slate-900 flex flex-col justify-center items-center px-4 py-8 bg-ambient-glow selection:bg-blue-600 selection:text-white">
+      <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-900/5 flex flex-col gap-5">
         {/* Brand Header */}
         <div className="flex flex-col items-center text-center gap-2">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-600/25">
             <span className="material-symbols-outlined text-[26px]">account_balance_wallet</span>
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Apex Bankroll
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Gestão individual de banca esportiva com sincronização PC ↔ Celular
             </p>
           </div>
@@ -111,7 +111,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 active:scale-98"
+          className="w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm transition-all shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2 active:scale-98"
         >
           <span className="material-symbols-outlined text-[20px]">cloud_sync</span>
           <span>Conectar com Google (Sincronizar Nuvem)</span>
@@ -122,21 +122,21 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
           type="button"
           onClick={handleInstantAccess}
           disabled={loading}
-          className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-98"
+          className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-98"
         >
           <span className="material-symbols-outlined text-[18px]">bolt</span>
           <span>Acesso Local Instantâneo</span>
         </button>
 
-        <div className="flex items-center gap-3 text-slate-500 text-xs my-0.5">
-          <div className="h-px bg-white/[0.08] flex-1" />
-          <span>ou entre com seus dados</span>
-          <div className="h-px bg-white/[0.08] flex-1" />
+        <div className="flex items-center gap-3 text-slate-400 text-xs my-0.5">
+          <div className="h-px bg-slate-200 flex-1" />
+          <span className="text-slate-500">ou entre com seus dados</span>
+          <div className="h-px bg-slate-200 flex-1" />
         </div>
 
         {/* Mode Switcher Tabs */}
         {mode !== 'RESET' && (
-          <div className="grid grid-cols-2 p-1 bg-[#080c14] rounded-xl border border-white/[0.07]">
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200">
             <button
               type="button"
               onClick={() => {
@@ -147,7 +147,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
               className={`py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === 'LOGIN'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Entrar na Conta
@@ -162,7 +162,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
               className={`py-2 text-xs font-semibold rounded-lg transition-all ${
                 mode === 'REGISTER'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               Criar Nova Conta
@@ -172,8 +172,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
 
         {/* Feedback Banners */}
         {errorMsg && (
-          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/25 text-xs text-rose-300 flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-[18px] text-rose-400 shrink-0 mt-0.5">
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-[18px] text-rose-600 shrink-0 mt-0.5">
               error
             </span>
             <span>{errorMsg}</span>
@@ -181,8 +181,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
         )}
 
         {infoMsg && (
-          <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-emerald-300 flex items-start gap-2.5">
-            <span className="material-symbols-outlined text-[18px] text-emerald-400 shrink-0 mt-0.5">
+          <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 flex items-start gap-2.5">
+            <span className="material-symbols-outlined text-[18px] text-emerald-600 shrink-0 mt-0.5">
               check_circle
             </span>
             <span>{infoMsg}</span>
@@ -193,20 +193,20 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === 'REGISTER' && (
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-slate-300">Seu Nome</label>
+              <label className="text-xs font-semibold text-slate-700">Seu Nome</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Diogo"
                 required
-                className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
               />
             </div>
           )}
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-slate-300">E-mail</label>
+            <label className="text-xs font-semibold text-slate-700">E-mail</label>
             <input
               type="email"
               value={email}
@@ -214,14 +214,14 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
               placeholder="seu@email.com"
               required
               autoComplete="email"
-              className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+              className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
             />
           </div>
 
           {mode !== 'RESET' && (
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-300">Senha</label>
+                <label className="text-xs font-semibold text-slate-700">Senha</label>
                 {mode === 'LOGIN' && (
                   <button
                     type="button"
@@ -230,7 +230,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
                       setErrorMsg(null);
                       setInfoMsg(null);
                     }}
-                    className="text-[11px] text-blue-400 hover:text-blue-300 font-medium"
+                    className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold"
                   >
                     Esqueci a senha
                   </button>
@@ -244,7 +244,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
                 minLength={6}
                 required
                 autoComplete={mode === 'LOGIN' ? 'current-password' : 'new-password'}
-                className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
               />
             </div>
           )}
@@ -252,7 +252,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all active:scale-98 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
+            className="mt-1 w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all active:scale-98 shadow-lg shadow-blue-600/25 flex items-center justify-center gap-2"
           >
             {loading ? (
               <span>Autenticando...</span>
@@ -282,7 +282,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
                 setErrorMsg(null);
                 setInfoMsg(null);
               }}
-              className="text-xs text-slate-400 hover:text-white text-center pt-1"
+              className="text-xs text-slate-600 hover:text-slate-900 text-center pt-1 font-medium"
             >
               Voltar para o login
             </button>
@@ -290,10 +290,10 @@ export const AuthView: React.FC<AuthViewProps> = ({ onSuccessToast }) => {
         </form>
 
         {/* Install App Button & Privacy note */}
-        <div className="pt-4 border-t border-white/[0.06] flex flex-col gap-3">
+        <div className="pt-4 border-t border-slate-200 flex flex-col gap-3">
           <PWAInstallButton variant="auth" />
-          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 text-center">
-            <span className="material-symbols-outlined text-[15px] text-emerald-400">lock</span>
+          <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500 text-center">
+            <span className="material-symbols-outlined text-[15px] text-emerald-600">lock</span>
             <span>Apostas, caixa e configurações 100% isoladas por usuário</span>
           </div>
         </div>

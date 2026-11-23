@@ -46,19 +46,19 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="min-h-screen bg-[#080c14] text-slate-200 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0e1422] border border-rose-500/30 rounded-2xl p-6 shadow-2xl flex flex-col gap-4 text-center">
-            <div className="w-12 h-12 mx-auto rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+        <div className="min-h-screen bg-[#f4f7fb] text-slate-900 flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border border-rose-200 rounded-2xl p-6 shadow-xl flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-rose-600 text-white shadow-md shadow-rose-600/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[26px]">warning</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Algo deu errado na sincronização</h2>
-              <p className="text-xs text-slate-400 mt-1.5 break-words">{friendlyMessage}</p>
+              <h2 className="text-base font-bold text-slate-900">Algo deu errado na sincronização</h2>
+              <p className="text-xs text-slate-600 mt-1.5 break-words">{friendlyMessage}</p>
             </div>
             <button
               type="button"
               onClick={this.handleReload}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-colors"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm shadow-blue-600/20"
             >
               Recarregar Aplicativo
             </button>

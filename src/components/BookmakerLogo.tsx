@@ -21,21 +21,21 @@ export const BOOKMAKER_BRANDS: Record<string, BookmakerBrandInfo> = {
     name: 'Bet365',
     src: '/logos/bet365.svg',
     shape: 'wide',
-    bgClass: 'bg-[#027B5B] border border-white/10',
+    bgClass: 'bg-[#027B5B] border border-emerald-900/15',
     imgClass: 'w-full h-full object-contain px-1.5 py-0.5'
   },
   Betano: {
     name: 'Betano',
     src: '/logos/betano.svg',
     shape: 'wide',
-    bgClass: 'bg-white border border-white/10',
+    bgClass: 'bg-white border border-slate-200',
     imgClass: 'w-full h-full object-contain px-1.5 py-1'
   },
   Stake: {
     name: 'Stake',
     src: '/logos/stake.svg',
     shape: 'wide',
-    bgClass: 'bg-[#142533] border border-white/10',
+    bgClass: 'bg-[#142533] border border-slate-900/15',
     imgClass: 'w-full h-full object-contain px-2 py-0.5'
   },
   Pinnacle: {
@@ -49,14 +49,14 @@ export const BOOKMAKER_BRANDS: Record<string, BookmakerBrandInfo> = {
     name: 'Betfair',
     src: '/logos/betfair.svg',
     shape: 'wide',
-    bgClass: 'bg-[#FFB80C] border border-white/10',
+    bgClass: 'bg-[#FFB80C] border border-amber-500/30',
     imgClass: 'w-full h-full object-contain px-1.5 py-0.5'
   },
   Superbet: {
     name: 'Superbet',
     src: '/logos/superbet.svg',
     shape: 'wide',
-    bgClass: 'bg-white border border-white/10',
+    bgClass: 'bg-white border border-slate-200',
     imgClass: 'w-full h-full object-contain px-1.5 py-1'
   },
   Novibet: {
@@ -70,21 +70,21 @@ export const BOOKMAKER_BRANDS: Record<string, BookmakerBrandInfo> = {
     name: 'KTO',
     src: '/logos/kto.svg',
     shape: 'wide',
-    bgClass: 'bg-white border border-white/10',
+    bgClass: 'bg-white border border-slate-200',
     imgClass: 'w-full h-full object-contain px-1.5 py-0.5'
   },
   EstrelaBet: {
     name: 'EstrelaBet',
     src: '/logos/estrelabet.png',
     shape: 'wide',
-    bgClass: 'bg-[#0a1a3a] border border-white/10',
+    bgClass: 'bg-[#0a1a3a] border border-blue-950/20',
     imgClass: 'w-full h-full object-contain px-1.5 py-1'
   },
   Sportingbet: {
     name: 'Sportingbet',
     src: '/logos/sportingbet.svg',
     shape: 'wide',
-    bgClass: 'bg-[#034c81] border border-white/10',
+    bgClass: 'bg-[#034c81] border border-blue-950/20',
     imgClass: 'w-full h-full object-contain px-1.5 py-0.5'
   },
   '1xBet': {
@@ -147,7 +147,7 @@ export const BookmakerBadge: React.FC<BookmakerBadgeProps> = ({
         </span>
       ) : (
         <span
-          className={`${heightCls} ${iconWidthCls} rounded-lg bg-slate-800 border border-white/10 text-[10px] font-bold text-slate-300 inline-flex items-center justify-center shrink-0 uppercase`}
+          className={`${heightCls} ${iconWidthCls} rounded-lg bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 inline-flex items-center justify-center shrink-0 uppercase`}
         >
           {label.slice(0, 2)}
         </span>
@@ -198,28 +198,29 @@ export const BookmakerSelector: React.FC<BookmakerSelectorProps> = ({
   }, [isOpen]);
 
   const activeLabel = value === 'Outra' ? customValue.trim() || 'Outra casa...' : value;
-  const focusBorder = accent === 'emerald' ? 'border-emerald-500' : 'border-blue-500';
+  const focusBorder = accent === 'emerald' ? 'border-emerald-600' : 'border-blue-600';
   const activeItemCls =
     accent === 'emerald'
-      ? 'bg-emerald-500/15 border-emerald-500/50 text-white'
-      : 'bg-blue-600/20 border-blue-500/50 text-white';
+      ? 'bg-emerald-50 border-emerald-400 text-emerald-900 font-semibold'
+      : 'bg-blue-50 border-blue-400 text-blue-900 font-semibold';
+  const checkIconCls = accent === 'emerald' ? 'text-emerald-600' : 'text-blue-600';
 
   return (
     <div ref={containerRef} className="relative w-full">
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className={`w-full bg-[#080c14] border ${
-          isOpen ? focusBorder : 'border-white/[0.08] hover:border-white/20'
-        } text-white px-3 py-1.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-colors min-h-[38px]`}
+        className={`w-full bg-slate-50 border ${
+          isOpen ? focusBorder : 'border-slate-200 hover:border-slate-300'
+        } text-slate-900 px-3 py-1.5 rounded-xl text-xs flex items-center justify-between gap-2 transition-colors min-h-[38px]`}
       >
         <BookmakerBadge
           bookmaker={activeLabel}
           size="sm"
-          className="font-medium text-white"
+          className="font-semibold text-slate-900"
         />
         <span
-          className={`material-symbols-outlined text-[16px] text-slate-400 transition-transform shrink-0 ${
+          className={`material-symbols-outlined text-[16px] text-slate-500 transition-transform shrink-0 ${
             isOpen ? 'rotate-180' : ''
           }`}
         >
@@ -228,7 +229,7 @@ export const BookmakerSelector: React.FC<BookmakerSelectorProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 sm:min-w-[380px] top-full mt-1.5 z-40 bg-[#0e1422] border border-white/[0.12] rounded-2xl p-2.5 shadow-2xl shadow-black/80 max-h-72 overflow-y-auto">
+        <div className="absolute left-0 right-0 sm:min-w-[380px] top-full mt-1.5 z-40 bg-white border border-slate-200 rounded-2xl p-2.5 shadow-xl shadow-slate-900/10 max-h-72 overflow-y-auto">
           <div className="grid grid-cols-2 gap-1.5">
             {BOOKMAKERS.map((bk) => {
               const isSelected = value === bk;
@@ -243,12 +244,12 @@ export const BookmakerSelector: React.FC<BookmakerSelectorProps> = ({
                   className={`px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between gap-1.5 border transition-all text-left ${
                     isSelected
                       ? activeItemCls
-                      : 'bg-[#080c14] border-white/[0.05] text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                      : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                   }`}
                 >
                   <BookmakerBadge bookmaker={bk} size="sm" className="min-w-0" />
                   {isSelected && (
-                    <span className="material-symbols-outlined text-[14px] text-emerald-400 shrink-0">
+                    <span className={`material-symbols-outlined text-[14px] ${checkIconCls} shrink-0`}>
                       check
                     </span>
                   )}
@@ -267,17 +268,17 @@ export const BookmakerSelector: React.FC<BookmakerSelectorProps> = ({
               className={`mt-1.5 w-full px-2.5 py-2 rounded-xl text-xs font-medium flex items-center justify-between border transition-all ${
                 value === 'Outra'
                   ? activeItemCls
-                  : 'bg-[#080c14] border-white/[0.05] text-slate-300 hover:bg-white/[0.06] hover:text-white'
+                  : 'bg-slate-50 border-slate-200/80 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
               }`}
             >
               <span className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-lg bg-slate-800 border border-white/10 flex items-center justify-center text-slate-400">
+                <span className="w-6 h-6 rounded-lg bg-slate-200/70 border border-slate-300/60 flex items-center justify-center text-slate-600">
                   <span className="material-symbols-outlined text-[14px]">edit</span>
                 </span>
                 <span>Outra casa...</span>
               </span>
               {value === 'Outra' && (
-                <span className="material-symbols-outlined text-[14px] text-emerald-400">
+                <span className={`material-symbols-outlined text-[14px] ${checkIconCls}`}>
                   check
                 </span>
               )}
@@ -292,7 +293,7 @@ export const BookmakerSelector: React.FC<BookmakerSelectorProps> = ({
           value={customValue}
           onChange={(e) => onCustomChange(e.target.value)}
           placeholder="Digite o nome da casa..."
-          className="mt-2 w-full bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+          className="mt-2 w-full bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
         />
       )}
     </div>

@@ -1136,22 +1136,22 @@ export function computeScopedAnalytics(bets: BetEntry[], scope: AnalyticsScope) 
       label: 'Odds Baixas (@1.01 - @1.60)',
       min: 1.0,
       max: 1.6,
-      barColor: 'bg-emerald-400',
-      textColor: 'text-emerald-400'
+      barColor: 'bg-emerald-500',
+      textColor: 'text-emerald-600'
     },
     {
       label: 'Odds Médias (@1.61 - @2.10)',
       min: 1.6001,
       max: 2.1,
-      barColor: 'bg-blue-500',
-      textColor: 'text-blue-400'
+      barColor: 'bg-blue-600',
+      textColor: 'text-blue-600'
     },
     {
       label: 'Odds Altas (@2.11+)',
       min: 2.1001,
       max: 9999,
-      barColor: 'bg-indigo-500',
-      textColor: 'text-indigo-400'
+      barColor: 'bg-indigo-600',
+      textColor: 'text-indigo-600'
     }
   ].map((bucket) => {
     const resolved = scopedBets.filter(

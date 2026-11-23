@@ -44,7 +44,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
   if (url) {
     return (
       <span
-        className={`${boxSize} ${imgPad} rounded-full bg-white/[0.13] border border-white/20 inline-flex items-center justify-center shrink-0 overflow-hidden shadow-sm`}
+        className={`${boxSize} ${imgPad} rounded-full bg-white border border-slate-200 inline-flex items-center justify-center shrink-0 overflow-hidden shadow-sm`}
         title={titleText}
       >
         <img
@@ -54,7 +54,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
           decoding="async"
           referrerPolicy="no-referrer"
           onError={() => setImgFailed(true)}
-          className="w-full h-full object-contain drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]"
+          className="w-full h-full object-contain drop-shadow-[0_1px_1px_rgba(15,23,42,0.16)]"
         />
       </span>
     );
@@ -62,7 +62,7 @@ const SingleCrest: React.FC<SingleCrestProps> = ({ teamName, crest, size }) => {
 
   return (
     <span
-      className={`${boxSize} rounded-full bg-slate-800/95 border border-white/[0.16] inline-flex items-center justify-center shrink-0 ${textSize} font-bold text-slate-200 tracking-tighter select-none`}
+      className={`${boxSize} rounded-full bg-slate-100 border border-slate-300/90 inline-flex items-center justify-center shrink-0 ${textSize} font-bold text-slate-700 tracking-tighter select-none`}
       title={teamName}
     >
       {getTeamMonogram(teamName)}
@@ -202,12 +202,12 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
       <div className={`flex flex-col gap-1.5 w-full ${className}`}>
         {isMultiLegs && (
           <div className="flex items-center justify-between text-[11px] px-0.5">
-            <span className="font-semibold text-blue-300 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
+            <span className="font-bold text-blue-600 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-600 shrink-0" />
               <span>Múltipla · {matchup.legs.length} jogos</span>
             </span>
             {matchup.legs.length > 2 && (
-              <span className="text-[10px] text-slate-400">Role para ver todos</span>
+              <span className="text-[10px] text-slate-500">Role para ver todos</span>
             )}
           </div>
         )}
@@ -221,18 +221,18 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
             return (
               <div
                 key={`${leg.home}-${leg.away}-${idx}`}
-                className="rounded-xl bg-[#0b101b]/95 border border-white/[0.07] px-2.5 py-2 flex flex-col gap-1 min-w-0 w-full"
+                className="rounded-xl bg-white border border-slate-200 px-2.5 py-2 flex flex-col gap-1 min-w-0 w-full shadow-[0_1px_2px_rgba(15,23,42,0.03)]"
               >
                 {isMultiLegs && leg.context && (
-                  <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 truncate">
-                    <span className="font-mono text-slate-500 shrink-0">#{idx + 1}</span>
+                  <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 truncate">
+                    <span className="font-mono text-slate-400 shrink-0">#{idx + 1}</span>
                     <span className="truncate">{leg.context}</span>
                   </div>
                 )}
                 <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 min-w-0 w-full">
                   <div className="flex items-center gap-2 min-w-0">
                     {isMultiLegs && !leg.context && (
-                      <span className="text-[10px] font-mono text-slate-500 shrink-0">
+                      <span className="text-[10px] font-mono text-slate-400 shrink-0">
                         {idx + 1}.
                       </span>
                     )}
@@ -241,15 +241,15 @@ export const MatchCrests: React.FC<MatchCrestsProps> = ({
                       crest={getDisplayCrest(leg.home, ctx)}
                       size={size}
                     />
-                    <span className="text-xs font-semibold text-slate-100 truncate">
+                    <span className="text-xs font-semibold text-slate-900 truncate">
                       {leg.home}
                     </span>
                   </div>
-                  <span className="text-[11px] text-slate-500 font-bold select-none px-0.5">
+                  <span className="text-[11px] text-slate-400 font-bold select-none px-0.5">
                     ×
                   </span>
                   <div className="flex items-center justify-end gap-2 min-w-0">
-                    <span className="text-xs font-semibold text-slate-100 truncate text-right">
+                    <span className="text-xs font-semibold text-slate-900 truncate text-right">
                       {leg.away}
                     </span>
                     <SingleCrest

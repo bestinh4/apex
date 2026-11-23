@@ -559,22 +559,22 @@ export const BetModal: React.FC<BetModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-md p-0 sm:p-4 lg:p-6 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4 lg:p-6 overflow-y-auto"
     >
-      <div className="w-full max-w-4xl bg-[#0e1422] border-t sm:border border-white/[0.09] rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[94dvh] overflow-y-auto">
-        <div className="w-10 h-1 bg-slate-700 rounded-full mx-auto sm:hidden shrink-0" />
+      <div className="w-full max-w-4xl bg-white border-t sm:border border-slate-200 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 max-h-[94dvh] overflow-y-auto">
+        <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto sm:hidden shrink-0" />
 
         {/* Header */}
-        <div className="flex items-center justify-between pb-3.5 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between pb-3.5 border-b border-slate-200 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/20 shrink-0">
               <span className="material-symbols-outlined text-[20px]">sports_soccer</span>
             </div>
             <div className="min-w-0">
-              <h3 className="font-bold text-base text-white tracking-tight truncate">
+              <h3 className="font-bold text-base text-slate-900 tracking-tight truncate">
                 {initialBet ? `Editar Aposta #${initialBet.id}` : 'Registrar Nova Aposta'}
               </h3>
-              <p className="text-xs text-slate-400 truncate">
+              <p className="text-xs text-slate-500 truncate">
                 Catálogo completo de mercados e cálculo automático de P/L
               </p>
             </div>
@@ -582,7 +582,7 @@ export const BetModal: React.FC<BetModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-white/[0.06] transition-colors shrink-0"
+            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors shrink-0"
             aria-label="Fechar modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
@@ -591,17 +591,17 @@ export const BetModal: React.FC<BetModalProps> = ({
 
         {/* Quick Import by Shared Bet Link */}
         {!initialBet && (
-          <div className="p-3.5 rounded-2xl bg-[#080c14] border border-blue-500/25 flex flex-col gap-2.5 shrink-0">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-blue-200 flex flex-col gap-2.5 shrink-0">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-blue-500/15 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
                   <span className="material-symbols-outlined text-[16px]">link</span>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-white leading-tight">
+                  <p className="text-xs font-bold text-slate-900 leading-tight">
                     Importar Aposta por Link ou Texto da Tip
                   </p>
-                  <p className="text-[11px] text-slate-400 truncate">
+                  <p className="text-[11px] text-slate-500 truncate">
                     Cole o link da casa (1win) ou a mensagem completa com liga, jogo e mercado
                   </p>
                 </div>
@@ -610,7 +610,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 type="button"
                 onClick={handlePasteFromClipboard}
                 disabled={isParsingLink}
-                className="px-2.5 py-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[11px] font-semibold text-slate-200 flex items-center gap-1 transition-colors disabled:opacity-50 shrink-0"
+                className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-700 flex items-center gap-1 transition-colors disabled:opacity-50 shrink-0"
               >
                 <span className="material-symbols-outlined text-[14px]">content_paste</span>
                 <span>Colar e Ler</span>
@@ -639,7 +639,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                     }
                   }}
                   placeholder={`Cole o link ou a tip em múltiplas linhas, ex:\nLiga Jupiler 🇧🇪 - 16:45\nMechelen x Club Brugge\nBTTS e Over 2.5 Gols @1.80 (1 un)`}
-                  className="w-full bg-[#0e1422] border border-white/[0.08] text-white pl-3.5 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 font-mono resize-y leading-relaxed"
+                  className="w-full bg-white border border-slate-200 text-slate-900 pl-3.5 pr-8 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 placeholder:text-slate-400 font-mono resize-y leading-relaxed"
                 />
                 {shareLinkInput && (
                   <button
@@ -649,7 +649,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setLinkParseError(null);
                       setImportedResult(null);
                     }}
-                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white"
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700"
                     aria-label="Limpar texto"
                   >
                     <span className="material-symbols-outlined text-[15px]">close</span>
@@ -661,7 +661,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 type="button"
                 onClick={() => void handleImportBetLink()}
                 disabled={isParsingLink || !shareLinkInput.trim()}
-                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm shadow-blue-600/20"
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all whitespace-nowrap shrink-0 shadow-sm shadow-blue-600/20"
               >
                 <span
                   className={`material-symbols-outlined text-[16px] ${
@@ -675,7 +675,7 @@ export const BetModal: React.FC<BetModalProps> = ({
             </div>
 
             {linkParseError && (
-              <div className="px-3 py-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-[11px] flex items-start gap-2">
+              <div className="px-3 py-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-[11px] flex items-start gap-2">
                 <span className="material-symbols-outlined text-[15px] shrink-0 mt-0.5">
                   error_outline
                 </span>
@@ -684,9 +684,9 @@ export const BetModal: React.FC<BetModalProps> = ({
             )}
 
             {importedResult && (
-              <div className="px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs flex flex-col gap-1.5">
+              <div className="px-3 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs flex flex-col gap-1.5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-emerald-300 font-semibold">
+                  <div className="flex items-center gap-1.5 text-emerald-700 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">check_circle</span>
                     <span>
                       {(importedResult.bookmaker || (bookmaker === 'Outra' ? customBookmaker || 'Casa' : bookmaker))} · {importedResult.sport}
@@ -698,12 +698,12 @@ export const BetModal: React.FC<BetModalProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5">
                     {importedResult.odd && (
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-200 font-mono text-[11px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono text-[11px] font-bold">
                         Odd {importedResult.odd.toFixed(2)}
                       </span>
                     )}
                     {importedResult.units && (
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-200 font-mono text-[11px] font-bold">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-600 text-white font-mono text-[11px] font-bold">
                         {importedResult.units}u
                       </span>
                     )}
@@ -711,7 +711,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 </div>
 
                 {importedResult.legs.length > 0 && (
-                  <div className="flex flex-col gap-1.5 text-[11px] text-slate-200 max-h-60 overflow-y-auto overscroll-contain pr-1">
+                  <div className="flex flex-col gap-1.5 text-[11px] text-slate-800 max-h-60 overflow-y-auto overscroll-contain pr-1">
                     {importedResult.legs.map((leg, i) => {
                       const marketText =
                         leg.selection && leg.selection !== leg.marketGroup
@@ -720,7 +720,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                       return (
                         <div
                           key={`${leg.matchId || i}-${i}`}
-                          className="flex items-center justify-between gap-2.5 bg-[#0b101b]/95 border border-white/[0.07] px-3 py-2 rounded-xl"
+                          className="flex items-center justify-between gap-2.5 bg-white border border-slate-200 px-3 py-2 rounded-xl shadow-xs"
                         >
                           <div className="min-w-0 flex-1 flex items-center gap-2.5">
                             <MatchCrests
@@ -729,19 +729,19 @@ export const BetModal: React.FC<BetModalProps> = ({
                               size="sm"
                             />
                             <div className="min-w-0 flex-1">
-                              <div className="font-semibold text-white truncate">
+                              <div className="font-semibold text-slate-900 truncate">
                                 {leg.event}
                                 {leg.tournament && (
-                                  <span className="text-slate-400 font-normal ml-1.5">({leg.tournament})</span>
+                                  <span className="text-slate-500 font-normal ml-1.5">({leg.tournament})</span>
                                 )}
                               </div>
                               {marketText && (
-                                <div className="text-emerald-300/90 truncate">{marketText}</div>
+                                <div className="text-emerald-700 font-medium truncate">{marketText}</div>
                               )}
                             </div>
                           </div>
                           {leg.odd > 1 && (
-                            <span className="font-mono text-slate-200 font-semibold shrink-0">
+                            <span className="font-mono text-blue-600 font-bold shrink-0">
                               @{leg.odd.toFixed(2)}
                             </span>
                           )}
@@ -752,7 +752,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 )}
 
                 {importedResult.warning && (
-                  <p className="text-[11px] text-amber-200/95 flex items-start gap-1.5 pt-0.5">
+                  <p className="text-[11px] text-amber-800 flex items-start gap-1.5 pt-0.5">
                     <span className="material-symbols-outlined text-[14px] shrink-0 mt-0.5">
                       info
                     </span>
@@ -769,14 +769,14 @@ export const BetModal: React.FC<BetModalProps> = ({
           {/* LEFT COLUMN: Entry details, Stake, Odd, Status, Return */}
           <div className="lg:col-span-5 flex flex-col gap-3.5">
             {/* Tipo de Saldo (Real, Freebet ou Bônus Rollover) */}
-            <div className="grid grid-cols-3 gap-1 p-1 bg-[#080c14] rounded-xl border border-white/[0.06]">
+            <div className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
               <button
                 type="button"
                 onClick={() => setFundType('Saldo Real')}
                 className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                   fundType === 'Saldo Real'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
@@ -787,8 +787,8 @@ export const BetModal: React.FC<BetModalProps> = ({
                 onClick={() => setFundType('Freebet')}
                 className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                   fundType === 'Freebet'
-                    ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
-                    : 'text-slate-400 hover:text-emerald-400'
+                    ? 'bg-emerald-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-emerald-700'
                 }`}
               >
                 <span className="material-symbols-outlined text-[14px]">redeem</span>
@@ -799,8 +799,8 @@ export const BetModal: React.FC<BetModalProps> = ({
                 onClick={() => setFundType('Bônus Rollover')}
                 className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                   fundType === 'Bônus Rollover'
-                    ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/25'
-                    : 'text-slate-400 hover:text-indigo-300'
+                    ? 'bg-indigo-600 text-white font-bold shadow-sm'
+                    : 'text-slate-600 hover:text-indigo-700'
                 }`}
               >
                 <span className="material-symbols-outlined text-[14px]">stars</span>
@@ -811,7 +811,7 @@ export const BetModal: React.FC<BetModalProps> = ({
             {/* Casa e Esporte */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-400">
+                <label className="text-[11px] font-semibold text-slate-600">
                   Casa de Apostas
                 </label>
                 <BookmakerSelector
@@ -823,7 +823,7 @@ export const BetModal: React.FC<BetModalProps> = ({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-400">
+                <label className="text-[11px] font-semibold text-slate-600">
                   Esporte Principal
                 </label>
                 <select
@@ -840,10 +840,10 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setCustomMarketText(`${activeMarket.name}: ${selectedOption}`);
                     }
                   }}
-                  className="bg-[#080c14] border border-white/[0.08] text-white px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 transition-colors"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
                 >
                   {SPORTS_LIST.map((sp) => (
-                    <option key={sp} value={sp} className="bg-[#0e1422] text-white">
+                    <option key={sp} value={sp} className="bg-white text-slate-900">
                       {sp === 'Futebol' ? 'Futebol (Catálogo Completo)' : sp}
                     </option>
                   ))}
@@ -853,7 +853,7 @@ export const BetModal: React.FC<BetModalProps> = ({
 
             {bookmaker === 'Outra' && (
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-400">
+                <label className="text-[11px] font-semibold text-slate-600">
                   Nome da Casa de Apostas
                 </label>
                 <input
@@ -861,7 +861,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                   value={customBookmaker}
                   onChange={(e) => setCustomBookmaker(e.target.value)}
                   placeholder="Digite o nome da casa..."
-                  className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
                 />
               </div>
             )}
@@ -869,7 +869,7 @@ export const BetModal: React.FC<BetModalProps> = ({
             {/* Partida / Evento */}
             <div className="flex flex-col gap-1.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="text-[11px] font-semibold text-slate-400 shrink-0">
+                <label className="text-[11px] font-semibold text-slate-600 shrink-0">
                   Evento / Partida
                 </label>
                 <select
@@ -894,22 +894,22 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setEvent(`${comp} ${trimmed}`);
                     }
                   }}
-                  className="bg-[#080c14] border border-white/[0.08] text-slate-300 px-2.5 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-500 min-w-0 w-full sm:w-auto sm:max-w-[230px]"
+                  className="bg-slate-50 border border-slate-200 text-slate-700 px-2.5 py-1 rounded-lg text-[11px] focus:outline-none focus:border-blue-600 focus:bg-white min-w-0 w-full sm:w-auto sm:max-w-[230px]"
                 >
-                  <option value="" className="bg-[#0e1422] text-slate-400">
+                  <option value="" className="bg-white text-slate-500">
                     + Competição / Bandeira ({POPULAR_COMPETITION_PRESETS.length})
                   </option>
                   {COMPETITION_PRESET_GROUPS.map((group) => (
                     <optgroup
                       key={group.group}
                       label={group.group}
-                      className="bg-[#0e1422] text-slate-400 font-semibold"
+                      className="bg-slate-50 text-slate-500 font-semibold"
                     >
                       {group.items.map((preset) => (
                         <option
                           key={`${group.group}-${preset.value}`}
                           value={preset.value}
-                          className="bg-[#0e1422] text-white font-normal"
+                          className="bg-white text-slate-900 font-normal"
                         >
                           {preset.label}
                         </option>
@@ -937,11 +937,11 @@ export const BetModal: React.FC<BetModalProps> = ({
                   }
                 }}
                 placeholder="Ex: Liga Jupiler 🇧🇪 - 16:45 Mechelen x Club Brugge"
-                className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600 transition-colors"
+                className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400 transition-colors"
               />
               {inlineDetectedMarket && (
-                <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-[11px]">
-                  <span className="text-emerald-300 font-medium truncate flex items-center gap-1.5 min-w-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-[11px]">
+                  <span className="text-emerald-700 font-medium truncate flex items-center gap-1.5 min-w-0">
                     <span className="material-symbols-outlined text-[14px] shrink-0">auto_awesome</span>
                     <span className="truncate">Mercado: {inlineDetectedMarket.label}</span>
                   </span>
@@ -951,7 +951,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                       setEvent(inlineDetectedMarket.cleanEvent);
                       setInlineDetectedMarket(null);
                     }}
-                    className="text-[10px] font-semibold text-emerald-200 hover:text-white px-2 py-0.5 rounded-md bg-emerald-500/20 hover:bg-emerald-500/30 transition-colors shrink-0"
+                    className="text-[10px] font-semibold text-emerald-700 hover:text-emerald-900 px-2 py-0.5 rounded-md bg-emerald-100 hover:bg-emerald-200 transition-colors shrink-0"
                   >
                     Deixar só o jogo
                   </button>
@@ -973,7 +973,7 @@ export const BetModal: React.FC<BetModalProps> = ({
             {/* Odd e Stake */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-400">
+                <label className="text-[11px] font-semibold text-slate-600">
                   Odd Decimal
                 </label>
                 <input
@@ -987,13 +987,13 @@ export const BetModal: React.FC<BetModalProps> = ({
                     }
                   }}
                   placeholder="Ex: 1,90"
-                  className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 tabular-nums"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400 tabular-nums"
                   required
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-slate-400">
+                <label className="text-[11px] font-semibold text-slate-600">
                   Valor / Stake (R$)
                 </label>
                 <input
@@ -1007,7 +1007,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                     }
                   }}
                   placeholder="Ex: 2,75"
-                  className="bg-[#080c14] border border-white/[0.08] text-white font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 tabular-nums"
+                  className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400 tabular-nums"
                   required
                 />
               </div>
@@ -1016,8 +1016,8 @@ export const BetModal: React.FC<BetModalProps> = ({
             {/* Atalhos de Unidades */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="font-semibold text-slate-400">Atalhos de Unidade</span>
-                <span className="font-mono text-blue-400 font-semibold tabular-nums">
+                <span className="font-semibold text-slate-600">Atalhos de Unidade</span>
+                <span className="font-mono text-blue-600 font-semibold tabular-nums">
                   {units.toFixed(2)}u
                 </span>
               </div>
@@ -1025,21 +1025,21 @@ export const BetModal: React.FC<BetModalProps> = ({
                 <button
                   type="button"
                   onClick={() => handleApplyUnit(0.5)}
-                  className="py-2 bg-[#080c14] hover:bg-white/[0.06] border border-white/[0.08] rounded-xl text-xs font-mono text-slate-300 transition-colors"
+                  className="py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-700 transition-colors"
                 >
                   0.5u
                 </button>
                 <button
                   type="button"
                   onClick={() => handleApplyUnit(1.0)}
-                  className="py-2 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 rounded-xl text-xs font-mono text-blue-400 font-bold transition-colors"
+                  className="py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl text-xs font-mono text-blue-700 font-bold transition-colors"
                 >
                   1.0u
                 </button>
                 <button
                   type="button"
                   onClick={() => handleApplyUnit(2.0)}
-                  className="py-2 bg-[#080c14] hover:bg-white/[0.06] border border-white/[0.08] rounded-xl text-xs font-mono text-slate-300 transition-colors"
+                  className="py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-semibold text-slate-700 transition-colors"
                 >
                   2.0u
                 </button>
@@ -1048,7 +1048,7 @@ export const BetModal: React.FC<BetModalProps> = ({
 
             {/* Status selector */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold text-slate-400">
+              <label className="text-[11px] font-semibold text-slate-600">
                 Resultado / Status da Aposta
               </label>
               <select
@@ -1058,21 +1058,21 @@ export const BetModal: React.FC<BetModalProps> = ({
                   setStatus(next);
                   setCashoutError(null);
                 }}
-                className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
+                className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white"
               >
-                <option value="GREEN" className="bg-[#0e1422] text-white">GREEN (Ganho Total)</option>
-                <option value="PENDENTE" className="bg-[#0e1422] text-white">AO VIVO / PENDENTE (Em Aberto)</option>
-                <option value="RED" className="bg-[#0e1422] text-white">RED (Perdida)</option>
-                <option value="HALF_GREEN" className="bg-[#0e1422] text-white">MEIO GREEN (50% Ganho)</option>
-                <option value="HALF_RED" className="bg-[#0e1422] text-white">MEIO RED (50% Devolvido)</option>
-                <option value="VOID" className="bg-[#0e1422] text-white">REEMBOLSO / VOID (Devolvida)</option>
-                <option value="CASHOUT" className="bg-[#0e1422] text-white">CASHOUT (Valor Recebido)</option>
+                <option value="GREEN" className="bg-white text-slate-900">GREEN (Ganho Total)</option>
+                <option value="PENDENTE" className="bg-white text-slate-900">AO VIVO / PENDENTE (Em Aberto)</option>
+                <option value="RED" className="bg-white text-slate-900">RED (Perdida)</option>
+                <option value="HALF_GREEN" className="bg-white text-slate-900">MEIO GREEN (50% Ganho)</option>
+                <option value="HALF_RED" className="bg-white text-slate-900">MEIO RED (50% Devolvido)</option>
+                <option value="VOID" className="bg-white text-slate-900">REEMBOLSO / VOID (Devolvida)</option>
+                <option value="CASHOUT" className="bg-white text-slate-900">CASHOUT (Valor Recebido)</option>
               </select>
             </div>
 
             {status === 'CASHOUT' && (
-              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/25">
-                <label className="text-[11px] font-semibold text-blue-300">
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-blue-50 border border-blue-200">
+                <label className="text-[11px] font-semibold text-blue-700">
                   Valor Efetivamente Recebido no Cashout (R$)
                 </label>
                 <input
@@ -1087,34 +1087,34 @@ export const BetModal: React.FC<BetModalProps> = ({
                     }
                   }}
                   placeholder="Ex: 65,00"
-                  className="bg-[#080c14] border border-blue-500/40 text-white font-mono px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-400 tabular-nums"
+                  className="bg-white border border-blue-300 text-slate-900 font-mono px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 tabular-nums placeholder:text-slate-400"
                   required
                 />
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[10px] text-slate-600">
                   {fundType === 'Freebet'
                     ? 'Em Freebet, o valor recebido no cashout representa ganho promocional integral.'
                     : 'Ex.: Stake R$ 100 e Cashout recebido de R$ 65 = resultado líquido de -R$ 35.'}
                 </span>
                 {cashoutError && (
-                  <span className="text-[11px] text-rose-400 font-medium">{cashoutError}</span>
+                  <span className="text-[11px] text-rose-600 font-medium">{cashoutError}</span>
                 )}
               </div>
             )}
 
             {/* Resumo do Retorno */}
-            <div className="p-3.5 rounded-xl bg-[#080c14] border border-white/[0.07] flex items-center justify-between gap-3">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-500">
                   {status === 'PENDENTE' ? 'Retorno Potencial' : 'Retorno Bruto'}
                 </span>
-                <span className="font-mono text-sm sm:text-base font-bold text-white tabular-nums">
+                <span className="font-mono text-sm sm:text-base font-bold text-slate-900 tabular-nums">
                   {status === 'CASHOUT' && !preview.cashoutValid
                     ? 'Informe o valor'
                     : formatBRL(displayGross)}
                 </span>
               </div>
               <div className="flex flex-col text-right gap-0.5">
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-slate-500">
                   {status === 'PENDENTE'
                     ? 'Lucro Potencial'
                     : fundType === 'Saldo Real'
@@ -1124,10 +1124,10 @@ export const BetModal: React.FC<BetModalProps> = ({
                 <span
                   className={`font-mono text-sm sm:text-base font-bold tabular-nums ${
                     displayPl > 0
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-600'
                       : displayPl < 0
-                      ? 'text-rose-400'
-                      : 'text-slate-300'
+                      ? 'text-rose-600'
+                      : 'text-slate-600'
                   }`}
                 >
                   {status === 'CASHOUT' && !preview.cashoutValid
@@ -1143,17 +1143,17 @@ export const BetModal: React.FC<BetModalProps> = ({
           {/* RIGHT COLUMN: Full Market Explorer */}
           <div className="lg:col-span-7 flex flex-col gap-3.5">
             {sport === 'Futebol' ? (
-              <div className="p-4 bg-[#080c14] border border-white/[0.07] rounded-2xl flex flex-col gap-3.5">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3.5">
                 {/* Title + Global Search */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <span className="text-xs font-bold text-white flex items-center gap-2 shrink-0">
-                    <span className="material-symbols-outlined text-[16px] text-blue-400">
+                  <span className="text-xs font-bold text-slate-900 flex items-center gap-2 shrink-0">
+                    <span className="material-symbols-outlined text-[16px] text-blue-600">
                       sports_soccer
                     </span>
                     <span>Mercados de Futebol ({filteredFootballMarkets.length})</span>
                   </span>
                   <div className="relative flex-1 sm:max-w-[260px]">
-                    <span className="material-symbols-outlined text-[15px] text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2">
+                    <span className="material-symbols-outlined text-[15px] text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2">
                       search
                     </span>
                     <input
@@ -1161,13 +1161,13 @@ export const BetModal: React.FC<BetModalProps> = ({
                       value={marketSearch}
                       onChange={(e) => setMarketSearch(e.target.value)}
                       placeholder="Buscar qualquer mercado (ex: cartões, escanteios)..."
-                      className="w-full bg-[#0e1422] border border-white/[0.08] text-white pl-8 pr-7 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-500"
+                      className="w-full bg-white border border-slate-200 text-slate-900 pl-8 pr-7 py-1.5 rounded-lg text-xs focus:outline-none focus:border-blue-600 placeholder:text-slate-400"
                     />
                     {marketSearch && (
                       <button
                         type="button"
                         onClick={() => setMarketSearch('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                         title="Limpar busca"
                       >
                         <span className="material-symbols-outlined text-[14px]">close</span>
@@ -1197,14 +1197,14 @@ export const BetModal: React.FC<BetModalProps> = ({
                         }}
                         className={`px-2.5 py-1.5 text-[11px] font-medium rounded-lg whitespace-nowrap transition-all flex items-center gap-1 ${
                           isSelected
-                            ? 'bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/30'
-                            : 'bg-[#0e1422] text-slate-300 hover:text-white hover:bg-slate-800/80 border border-white/[0.07]'
+                            ? 'bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/20'
+                            : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
                         }`}
                       >
                         <span>{cat}</span>
                         <span
                           className={`text-[10px] font-mono ${
-                            isSelected ? 'text-blue-100' : 'text-slate-500'
+                            isSelected ? 'text-blue-100' : 'text-slate-400'
                           }`}
                         >
                           ({count})
@@ -1216,7 +1216,7 @@ export const BetModal: React.FC<BetModalProps> = ({
 
                 {/* 2. Lista Interativa Visível de Mercados */}
                 <div className="flex flex-col gap-1.5">
-                  <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <div className="flex items-center justify-between text-[11px] text-slate-500">
                     <span>
                       {searchClean
                         ? `Resultados da busca (${filteredFootballMarkets.length}):`
@@ -1225,18 +1225,18 @@ export const BetModal: React.FC<BetModalProps> = ({
                   </div>
 
                   {filteredFootballMarkets.length === 0 ? (
-                    <div className="p-4 rounded-xl bg-[#0e1422] border border-white/[0.06] text-center text-xs text-slate-400">
+                    <div className="p-4 rounded-xl bg-white border border-slate-200 text-center text-xs text-slate-500">
                       Nenhum mercado encontrado para &ldquo;{marketSearch}&rdquo;.{' '}
                       <button
                         type="button"
                         onClick={() => setMarketSearch('')}
-                        className="text-blue-400 hover:underline font-semibold ml-1"
+                        className="text-blue-600 hover:underline font-semibold ml-1"
                       >
                         Limpar busca
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto p-1.5 bg-[#0e1422] border border-white/[0.06] rounded-xl">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-44 overflow-y-auto p-1.5 bg-white border border-slate-200 rounded-xl">
                       {filteredFootballMarkets.map((m) => {
                         const isCurrent = activeMarket?.id === m.id;
                         return (
@@ -1246,12 +1246,12 @@ export const BetModal: React.FC<BetModalProps> = ({
                             onClick={() => handleMarketChange(m.id)}
                             className={`text-left px-3 py-2 rounded-lg text-xs transition-all flex flex-col gap-0.5 ${
                               isCurrent
-                                ? 'bg-blue-600/20 border border-blue-500/50 text-white font-semibold'
-                                : 'bg-[#080c14] hover:bg-white/[0.05] border border-white/[0.05] text-slate-300'
+                                ? 'bg-blue-50 border border-blue-500 text-blue-900 font-semibold'
+                                : 'bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-700'
                             }`}
                           >
                             <span className="truncate leading-snug">{m.name}</span>
-                            <span className="text-[10px] text-slate-400 truncate">
+                            <span className={`text-[10px] truncate ${isCurrent ? 'text-blue-700 font-normal' : 'text-slate-500'}`}>
                               {m.category} · {m.selections.length} linhas
                             </span>
                           </button>
@@ -1264,10 +1264,10 @@ export const BetModal: React.FC<BetModalProps> = ({
                 {/* 3. Seleção / Opção do Mercado */}
                 {activeMarket && activeMarket.selections.length > 0 && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[11px] font-medium text-slate-400">
-                      Linha / Seleção em <strong className="text-slate-200">{activeMarket.name}</strong>:
+                    <label className="text-[11px] font-medium text-slate-600">
+                      Linha / Seleção em <strong className="text-slate-900">{activeMarket.name}</strong>:
                     </label>
-                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-[#0e1422] border border-white/[0.06] rounded-xl">
+                    <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-2 bg-white border border-slate-200 rounded-xl">
                       {activeMarket.selections.map((sel) => {
                         const isSel = selectedOption === sel;
                         return (
@@ -1277,8 +1277,8 @@ export const BetModal: React.FC<BetModalProps> = ({
                             onClick={() => handleOptionChange(sel)}
                             className={`px-2.5 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1 ${
                               isSel
-                                ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm shadow-emerald-500/20'
-                                : 'bg-[#080c14] text-slate-300 hover:bg-white/[0.06] border border-white/[0.06]'
+                                ? 'bg-emerald-600 text-white font-semibold shadow-sm shadow-emerald-600/20'
+                                : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
                             }`}
                           >
                             {isSel && (
@@ -1295,11 +1295,11 @@ export const BetModal: React.FC<BetModalProps> = ({
                 {/* 4. Campo de confirmação ou personalização livre */}
                 <div className="flex flex-col gap-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-[11px] font-medium text-slate-400">
+                    <label className="text-[11px] font-medium text-slate-600">
                       Resumo Final do Mercado (editável para adicionar jogador/time):
                     </label>
                     {autoMatchedHint && (
-                      <span className="text-[10px] font-semibold text-emerald-300 flex items-center gap-1 truncate max-w-full">
+                      <span className="text-[10px] font-semibold text-emerald-700 flex items-center gap-1 truncate max-w-full">
                         <span className="material-symbols-outlined text-[13px] shrink-0">check_circle</span>
                         <span className="truncate">Auto: {autoMatchedHint}</span>
                       </span>
@@ -1310,14 +1310,14 @@ export const BetModal: React.FC<BetModalProps> = ({
                     value={customMarketText}
                     onChange={(e) => handleCustomMarketChange(e.target.value)}
                     placeholder="Ex: Total de Gols FT: Mais de 2.5 Gols (Over 2.5)"
-                    className="bg-[#0e1422] border border-emerald-500/30 text-emerald-400 font-medium px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-400"
+                    className="bg-white border border-emerald-300 text-emerald-700 font-semibold px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-emerald-600 placeholder:text-slate-400"
                   />
                 </div>
               </div>
             ) : (
-              <div className="p-4 bg-[#080c14] border border-white/[0.07] rounded-2xl flex flex-col gap-3.5">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col gap-3.5">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-slate-400">
+                  <label className="text-[11px] font-semibold text-slate-600">
                     Mercados Populares — {sport}
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -1330,8 +1330,8 @@ export const BetModal: React.FC<BetModalProps> = ({
                           onClick={() => setCustomMarketText(preset)}
                           className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
                             isSel
-                              ? 'bg-emerald-500 text-slate-950 font-bold'
-                              : 'bg-[#0e1422] text-slate-300 hover:bg-white/[0.06] border border-white/[0.06]'
+                              ? 'bg-emerald-600 text-white font-semibold'
+                              : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
                           }`}
                         >
                           {preset}
@@ -1342,7 +1342,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-slate-400">
+                  <label className="text-[11px] font-semibold text-slate-600">
                     Mercado & Seleção Personalizada
                   </label>
                   <input
@@ -1350,7 +1350,7 @@ export const BetModal: React.FC<BetModalProps> = ({
                     value={customMarketText}
                     onChange={(e) => setCustomMarketText(e.target.value)}
                     placeholder="Ex: Vencedor da Partida / Moneyline ou Handicap"
-                    className="bg-[#0e1422] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500 placeholder:text-slate-600"
+                    className="bg-white border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 placeholder:text-slate-400"
                   />
                 </div>
               </div>
@@ -1361,13 +1361,13 @@ export const BetModal: React.FC<BetModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2.5 text-xs font-semibold text-slate-400 hover:text-white rounded-xl hover:bg-white/[0.05] transition-colors"
+                className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-blue-600/25 active:scale-95"
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-xs rounded-xl transition-all flex items-center gap-1.5 shadow-sm shadow-blue-600/20 active:scale-95"
               >
                 <span className="material-symbols-outlined text-[16px]">check</span>
                 <span>{initialBet ? 'Salvar Alterações' : 'Confirmar Aposta'}</span>
