@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
 import { useBankroll } from '../context/BankrollContext';
-import { BetEntry, BetStatus } from '../types';
+import { BetEntry, BetFundType, BetStatus } from '../types';
 import { SPORTS_LIST } from '../data/footballMarkets';
 import { BookmakerBadge } from './BookmakerLogo';
 import { MatchCrests } from './TeamCrests';
+import { TURNOVER_POLICY_DOC, finiteNumber, roundCurrency } from '../lib/financialEngine';
 
 interface LedgerViewProps {
   onOpenNewBetModal: () => void;
@@ -23,6 +24,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [selectedSport, setSelectedSport] = useState('ALL');
   const [selectedMarketCat, setSelectedMarketCat] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [fundTypeFilter, setFundTypeFilter] = useState<'ALL' | BetFundType>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const rowsPerPage = 12;
@@ -167,6 +169,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         }
       }
 
+      if (fundTypeFilter !== 'ALL' && b.type !== fundTypeFilter) {
+        return false;
+      }
+
       if (statusFilter !== 'ALL') {
         if (statusFilter === 'GREEN' && !(b.status === 'GREEN' || b.status === 'HALF_GREEN')) return false;
         if (statusFilter === 'RED' && !(b.status === 'RED' || b.status === 'HALF_RED')) return false;
@@ -175,36 +181,63 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       return true;
     });
-  }, [bets, selectedMonth, searchTerm, selectedSport, selectedMarketCat, statusFilter]);
+  }, [bets, selectedMonth, searchTerm, selectedSport, selectedMarketCat, statusFilter, fundTypeFilter]);
 
   const periodStats = useMemo(() => {
+    const isPromoOnlyView = fundTypeFilter === 'Freebet' || fundTypeFilter === 'Bônus Rollover';
     let volume = 0;
     let pl = 0;
+    let promoVolume = 0;
+    let promoPl = 0;
+    let settledScopedCount = 0;
 
     filteredBets.forEach((b) => {
-      volume += b.stake;
-      if (b.status !== 'PENDENTE') {
-        pl += b.pl;
+      const stake = Math.max(0, finiteNumber(b.stake, 0));
+      const betPl = finiteNumber(b.pl, 0);
+      const isSettled = b.status !== 'PENDENTE';
+      const isTurnoverEligible = isSettled && b.status !== 'VOID';
+
+      if (b.type === 'Saldo Real') {
+        if (isSettled) {
+          settledScopedCount++;
+          pl += betPl;
+        }
+        if (isTurnoverEligible) {
+          volume += stake;
+        }
+      } else {
+        if (isSettled) {
+          promoPl += betPl;
+          if (isPromoOnlyView) settledScopedCount++;
+        }
+        if (isTurnoverEligible) {
+          promoVolume += stake;
+        }
       }
     });
 
-    const roi = volume > 0 ? (pl / volume) * 100 : 0;
+    const activeVolume = roundCurrency(isPromoOnlyView ? promoVolume : volume);
+    const activePl = roundCurrency(isPromoOnlyView ? promoPl : pl);
+    const roi = activeVolume > 0 ? (activePl / activeVolume) * 100 : 0;
 
     return {
       count: filteredBets.length,
-      volume,
-      pl,
-      roi
+      settledScopedCount,
+      volume: activeVolume,
+      pl: activePl,
+      roi,
+      promoPl: roundCurrency(promoPl),
+      isPromoOnlyView
     };
-  }, [filteredBets]);
+  }, [filteredBets, fundTypeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredBets.length / rowsPerPage));
   const paginatedBets = filteredBets.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const exportCSV = () => {
-    let csv = 'Data,Casa,Esporte,Evento,Mercado,Odd,Valor,Status,Lucro\n';
+    let csv = 'Data,Casa,Saldo,Esporte,Evento,Mercado,Odd,Valor,Status,CashoutRecebido,Lucro\n';
     filteredBets.forEach((r) => {
-      csv += `"${r.date}","${r.bookmaker || ''}","${r.sport}","${r.event}","${r.market}",${r.odd},${r.stake},"${r.status}",${r.pl}\n`;
+      csv += `"${r.date}","${r.bookmaker || ''}","${r.type}","${r.sport}","${r.event}","${r.market}",${r.odd},${r.stake},"${r.status}",${r.cashoutReturn ?? ''},${r.pl}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -324,15 +357,28 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <div className="text-lg sm:text-xl font-mono font-bold text-white mt-1 tabular-nums">
             {periodStats.count}
           </div>
+          {!periodStats.isPromoOnlyView && periodStats.promoPl !== 0 && (
+            <span className="text-[10px] text-indigo-300 font-mono">
+              Promo no filtro: {periodStats.promoPl >= 0 ? '+' : ''}
+              {formatBRL(periodStats.promoPl)}
+            </span>
+          )}
         </div>
-        <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 shadow-sm">
-          <span className="text-[11px] text-slate-400 font-medium">Volume Apostado</span>
+        <div
+          title={TURNOVER_POLICY_DOC}
+          className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 shadow-sm"
+        >
+          <span className="text-[11px] text-slate-400 font-medium">
+            {periodStats.isPromoOnlyView ? 'Giro Promocional' : 'Turnover Real (sem VOID)'}
+          </span>
           <div className="text-lg sm:text-xl font-mono font-bold text-white mt-1 tabular-nums truncate">
             {formatBRL(periodStats.volume)}
           </div>
         </div>
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 shadow-sm">
-          <span className="text-[11px] text-slate-400 font-medium">Lucro / P&L</span>
+          <span className="text-[11px] text-slate-400 font-medium">
+            {periodStats.isPromoOnlyView ? 'Resultado Promo' : 'Lucro Real / P&L'}
+          </span>
           <div
             className={`text-lg sm:text-xl font-mono font-bold mt-1 tabular-nums truncate ${
               periodStats.pl >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -342,8 +388,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             {formatBRL(periodStats.pl)}
           </div>
         </div>
-        <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 shadow-sm">
-          <span className="text-[11px] text-slate-400 font-medium">ROI do Período</span>
+        <div
+          title={TURNOVER_POLICY_DOC}
+          className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 shadow-sm"
+        >
+          <span className="text-[11px] text-slate-400 font-medium">
+            {periodStats.isPromoOnlyView ? 'ROI Promocional' : 'ROI Real do Período'}
+          </span>
           <div
             className={`text-lg sm:text-xl font-mono font-bold mt-1 tabular-nums ${
               periodStats.roi >= 0 ? 'text-emerald-400' : 'text-rose-400'
@@ -357,7 +408,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Filter and Search Bar */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 shadow-sm">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 flex-1">
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-[16px]">
               search
@@ -373,6 +424,20 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               className="bg-[#080c14] border border-white/[0.08] text-slate-200 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500 w-full placeholder:text-slate-500"
             />
           </div>
+
+          <select
+            value={fundTypeFilter}
+            onChange={(e) => {
+              setFundTypeFilter(e.target.value as 'ALL' | BetFundType);
+              setCurrentPage(1);
+            }}
+            className="bg-[#080c14] border border-white/[0.08] text-slate-200 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-500"
+          >
+            <option value="ALL" className="bg-[#0e1422] text-slate-200">Todos os Saldos</option>
+            <option value="Saldo Real" className="bg-[#0e1422] text-slate-200">Saldo Real</option>
+            <option value="Freebet" className="bg-[#0e1422] text-slate-200">Freebet (Promo)</option>
+            <option value="Bônus Rollover" className="bg-[#0e1422] text-slate-200">Bônus Rollover (Promo)</option>
+          </select>
 
           <select
             value={selectedSport}
@@ -546,6 +611,11 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <span>·</span>
                     <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                     <span>({bet.units}u)</span>
+                    {bet.type !== 'Saldo Real' && (
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[10px] font-sans font-semibold">
+                        {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-400 min-w-0 truncate">
                     <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
@@ -682,7 +752,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       @{Number(bet.odd || 1).toFixed(2)}
                     </td>
                     <td className="py-3 px-3.5 text-right font-mono text-slate-200 whitespace-nowrap tabular-nums">
-                      {formatBRL(bet.stake)}
+                      <div className="flex flex-col items-end">
+                        <span>{formatBRL(bet.stake)}</span>
+                        {bet.type !== 'Saldo Real' && (
+                          <span className="text-[10px] font-sans font-semibold text-indigo-300">
+                            {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-3.5 text-center whitespace-nowrap">
                       {getStatusBadge(bet.status)}

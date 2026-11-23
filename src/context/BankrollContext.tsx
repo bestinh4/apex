@@ -22,15 +22,16 @@ import {
   TreasuryEntry,
   FreebetEntry,
   FreeSpinEntry,
+  PromoConversionEntry,
   AppSettings,
-  BetStatus,
-  BetFundType
+  BetStatus
 } from '../types';
 import {
   initialBets,
   initialTreasury,
   initialFreebets,
   initialFreeSpins,
+  initialPromoConversions,
   demoBets,
   demoTreasury,
   demoFreebets,
@@ -48,12 +49,15 @@ import {
   updateBetInFirestore,
   deleteBetInFirestore,
   createTreasuryInFirestore,
+  updateTreasuryStatusInFirestore,
   deleteTreasuryInFirestore,
   createFreebetInFirestore,
-  updateFreebetStatusInFirestore,
+  updateFreebetInFirestore,
   deleteFreebetInFirestore,
   createFreeSpinInFirestore,
   deleteFreeSpinInFirestore,
+  createPromoConversionInFirestore,
+  deletePromoConversionInFirestore,
   hasAnyCloudRecords,
   pushAllStateToFirestore,
   clearAllUserSubcollectionsInFirestore,
@@ -69,6 +73,24 @@ import {
   localResetPassword,
   localSignOut
 } from '../lib/localAuth';
+import {
+  TURNOVER_POLICY_DOC,
+  calculateBetSettlement,
+  calculateFreebetRealizedReturn,
+  computeFinancialMetrics,
+  deduplicateFreeSpins,
+  deduplicatePromoConversions,
+  finiteNumber,
+  findLinkedBetForFreebet,
+  findLinkedFreebetForBet,
+  mapBetStatusToFreebetStatus,
+  mapFreebetStatusToBetStatus,
+  normalizeBetEntry,
+  normalizeFreebetEntry,
+  PromoConversionRequest,
+  roundCurrency,
+  validatePromoConversion
+} from '../lib/financialEngine';
 
 export interface AuthUser {
   id: string;
@@ -78,6 +100,12 @@ export interface AuthUser {
 }
 
 export type CloudSyncStatus = 'local' | 'syncing' | 'synced' | 'error';
+
+export interface PromoConversionActionResult {
+  success: boolean;
+  error?: string;
+  entry?: PromoConversionEntry;
+}
 
 interface BankrollContextType {
   currentUser: AuthUser | null;
@@ -97,18 +125,29 @@ interface BankrollContextType {
   treasury: TreasuryEntry[];
   freebets: FreebetEntry[];
   freeSpins: FreeSpinEntry[];
+  promoConversions: PromoConversionEntry[];
   settings: AppSettings;
-  addBet: (bet: Omit<BetEntry, 'id' | 'gross' | 'pl'> & { gross?: number; pl?: number }) => void;
+  addBet: (bet: Omit<BetEntry, 'id' | 'gross' | 'pl'> & { gross?: number; pl?: number }) => BetEntry;
   updateBet: (id: string, updated: Partial<BetEntry>) => void;
   deleteBet: (id: string) => void;
-  resolveBet: (id: string, status: BetStatus) => void;
+  resolveBet: (id: string, status: BetStatus, cashoutReturn?: number) => void;
   addTreasury: (tx: Omit<TreasuryEntry, 'id'>) => void;
+  updateTreasuryStatus: (id: string, status: TreasuryEntry['status']) => void;
   deleteTreasury: (id: string) => void;
-  addFreebet: (fb: Omit<FreebetEntry, 'id'>) => void;
-  updateFreebetStatus: (id: string, status: FreebetEntry['status']) => void;
+  addFreebet: (
+    fb: Omit<FreebetEntry, 'id' | 'netReturn'> & { netReturn?: number },
+    options?: { syncToLedger?: boolean; sport?: string }
+  ) => FreebetEntry;
+  updateFreebetStatus: (
+    id: string,
+    status: FreebetEntry['status'],
+    explicitSettledPl?: number
+  ) => void;
   deleteFreebet: (id: string) => void;
-  addFreeSpin: (spin: Omit<FreeSpinEntry, 'id'>) => void;
+  addFreeSpin: (spin: Omit<FreeSpinEntry, 'id'>) => FreeSpinEntry | null;
   deleteFreeSpin: (id: string) => void;
+  convertPromoToReal: (req: PromoConversionRequest) => PromoConversionActionResult;
+  deletePromoConversion: (id: string) => void;
   updateSettings: (newSettings: Partial<AppSettings>) => void;
   resetData: () => void;
   loadDemoData: () => void;
@@ -117,25 +156,51 @@ interface BankrollContextType {
     treasury?: TreasuryEntry[];
     freebets?: FreebetEntry[];
     freeSpins?: FreeSpinEntry[];
+    promoConversions?: PromoConversionEntry[];
     settings?: AppSettings;
   }) => void;
   syncNow: () => Promise<boolean>;
-  // Computed metrics
+
+  // Métricas Financeiras (Fase 1.1)
   totalDeposits: number;
   totalWithdrawals: number;
+  pendingDeposits: number;
+  pendingWithdrawals: number;
+  bonusCredits: number;
+  pendingBonusCredits: number;
+  realBetProfit: number;
   netBetProfit: number;
   totalSpinsProfit: number;
   totalFreebetsProfit: number;
+  rolloverBetProfit: number;
+  rolloverTurnover: number;
+  rolloverRoi: number;
+  freebetExtractionRate: number;
+  promoBetProfit: number;
+  promoTurnover: number;
+  promoRoi: number;
+  promoBalance: number;
+  availablePromoBalance: number;
+  promoExposure: number;
+  totalConvertedPromo: number;
+  realEquity: number;
   currentEquity: number;
+  realExposure: number;
   activeExposure: number;
+  availableRealBalance: number;
   openPositionsCount: number;
   settledBetsCount: number;
   winCount: number;
   lossCount: number;
   voidCount: number;
+  cashoutCount: number;
   winRate: number;
+  realTurnover: number;
+  realVoidVolume: number;
   turnoverVolume: number;
   roi: number;
+  turnoverPolicyDoc: string;
+  bettingDrawdownPct: number;
   maxDrawdownPct: number;
   currentStreakText: string;
   maxWinStreak: number;
@@ -149,63 +214,22 @@ const BankrollContext = createContext<BankrollContextType | undefined>(undefined
 
 const STORAGE_VERSION = 'apex_bankroll_v3_';
 
-const finiteNumber = (v: unknown, fallback = 0): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : fallback;
-};
-
 function getStorageKey(userId: string, key: string): string {
   return `${STORAGE_VERSION}${userId}_${key}`;
 }
 
-function normalizeBetEntry(raw: any, fallbackUnitValue = 25): BetEntry {
-  const safeUnit = fallbackUnitValue > 0 ? fallbackUnitValue : 25;
-  const stake = finiteNumber(raw?.stake, 0);
-  const odd = Math.max(1, finiteNumber(raw?.odd, 1));
-  const type: BetFundType =
-    raw?.type === 'Freebet' || raw?.type === 'Bônus Rollover' ? raw.type : 'Saldo Real';
-  const allowedStatuses: BetStatus[] = [
-    'GREEN',
-    'RED',
-    'HALF_GREEN',
-    'HALF_RED',
-    'VOID',
-    'CASHOUT',
-    'PENDENTE'
-  ];
-  const rawStatus = String(raw?.status || 'GREEN').toUpperCase() as BetStatus;
-  const status: BetStatus = allowedStatuses.includes(rawStatus) ? rawStatus : 'GREEN';
-  const gross = finiteNumber(raw?.gross, 0);
-  const pl = finiteNumber(raw?.pl, 0);
-  const units =
-    raw?.units !== undefined && Number.isFinite(Number(raw.units))
-      ? Number(raw.units)
-      : Number((stake / safeUnit).toFixed(2));
-
-  const entry: BetEntry = {
+function normalizeTreasuryEntry(raw: any): TreasuryEntry {
+  const allowedTypes: TreasuryEntry['type'][] = ['DEPOSIT', 'WITHDRAW', 'BONUS'];
+  const allowedStatuses: TreasuryEntry['status'][] = ['Compensado', 'Pendente', 'Processando'];
+  return {
     id: sanitizeFirestoreId(raw?.id),
     date: String(raw?.date || new Date().toLocaleDateString('pt-BR')),
-    sport: String(raw?.sport || 'Futebol'),
-    event: String(raw?.event || 'Evento Esportivo'),
-    market: String(raw?.market || 'Mercado Principal'),
-    odd,
-    stake,
-    units,
-    type,
-    status,
-    gross,
-    pl,
-    bookmaker: String(raw?.bookmaker || '1win')
+    type: allowedTypes.includes(raw?.type) ? raw.type : 'DEPOSIT',
+    desc: String(raw?.desc || 'Movimentação'),
+    details: raw?.details ? String(raw.details) : undefined,
+    amount: Math.max(0, roundCurrency(finiteNumber(raw?.amount, 0))),
+    status: allowedStatuses.includes(raw?.status) ? raw.status : 'Compensado'
   };
-
-  if (
-    raw?.closingOdd !== undefined &&
-    Number.isFinite(Number(raw.closingOdd)) &&
-    Number(raw.closingOdd) >= 1
-  ) {
-    entry.closingOdd = Number(raw.closingOdd);
-  }
-  return entry;
 }
 
 function readLocalStateForUid(uid: string): {
@@ -214,6 +238,7 @@ function readLocalStateForUid(uid: string): {
   treasury: TreasuryEntry[];
   freebets: FreebetEntry[];
   freeSpins: FreeSpinEntry[];
+  promoConversions: PromoConversionEntry[];
 } {
   try {
     let savedSettings = localStorage.getItem(getStorageKey(uid, 'settings'));
@@ -234,9 +259,13 @@ function readLocalStateForUid(uid: string): {
       ? {
           ...defaultSettings,
           ...parsedSettings,
-          initialBankroll: finiteNumber(
-            parsedSettings.initialBankroll,
-            defaultSettings.initialBankroll
+          initialBankroll: Math.max(
+            0,
+            finiteNumber(parsedSettings.initialBankroll, defaultSettings.initialBankroll)
+          ),
+          initialPromoBalance: Math.max(
+            0,
+            finiteNumber(parsedSettings.initialPromoBalance, defaultSettings.initialPromoBalance ?? 0)
           ),
           unitValue: Math.max(0.01, finiteNumber(parsedSettings.unitValue, defaultSettings.unitValue))
         }
@@ -260,7 +289,7 @@ function readLocalStateForUid(uid: string): {
     }
     const userBets: BetEntry[] =
       parsedBets && Array.isArray(parsedBets)
-        ? parsedBets.map((item) => normalizeBetEntry(item, userSettings.unitValue))
+        ? parsedBets.map((item) => normalizeBetEntry(item, userSettings.unitValue, sanitizeFirestoreId))
         : initialBets;
 
     let savedTreasury = localStorage.getItem(getStorageKey(uid, 'treasury'));
@@ -276,20 +305,36 @@ function readLocalStateForUid(uid: string): {
         }
       }
     }
-    const userTreasury: TreasuryEntry[] = savedTreasury ? JSON.parse(savedTreasury) : initialTreasury;
+    const parsedTreasury = savedTreasury ? JSON.parse(savedTreasury) : null;
+    const userTreasury: TreasuryEntry[] = Array.isArray(parsedTreasury)
+      ? parsedTreasury.map(normalizeTreasuryEntry)
+      : initialTreasury;
 
     const savedFreebets = localStorage.getItem(getStorageKey(uid, 'freebets'));
-    const userFreebets: FreebetEntry[] = savedFreebets ? JSON.parse(savedFreebets) : initialFreebets;
+    const parsedFreebets = savedFreebets ? JSON.parse(savedFreebets) : null;
+    const userFreebets: FreebetEntry[] = Array.isArray(parsedFreebets)
+      ? parsedFreebets.map((fb) => normalizeFreebetEntry(fb, sanitizeFirestoreId))
+      : initialFreebets;
 
     const savedSpins = localStorage.getItem(getStorageKey(uid, 'freespins'));
-    const userFreeSpins: FreeSpinEntry[] = savedSpins ? JSON.parse(savedSpins) : initialFreeSpins;
+    const parsedSpins = savedSpins ? JSON.parse(savedSpins) : null;
+    const userFreeSpins: FreeSpinEntry[] = Array.isArray(parsedSpins)
+      ? deduplicateFreeSpins(parsedSpins)
+      : initialFreeSpins;
+
+    const savedConversions = localStorage.getItem(getStorageKey(uid, 'promo_conversions'));
+    const parsedConversions = savedConversions ? JSON.parse(savedConversions) : null;
+    const userConversions: PromoConversionEntry[] = Array.isArray(parsedConversions)
+      ? deduplicatePromoConversions(parsedConversions)
+      : initialPromoConversions;
 
     return {
       settings: userSettings,
       bets: Array.isArray(userBets) ? userBets : initialBets,
       treasury: Array.isArray(userTreasury) ? userTreasury : initialTreasury,
       freebets: Array.isArray(userFreebets) ? userFreebets : initialFreebets,
-      freeSpins: Array.isArray(userFreeSpins) ? userFreeSpins : initialFreeSpins
+      freeSpins: Array.isArray(userFreeSpins) ? userFreeSpins : initialFreeSpins,
+      promoConversions: Array.isArray(userConversions) ? userConversions : initialPromoConversions
     };
   } catch {
     return {
@@ -297,7 +342,8 @@ function readLocalStateForUid(uid: string): {
       bets: initialBets,
       treasury: initialTreasury,
       freebets: initialFreebets,
-      freeSpins: initialFreeSpins
+      freeSpins: initialFreeSpins,
+      promoConversions: initialPromoConversions
     };
   }
 }
@@ -328,14 +374,19 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   const [treasury, setTreasury] = useState<TreasuryEntry[]>(initialTreasury);
   const [freebets, setFreebets] = useState<FreebetEntry[]>(initialFreebets);
   const [freeSpins, setFreeSpins] = useState<FreeSpinEntry[]>(initialFreeSpins);
+  const [promoConversions, setPromoConversions] = useState<PromoConversionEntry[]>(
+    initialPromoConversions
+  );
 
   const loadedUserRef = useRef<string | null>(null);
   const firebaseUserRef = useRef<User | null>(null);
   const unsubscribesRef = useRef<Unsubscribe[]>([]);
   const authFlowSeqRef = useRef<number>(0);
+  const pendingSpinKeysRef = useRef<Set<string>>(new Set());
+  const pendingConversionKeysRef = useRef<Set<string>>(new Set());
 
-  const stateRef = useRef({ bets, treasury, freebets, freeSpins, settings });
-  stateRef.current = { bets, treasury, freebets, freeSpins, settings };
+  const stateRef = useRef({ bets, treasury, freebets, freeSpins, promoConversions, settings });
+  stateRef.current = { bets, treasury, freebets, freeSpins, promoConversions, settings };
 
   const loadLocalUserData = useCallback((uid: string) => {
     const localData = readLocalStateForUid(uid);
@@ -344,6 +395,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     setTreasury(localData.treasury);
     setFreebets(localData.freebets);
     setFreeSpins(localData.freeSpins);
+    setPromoConversions(localData.promoConversions);
     loadedUserRef.current = uid;
   }, []);
 
@@ -375,7 +427,11 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
             const d = snap.data();
             setSettings((prev) => ({
               ...prev,
-              initialBankroll: finiteNumber(d.initialBankroll, prev.initialBankroll),
+              initialBankroll: Math.max(0, finiteNumber(d.initialBankroll, prev.initialBankroll)),
+              initialPromoBalance: Math.max(
+                0,
+                finiteNumber(d.initialPromoBalance, prev.initialPromoBalance ?? 0)
+              ),
               unitValue: Math.max(0.01, finiteNumber(d.unitValue, prev.unitValue)),
               kellyFraction: String(d.kellyFraction || prev.kellyFraction),
               maxDrawdownLimitPct: finiteNumber(d.maxDrawdownLimitPct, prev.maxDrawdownLimitPct),
@@ -401,7 +457,8 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
             .map((item) =>
               normalizeBetEntry(
                 { ...item.data, id: item.id },
-                stateRef.current.settings.unitValue
+                stateRef.current.settings.unitValue,
+                sanitizeFirestoreId
               )
             );
           setBets(rows);
@@ -421,15 +478,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
               ts: timestampToMillis(d.data().createdAt)
             }))
             .sort((a, b) => b.ts - a.ts)
-            .map((item) => ({
-              id: item.id,
-              date: String(item.data.date || ''),
-              type: item.data.type as TreasuryEntry['type'],
-              desc: String(item.data.desc || ''),
-              details: item.data.details ? String(item.data.details) : undefined,
-              amount: finiteNumber(item.data.amount, 0),
-              status: item.data.status as TreasuryEntry['status']
-            }));
+            .map((item) => normalizeTreasuryEntry({ ...item.data, id: item.id }));
           setTreasury(rows);
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date());
@@ -447,17 +496,9 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
               ts: timestampToMillis(d.data().createdAt)
             }))
             .sort((a, b) => b.ts - a.ts)
-            .map((item) => ({
-              id: item.id,
-              bookmaker: String(item.data.bookmaker || '1win'),
-              event: String(item.data.event || ''),
-              selection: String(item.data.selection || ''),
-              bonusAmount: finiteNumber(item.data.bonusAmount, 0),
-              odd: finiteNumber(item.data.odd, 1),
-              netReturn: finiteNumber(item.data.netReturn, 0),
-              status: item.data.status as FreebetEntry['status'],
-              date: String(item.data.date || '')
-            }));
+            .map((item) =>
+              normalizeFreebetEntry({ ...item.data, id: item.id }, sanitizeFirestoreId)
+            );
           setFreebets(rows);
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date());
@@ -482,13 +523,47 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
               bookmaker: String(item.data.bookmaker || '1win'),
               spinsCount: finiteNumber(item.data.spinsCount, 0),
               netProfit: finiteNumber(item.data.netProfit, 0),
-              date: String(item.data.date || '')
+              date: String(item.data.date || ''),
+              ...(item.data.idempotencyKey
+                ? { idempotencyKey: String(item.data.idempotencyKey) }
+                : {})
             }));
-          setFreeSpins(rows);
+          setFreeSpins(deduplicateFreeSpins(rows));
           setCloudSyncStatus('synced');
           setLastSyncedAt(new Date());
         },
         handleListenerError(`users/${uid}/free_spins`)
+      );
+
+      const unsubPromoConversions = onSnapshot(
+        query(collection(db, 'users', uid, 'promo_conversions'), where('userId', '==', uid)),
+        (snap) => {
+          const rows: PromoConversionEntry[] = snap.docs
+            .map((d) => ({
+              data: d.data(),
+              id: d.id,
+              ts: timestampToMillis(d.data().createdAt)
+            }))
+            .sort((a, b) => b.ts - a.ts)
+            .map((item) => ({
+              id: item.id,
+              amount: roundCurrency(finiteNumber(item.data.amount, 0)),
+              date: String(item.data.date || ''),
+              origin: String(item.data.origin || 'Saldo Promocional'),
+              promotionName: String(item.data.promotionName || 'Conversão Manual'),
+              ...(item.data.bookmaker ? { bookmaker: String(item.data.bookmaker) } : {}),
+              ...(item.data.notes ? { notes: String(item.data.notes) } : {}),
+              ...(item.data.idempotencyKey
+                ? { idempotencyKey: String(item.data.idempotencyKey) }
+                : {}),
+              ...(item.data.sourceId ? { sourceId: String(item.data.sourceId) } : {}),
+              ...(item.data.createdAtIso ? { createdAtIso: String(item.data.createdAtIso) } : {})
+            }));
+          setPromoConversions(deduplicatePromoConversions(rows));
+          setCloudSyncStatus('synced');
+          setLastSyncedAt(new Date());
+        },
+        handleListenerError(`users/${uid}/promo_conversions`)
       );
 
       unsubscribesRef.current = [
@@ -496,7 +571,8 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         unsubBets,
         unsubTreasury,
         unsubFreebets,
-        unsubFreeSpins
+        unsubFreeSpins,
+        unsubPromoConversions
       ];
     },
     [cleanupFirestoreListeners]
@@ -504,7 +580,6 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
 
   // Firebase Auth listener with graceful non-blocking local fallback
   useEffect(() => {
-    // Load local session immediately for zero-lag boot
     try {
       const localSession = getCurrentSession() || getOrCreateDefaultSession();
       setCurrentUser({
@@ -540,7 +615,6 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // User signed in with Google -> connect real-time Firestore sync
       cleanupFirestoreListeners();
       firebaseUserRef.current = fbUser;
       setIsCloudAuthenticated(true);
@@ -548,7 +622,6 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       setCloudSyncError(null);
       setUnauthorizedDomain(null);
 
-      // Capture existing local data BEFORE switching active UID so we can migrate on first sign-in
       const localFallback = readLocalStateForUid(loadedUserRef.current || DEFAULT_USER.id);
       const localSnapshot = {
         bets: stateRef.current.bets.length > 0 ? stateRef.current.bets : localFallback.bets,
@@ -564,6 +637,10 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           stateRef.current.freeSpins.length > 0
             ? stateRef.current.freeSpins
             : localFallback.freeSpins,
+        promoConversions:
+          stateRef.current.promoConversions.length > 0
+            ? stateRef.current.promoConversions
+            : localFallback.promoConversions,
         settings: stateRef.current.settings
       };
 
@@ -585,7 +662,8 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           localSnapshot.bets.length > 0 ||
           localSnapshot.treasury.length > 0 ||
           localSnapshot.freebets.length > 0 ||
-          localSnapshot.freeSpins.length > 0;
+          localSnapshot.freeSpins.length > 0 ||
+          localSnapshot.promoConversions.length > 0;
 
         if (!cloudHasData && hasLocalRecords) {
           await pushAllStateToFirestore(fbUser, localSnapshot, false);
@@ -636,6 +714,14 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
+    localStorage.setItem(
+      getStorageKey(currentUser.id, 'promo_conversions'),
+      JSON.stringify(promoConversions)
+    );
+  }, [promoConversions, currentUser?.id]);
+
+  useEffect(() => {
+    if (!currentUser?.id || loadedUserRef.current !== currentUser.id) return;
     localStorage.setItem(getStorageKey(currentUser.id, 'settings'), JSON.stringify(settings));
   }, [settings, currentUser?.id]);
 
@@ -656,7 +742,8 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       if (code === 'auth/popup-blocked') {
         return {
           success: false,
-          error: 'O navegador bloqueou o pop-up do Google. Permita pop-ups para este site e tente novamente.'
+          error:
+            'O navegador bloqueou o pop-up do Google. Permita pop-ups para este site e tente novamente.'
         };
       }
       if (code === 'auth/unauthorized-domain') {
@@ -670,10 +757,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       }
       const fallbackMsg = err?.message || 'Não foi possível conectar com a conta Google.';
       setCloudSyncError(fallbackMsg);
-      return {
-        success: false,
-        error: fallbackMsg
-      };
+      return { success: false, error: fallbackMsg };
     }
   }, []);
 
@@ -697,6 +781,10 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           stateRef.current.freeSpins.length > 0
             ? stateRef.current.freeSpins
             : localDefault.freeSpins,
+        promoConversions:
+          stateRef.current.promoConversions.length > 0
+            ? stateRef.current.promoConversions
+            : localDefault.promoConversions,
         settings: stateRef.current.settings
       };
       await pushAllStateToFirestore(fbUser, mergedPayload, false);
@@ -806,64 +894,59 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     loadLocalUserData(session.user.id);
   };
 
-  const calculateGrossAndPL = (stake: number, odd: number, status: BetStatus, type: string) => {
-    const s = finiteNumber(stake, 0);
-    const o = finiteNumber(odd, 1.0);
-    let gross = 0;
-    let pl = 0;
+  const syncLinkedFreebetForBet = useCallback((finalBet: BetEntry) => {
+    if (finalBet.type !== 'Freebet') return;
+    const linkedFb = findLinkedFreebetForBet(finalBet, stateRef.current.freebets);
+    if (!linkedFb) return;
 
-    if (status === 'GREEN') {
-      if (type === 'Freebet') {
-        gross = s * (o - 1);
-        pl = gross;
-      } else {
-        gross = s * o;
-        pl = gross - s;
-      }
-    } else if (status === 'HALF_GREEN') {
-      if (type === 'Freebet') {
-        gross = (s * (o - 1)) / 2;
-        pl = gross;
-      } else {
-        gross = s + (s * (o - 1)) / 2;
-        pl = gross - s;
-      }
-    } else if (status === 'RED') {
-      gross = 0;
-      pl = type === 'Freebet' ? 0 : -s;
-    } else if (status === 'HALF_RED') {
-      gross = type === 'Freebet' ? 0 : s / 2;
-      pl = type === 'Freebet' ? 0 : -s / 2;
-    } else if (status === 'VOID') {
-      gross = type === 'Freebet' ? 0 : s;
-      pl = 0;
-    } else if (status === 'CASHOUT') {
-      gross = s * 1.15;
-      pl = gross - s;
-    } else if (status === 'PENDENTE') {
-      gross = 0;
-      pl = 0;
+    const nextStatus = mapBetStatusToFreebetStatus(finalBet.status, finalBet.pl);
+    const nextReturn =
+      nextStatus === 'Creditado' ? roundCurrency(Math.max(0, finalBet.pl)) : 0;
+
+    const updatedFb: FreebetEntry = {
+      ...linkedFb,
+      status: nextStatus,
+      netReturn: nextReturn,
+      linkedBetId: finalBet.id
+    };
+
+    setFreebets((prev) => prev.map((f) => (f.id === linkedFb.id ? updatedFb : f)));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      updateFreebetInFirestore(updatedFb, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao sincronizar Freebet na nuvem.');
+      });
     }
-
-    return { gross, pl };
-  };
+  }, []);
 
   const addBet = (
     newBet: Omit<BetEntry, 'id' | 'gross' | 'pl'> & { gross?: number; pl?: number }
-  ) => {
-    const { gross, pl } =
-      newBet.gross !== undefined && newBet.pl !== undefined && Number.isFinite(newBet.pl)
-        ? { gross: finiteNumber(newBet.gross, 0), pl: finiteNumber(newBet.pl, 0) }
-        : calculateGrossAndPL(newBet.stake, newBet.odd, newBet.status, newBet.type);
+  ): BetEntry => {
+    const settled = calculateBetSettlement({
+      stake: newBet.stake,
+      odd: newBet.odd,
+      status: newBet.status,
+      type: newBet.type,
+      cashoutReturn: newBet.cashoutReturn
+    });
 
-    const safeUnit = settings.unitValue > 0 ? settings.unitValue : 25;
+    const safeUnit = stateRef.current.settings.unitValue > 0 ? stateRef.current.settings.unitValue : 25;
     const entry: BetEntry = {
       ...newBet,
       id: sanitizeFirestoreId(),
+      stake: roundCurrency(Math.max(0, finiteNumber(newBet.stake, 0))),
+      odd: Math.max(1, finiteNumber(newBet.odd, 1)),
       units: Number((finiteNumber(newBet.stake, 0) / safeUnit).toFixed(2)),
-      gross,
-      pl
+      gross: settled.gross,
+      pl: settled.pl,
+      ...(settled.cashoutReturn !== undefined
+        ? { cashoutReturn: settled.cashoutReturn }
+        : { cashoutReturn: undefined })
     };
+    if (entry.status !== 'CASHOUT') {
+      delete entry.cashoutReturn;
+    }
 
     setBets((prev) => [entry, ...prev]);
     const uid = firebaseUserRef.current?.uid;
@@ -873,21 +956,40 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         setCloudSyncError(err?.message || 'Falha ao salvar aposta na nuvem.');
       });
     }
+    return entry;
   };
 
   const updateBet = (id: string, updated: Partial<BetEntry>) => {
     const existing = stateRef.current.bets.find((b) => b.id === id);
     if (!existing) return;
 
-    const merged = { ...existing, ...updated };
-    const { gross, pl } = calculateGrossAndPL(merged.stake, merged.odd, merged.status, merged.type);
-    const safeUnit = settings.unitValue > 0 ? settings.unitValue : 25;
+    const merged: BetEntry = { ...existing, ...updated };
+    if (merged.status !== 'CASHOUT') {
+      delete merged.cashoutReturn;
+    }
+
+    const settled = calculateBetSettlement({
+      stake: merged.stake,
+      odd: merged.odd,
+      status: merged.status,
+      type: merged.type,
+      cashoutReturn: merged.cashoutReturn
+    });
+
+    const safeUnit = stateRef.current.settings.unitValue > 0 ? stateRef.current.settings.unitValue : 25;
     const finalBet: BetEntry = {
       ...merged,
+      stake: roundCurrency(Math.max(0, finiteNumber(merged.stake, 0))),
+      odd: Math.max(1, finiteNumber(merged.odd, 1)),
       units: Number((finiteNumber(merged.stake, 0) / safeUnit).toFixed(2)),
-      gross,
-      pl
+      gross: settled.gross,
+      pl: settled.pl
     };
+    if (settled.cashoutReturn !== undefined) {
+      finalBet.cashoutReturn = settled.cashoutReturn;
+    } else {
+      delete finalBet.cashoutReturn;
+    }
 
     setBets((prev) => prev.map((bet) => (bet.id === id ? finalBet : bet)));
     const uid = firebaseUserRef.current?.uid;
@@ -897,9 +999,12 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         setCloudSyncError(err?.message || 'Falha ao atualizar aposta na nuvem.');
       });
     }
+
+    syncLinkedFreebetForBet(finalBet);
   };
 
   const deleteBet = (id: string) => {
+    const target = stateRef.current.bets.find((b) => b.id === id);
     setBets((prev) => prev.filter((bet) => bet.id !== id));
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
@@ -908,19 +1013,40 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         setCloudSyncError(err?.message || 'Falha ao excluir aposta na nuvem.');
       });
     }
+
+    if (target?.type === 'Freebet') {
+      const linkedFb = findLinkedFreebetForBet(target, stateRef.current.freebets);
+      if (linkedFb && linkedFb.linkedBetId) {
+        const unlinked: FreebetEntry = { ...linkedFb };
+        delete unlinked.linkedBetId;
+        setFreebets((prev) => prev.map((f) => (f.id === linkedFb.id ? unlinked : f)));
+      }
+    }
   };
 
-  const resolveBet = (id: string, status: BetStatus) => {
+  const resolveBet = (id: string, status: BetStatus, cashoutReturn?: number) => {
     const existing = stateRef.current.bets.find((b) => b.id === id);
     if (!existing) return;
 
-    const { gross, pl } = calculateGrossAndPL(existing.stake, existing.odd, status, existing.type);
+    const settled = calculateBetSettlement({
+      stake: existing.stake,
+      odd: existing.odd,
+      status,
+      type: existing.type,
+      cashoutReturn: status === 'CASHOUT' ? cashoutReturn ?? existing.cashoutReturn : undefined
+    });
+
     const finalBet: BetEntry = {
       ...existing,
       status,
-      gross,
-      pl
+      gross: settled.gross,
+      pl: settled.pl
     };
+    if (settled.cashoutReturn !== undefined) {
+      finalBet.cashoutReturn = settled.cashoutReturn;
+    } else {
+      delete finalBet.cashoutReturn;
+    }
 
     setBets((prev) => prev.map((bet) => (bet.id === id ? finalBet : bet)));
     const uid = firebaseUserRef.current?.uid;
@@ -930,21 +1056,36 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         setCloudSyncError(err?.message || 'Falha ao liquidar aposta na nuvem.');
       });
     }
+
+    syncLinkedFreebetForBet(finalBet);
   };
 
   const addTreasury = (tx: Omit<TreasuryEntry, 'id'>) => {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const entry: TreasuryEntry = {
+    const entry: TreasuryEntry = normalizeTreasuryEntry({
       ...tx,
-      id: `TX-${Date.now().toString(36)}-${randomSuffix}`,
-      amount: finiteNumber(tx.amount, 0)
-    };
+      id: `TX-${Date.now().toString(36)}-${randomSuffix}`
+    });
     setTreasury((prev) => [entry, ...prev]);
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
       createTreasuryInFirestore(entry, uid).catch((err) => {
         setCloudSyncStatus('error');
         setCloudSyncError(err?.message || 'Falha ao salvar movimentação na nuvem.');
+      });
+    }
+  };
+
+  const updateTreasuryStatus = (id: string, status: TreasuryEntry['status']) => {
+    const existing = stateRef.current.treasury.find((tx) => tx.id === id);
+    if (!existing) return;
+    const updated: TreasuryEntry = { ...existing, status };
+    setTreasury((prev) => prev.map((tx) => (tx.id === id ? updated : tx)));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      updateTreasuryStatusInFirestore(id, status, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao atualizar status da movimentação na nuvem.');
       });
     }
   };
@@ -960,52 +1101,198 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addFreebet = (fb: Omit<FreebetEntry, 'id'>) => {
+  const addFreebet = (
+    fb: Omit<FreebetEntry, 'id' | 'netReturn'> & { netReturn?: number },
+    options?: { syncToLedger?: boolean; sport?: string }
+  ): FreebetEntry => {
     const randomSuffix = Math.floor(100 + Math.random() * 900);
-    const entry: FreebetEntry = { ...fb, id: `FB-${Date.now().toString(36)}-${randomSuffix}` };
+    const fbId = `FB-${Date.now().toString(36)}-${randomSuffix}`;
+    const realizedNetReturn = calculateFreebetRealizedReturn(
+      fb.bonusAmount,
+      fb.odd,
+      fb.status,
+      fb.status === 'Creditado' ? fb.netReturn : undefined
+    );
+
+    let linkedBetId = fb.linkedBetId;
+    let betToCreate: BetEntry | null = null;
+
+    if (options?.syncToLedger) {
+      const betStatus = mapFreebetStatusToBetStatus(fb.status);
+      const settled = calculateBetSettlement({
+        stake: fb.bonusAmount,
+        odd: fb.odd,
+        status: betStatus,
+        type: 'Freebet'
+      });
+      const safeUnit =
+        stateRef.current.settings.unitValue > 0 ? stateRef.current.settings.unitValue : 25;
+      linkedBetId = sanitizeFirestoreId();
+      betToCreate = {
+        id: linkedBetId,
+        date: fb.date,
+        type: 'Freebet',
+        bookmaker: fb.bookmaker,
+        sport: options.sport || 'Futebol',
+        event: fb.event,
+        market: fb.selection || 'Aposta Grátis',
+        odd: Math.max(1, finiteNumber(fb.odd, 1)),
+        stake: roundCurrency(Math.max(0, finiteNumber(fb.bonusAmount, 0))),
+        units: Number((finiteNumber(fb.bonusAmount, 0) / safeUnit).toFixed(2)),
+        status: betStatus,
+        gross: settled.gross,
+        pl: settled.pl,
+        freebetId: fbId
+      };
+    }
+
+    const entry: FreebetEntry = {
+      ...fb,
+      id: fbId,
+      bonusAmount: roundCurrency(Math.max(0, finiteNumber(fb.bonusAmount, 0))),
+      odd: Math.max(1, finiteNumber(fb.odd, 1)),
+      netReturn: realizedNetReturn,
+      ...(linkedBetId ? { linkedBetId } : {})
+    };
+
     setFreebets((prev) => [entry, ...prev]);
+    if (betToCreate) {
+      setBets((prev) => [betToCreate!, ...prev]);
+    }
+
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
       createFreebetInFirestore(entry, uid).catch((err) => {
         setCloudSyncStatus('error');
         setCloudSyncError(err?.message || 'Falha ao salvar freebet na nuvem.');
       });
+      if (betToCreate) {
+        createBetInFirestore(betToCreate, uid).catch((err) => {
+          setCloudSyncStatus('error');
+          setCloudSyncError(err?.message || 'Falha ao sincronizar aposta de freebet na nuvem.');
+        });
+      }
     }
+
+    return entry;
   };
 
-  const updateFreebetStatus = (id: string, status: FreebetEntry['status']) => {
+  const updateFreebetStatus = (
+    id: string,
+    status: FreebetEntry['status'],
+    explicitSettledPl?: number
+  ) => {
     const existing = stateRef.current.freebets.find((fb) => fb.id === id);
     if (!existing) return;
 
-    const updated = { ...existing, status };
+    const linkedBet = findLinkedBetForFreebet(existing, stateRef.current.bets);
+    const nextReturn = calculateFreebetRealizedReturn(
+      existing.bonusAmount,
+      existing.odd,
+      status,
+      explicitSettledPl
+    );
+
+    const updated: FreebetEntry = {
+      ...existing,
+      status,
+      netReturn: nextReturn,
+      ...(linkedBet ? { linkedBetId: linkedBet.id } : {})
+    };
+
     setFreebets((prev) => prev.map((fb) => (fb.id === id ? updated : fb)));
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
-      updateFreebetStatusInFirestore(id, status, uid).catch((err) => {
+      updateFreebetInFirestore(updated, uid).catch((err) => {
         setCloudSyncStatus('error');
         setCloudSyncError(err?.message || 'Falha ao atualizar freebet na nuvem.');
       });
     }
+
+    if (linkedBet) {
+      const nextBetStatus = mapFreebetStatusToBetStatus(status);
+      const settled = calculateBetSettlement({
+        stake: linkedBet.stake,
+        odd: linkedBet.odd,
+        status: nextBetStatus,
+        type: 'Freebet'
+      });
+
+      const updatedBet: BetEntry = {
+        ...linkedBet,
+        status: nextBetStatus,
+        freebetId: existing.id,
+        gross:
+          status === 'Creditado' &&
+          explicitSettledPl !== undefined &&
+          Number.isFinite(explicitSettledPl)
+            ? roundCurrency(Math.max(0, explicitSettledPl))
+            : settled.gross,
+        pl:
+          status === 'Creditado' &&
+          explicitSettledPl !== undefined &&
+          Number.isFinite(explicitSettledPl)
+            ? roundCurrency(Math.max(0, explicitSettledPl))
+            : settled.pl
+      };
+      delete updatedBet.cashoutReturn;
+
+      setBets((prev) => prev.map((b) => (b.id === linkedBet.id ? updatedBet : b)));
+      if (uid) {
+        updateBetInFirestore(updatedBet, uid).catch((err) => {
+          setCloudSyncStatus('error');
+          setCloudSyncError(err?.message || 'Falha ao atualizar aposta vinculada à freebet.');
+        });
+      }
+    }
   };
 
   const deleteFreebet = (id: string) => {
+    const existing = stateRef.current.freebets.find((fb) => fb.id === id);
+    const linkedBet = existing
+      ? findLinkedBetForFreebet(existing, stateRef.current.bets)
+      : undefined;
+
     setFreebets((prev) => prev.filter((fb) => fb.id !== id));
+    if (linkedBet) {
+      setBets((prev) => prev.filter((b) => b.id !== linkedBet.id));
+    }
+
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
       deleteFreebetInFirestore(id, uid).catch((err) => {
         setCloudSyncStatus('error');
         setCloudSyncError(err?.message || 'Falha ao excluir freebet na nuvem.');
       });
+      if (linkedBet) {
+        deleteBetInFirestore(linkedBet.id, uid).catch((err) => {
+          setCloudSyncStatus('error');
+          setCloudSyncError(err?.message || 'Falha ao excluir aposta vinculada na nuvem.');
+        });
+      }
     }
   };
 
-  const addFreeSpin = (spin: Omit<FreeSpinEntry, 'id'>) => {
+  const addFreeSpin = (spin: Omit<FreeSpinEntry, 'id'>): FreeSpinEntry | null => {
+    if (spin.idempotencyKey) {
+      if (
+        pendingSpinKeysRef.current.has(spin.idempotencyKey) ||
+        stateRef.current.freeSpins.some((s) => s.idempotencyKey === spin.idempotencyKey)
+      ) {
+        return null;
+      }
+      pendingSpinKeysRef.current.add(spin.idempotencyKey);
+    }
+
     const randomSuffix = Math.floor(100 + Math.random() * 900);
     const entry: FreeSpinEntry = {
       ...spin,
-      id: `FS-${Date.now().toString(36)}-${randomSuffix}`
+      id: `FS-${Date.now().toString(36)}-${randomSuffix}`,
+      spinsCount: Math.max(0, finiteNumber(spin.spinsCount, 0)),
+      netProfit: roundCurrency(finiteNumber(spin.netProfit, 0))
     };
-    setFreeSpins((prev) => [entry, ...prev]);
+
+    setFreeSpins((prev) => deduplicateFreeSpins([entry, ...prev]));
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
       createFreeSpinInFirestore(entry, uid).catch((err) => {
@@ -1013,6 +1300,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         setCloudSyncError(err?.message || 'Falha ao salvar giro grátis na nuvem.');
       });
     }
+    return entry;
   };
 
   const deleteFreeSpin = (id: string) => {
@@ -1022,6 +1310,91 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       deleteFreeSpinInFirestore(id, uid).catch((err) => {
         setCloudSyncStatus('error');
         setCloudSyncError(err?.message || 'Falha ao excluir giro grátis na nuvem.');
+      });
+    }
+  };
+
+  const metrics = useMemo(() => {
+    return computeFinancialMetrics({
+      bets,
+      treasury,
+      freebets,
+      freeSpins,
+      promoConversions,
+      settings: {
+        initialBankroll: settings.initialBankroll,
+        initialPromoBalance: settings.initialPromoBalance
+      }
+    });
+  }, [bets, treasury, freebets, freeSpins, promoConversions, settings.initialBankroll, settings.initialPromoBalance]);
+
+  const convertPromoToReal = (req: PromoConversionRequest): PromoConversionActionResult => {
+    if (req.idempotencyKey && pendingConversionKeysRef.current.has(req.idempotencyKey)) {
+      return {
+        success: false,
+        error: 'Solicitação de conversão já está em processamento (duplicidade bloqueada).'
+      };
+    }
+
+    const latestMetrics = computeFinancialMetrics({
+      bets: stateRef.current.bets,
+      treasury: stateRef.current.treasury,
+      freebets: stateRef.current.freebets,
+      freeSpins: stateRef.current.freeSpins,
+      promoConversions: stateRef.current.promoConversions,
+      settings: {
+        initialBankroll: stateRef.current.settings.initialBankroll,
+        initialPromoBalance: stateRef.current.settings.initialPromoBalance
+      }
+    });
+
+    const validation = validatePromoConversion(
+      req,
+      latestMetrics.availablePromoBalance,
+      stateRef.current.promoConversions
+    );
+
+    if (!validation.valid || !validation.normalizedAmount) {
+      return { success: false, error: validation.error || 'Conversão promocional inválida.' };
+    }
+
+    if (req.idempotencyKey) {
+      pendingConversionKeysRef.current.add(req.idempotencyKey);
+    }
+
+    const randomSuffix = Math.floor(100 + Math.random() * 900);
+    const entry: PromoConversionEntry = {
+      id: `CONV-${Date.now().toString(36)}-${randomSuffix}`,
+      amount: validation.normalizedAmount,
+      date: req.date || new Date().toLocaleDateString('pt-BR'),
+      origin: req.origin.trim(),
+      promotionName: req.promotionName.trim(),
+      ...(req.bookmaker && req.bookmaker.trim() ? { bookmaker: req.bookmaker.trim() } : {}),
+      ...(req.notes && req.notes.trim() ? { notes: req.notes.trim() } : {}),
+      ...(req.idempotencyKey ? { idempotencyKey: req.idempotencyKey } : {}),
+      ...(req.sourceId ? { sourceId: req.sourceId } : {}),
+      createdAtIso: new Date().toISOString()
+    };
+
+    setPromoConversions((prev) => deduplicatePromoConversions([entry, ...prev]));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      createPromoConversionInFirestore(entry, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao registrar conversão promocional na nuvem.');
+      });
+    }
+
+    return { success: true, entry };
+  };
+
+  const deletePromoConversion = (id: string) => {
+    setPromoConversions((prev) => prev.filter((c) => c.id !== id));
+    const uid = firebaseUserRef.current?.uid;
+    if (uid) {
+      deletePromoConversionInFirestore(id, uid).catch((err) => {
+        setCloudSyncStatus('error');
+        setCloudSyncError(err?.message || 'Falha ao excluir conversão promocional na nuvem.');
       });
     }
   };
@@ -1043,6 +1416,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     setTreasury([]);
     setFreebets([]);
     setFreeSpins([]);
+    setPromoConversions([]);
     const uid = firebaseUserRef.current?.uid;
     if (uid) {
       clearAllUserSubcollectionsInFirestore(uid).catch((err) => {
@@ -1053,14 +1427,17 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
   };
 
   const loadDemoData = () => {
-    const sanitizedDemoBets = demoBets.map((b) => ({
-      ...b,
-      id: sanitizeFirestoreId(b.id)
-    }));
+    const sanitizedDemoBets = demoBets.map((b) =>
+      normalizeBetEntry({ ...b, id: sanitizeFirestoreId(b.id) }, stateRef.current.settings.unitValue, sanitizeFirestoreId)
+    );
+    const sanitizedDemoFreebets = demoFreebets.map((fb) =>
+      normalizeFreebetEntry(fb, sanitizeFirestoreId)
+    );
     setBets(sanitizedDemoBets);
     setTreasury(demoTreasury);
-    setFreebets(demoFreebets);
+    setFreebets(sanitizedDemoFreebets);
     setFreeSpins(demoFreeSpins);
+    setPromoConversions([]);
     const fbUser = firebaseUserRef.current;
     if (fbUser) {
       pushAllStateToFirestore(
@@ -1068,8 +1445,9 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         {
           bets: sanitizedDemoBets,
           treasury: demoTreasury,
-          freebets: demoFreebets,
+          freebets: sanitizedDemoFreebets,
           freeSpins: demoFreeSpins,
+          promoConversions: [],
           settings: stateRef.current.settings
         },
         true
@@ -1085,29 +1463,55 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     treasury?: TreasuryEntry[];
     freebets?: FreebetEntry[];
     freeSpins?: FreeSpinEntry[];
+    promoConversions?: PromoConversionEntry[];
     settings?: AppSettings;
   }) => {
-    const nextSettings =
+    const nextSettings: AppSettings =
       data.settings && typeof data.settings === 'object'
-        ? { ...stateRef.current.settings, ...data.settings }
+        ? {
+            ...stateRef.current.settings,
+            ...data.settings,
+            initialBankroll: Math.max(
+              0,
+              finiteNumber(data.settings.initialBankroll, stateRef.current.settings.initialBankroll)
+            ),
+            initialPromoBalance: Math.max(
+              0,
+              finiteNumber(
+                data.settings.initialPromoBalance,
+                stateRef.current.settings.initialPromoBalance ?? 0
+              )
+            ),
+            unitValue: Math.max(
+              0.01,
+              finiteNumber(data.settings.unitValue, stateRef.current.settings.unitValue)
+            )
+          }
         : stateRef.current.settings;
+
     const nextBets = Array.isArray(data.bets)
-      ? data.bets.map((b) => normalizeBetEntry(b, nextSettings.unitValue))
+      ? data.bets.map((b) => normalizeBetEntry(b, nextSettings.unitValue, sanitizeFirestoreId))
       : stateRef.current.bets;
     const nextTreasury = Array.isArray(data.treasury)
-      ? data.treasury.map((t) => ({ ...t, id: sanitizeFirestoreId(t.id) }))
+      ? data.treasury.map(normalizeTreasuryEntry)
       : stateRef.current.treasury;
     const nextFreebets = Array.isArray(data.freebets)
-      ? data.freebets.map((f) => ({ ...f, id: sanitizeFirestoreId(f.id) }))
+      ? data.freebets.map((f) => normalizeFreebetEntry(f, sanitizeFirestoreId))
       : stateRef.current.freebets;
     const nextFreeSpins = Array.isArray(data.freeSpins)
-      ? data.freeSpins.map((s) => ({ ...s, id: sanitizeFirestoreId(s.id) }))
+      ? deduplicateFreeSpins(data.freeSpins.map((s) => ({ ...s, id: sanitizeFirestoreId(s.id) })))
       : stateRef.current.freeSpins;
+    const nextPromoConversions = Array.isArray(data.promoConversions)
+      ? deduplicatePromoConversions(
+          data.promoConversions.map((c) => ({ ...c, id: sanitizeFirestoreId(c.id) }))
+        )
+      : stateRef.current.promoConversions;
 
     setBets(nextBets);
     setTreasury(nextTreasury);
     setFreebets(nextFreebets);
     setFreeSpins(nextFreeSpins);
+    setPromoConversions(nextPromoConversions);
     setSettings(nextSettings);
 
     const fbUser = firebaseUserRef.current;
@@ -1119,6 +1523,7 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
           treasury: nextTreasury,
           freebets: nextFreebets,
           freeSpins: nextFreeSpins,
+          promoConversions: nextPromoConversions,
           settings: nextSettings
         },
         true
@@ -1128,152 +1533,6 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       });
     }
   };
-
-  // Computations with NaN-safe finiteNumber guards
-  const totalDeposits = useMemo(() => {
-    return treasury
-      .filter((t) => t.type === 'DEPOSIT' || t.type === 'BONUS')
-      .reduce((sum, t) => sum + finiteNumber(t.amount, 0), 0);
-  }, [treasury]);
-
-  const totalWithdrawals = useMemo(() => {
-    return treasury
-      .filter((t) => t.type === 'WITHDRAW')
-      .reduce((sum, t) => sum + finiteNumber(t.amount, 0), 0);
-  }, [treasury]);
-
-  const totalSpinsProfit = useMemo(() => {
-    return freeSpins.reduce((sum, s) => sum + finiteNumber(s.netProfit, 0), 0);
-  }, [freeSpins]);
-
-  const totalFreebetsProfit = useMemo(() => {
-    return freebets
-      .filter((f) => f.status === 'Creditado')
-      .reduce((sum, f) => sum + finiteNumber(f.netReturn, 0), 0);
-  }, [freebets]);
-
-  const {
-    netBetProfit,
-    activeExposure,
-    openPositionsCount,
-    settledBetsCount,
-    winCount,
-    lossCount,
-    voidCount,
-    turnoverVolume
-  } = useMemo(() => {
-    let profit = 0;
-    let exposure = 0;
-    let openCount = 0;
-    let settledCount = 0;
-    let wins = 0;
-    let losses = 0;
-    let voids = 0;
-    let turnover = 0;
-
-    bets.forEach((b) => {
-      const stakeVal = finiteNumber(b.stake, 0);
-      const plVal = finiteNumber(b.pl, 0);
-
-      if (b.status === 'PENDENTE') {
-        exposure += stakeVal;
-        openCount++;
-      } else {
-        settledCount++;
-        profit += plVal;
-        turnover += stakeVal;
-
-        if (b.status === 'GREEN' || b.status === 'HALF_GREEN') {
-          wins++;
-        } else if (b.status === 'RED' || b.status === 'HALF_RED') {
-          losses++;
-        } else if (b.status === 'VOID') {
-          voids++;
-        }
-      }
-    });
-
-    return {
-      netBetProfit: profit,
-      activeExposure: exposure,
-      openPositionsCount: openCount,
-      settledBetsCount: settledCount,
-      winCount: wins,
-      lossCount: losses,
-      voidCount: voids,
-      turnoverVolume: turnover
-    };
-  }, [bets]);
-
-  const currentEquity = useMemo(() => {
-    return (
-      finiteNumber(settings.initialBankroll, 1000) +
-      netBetProfit +
-      totalSpinsProfit +
-      totalDeposits -
-      totalWithdrawals
-    );
-  }, [settings.initialBankroll, netBetProfit, totalSpinsProfit, totalDeposits, totalWithdrawals]);
-
-  const winRate = useMemo(() => {
-    const totalDecisive = winCount + lossCount;
-    return totalDecisive > 0 ? (winCount / totalDecisive) * 100 : 0;
-  }, [winCount, lossCount]);
-
-  const roi = useMemo(() => {
-    return turnoverVolume > 0 ? (netBetProfit / turnoverVolume) * 100 : 0;
-  }, [netBetProfit, turnoverVolume]);
-
-  const { maxWinStreak, maxLossStreak, currentStreakText, maxDrawdownPct } = useMemo(() => {
-    let maxW = 0;
-    let maxL = 0;
-    let currentW = 0;
-    let currentL = 0;
-
-    const chronological = [...bets].filter((b) => b.status !== 'PENDENTE').reverse();
-
-    const baseBankroll = finiteNumber(settings.initialBankroll, 1000);
-    let runningEquity = baseBankroll;
-    let peakEquity = baseBankroll;
-    let maxDd = 0;
-
-    chronological.forEach((b) => {
-      runningEquity += finiteNumber(b.pl, 0);
-      if (runningEquity > peakEquity) {
-        peakEquity = runningEquity;
-      }
-      if (peakEquity > 0) {
-        const dd = ((peakEquity - runningEquity) / peakEquity) * 100;
-        if (dd > maxDd) maxDd = dd;
-      }
-
-      if (b.status === 'VOID') return;
-
-      if (b.status === 'GREEN' || b.status === 'HALF_GREEN') {
-        currentW++;
-        currentL = 0;
-        if (currentW > maxW) maxW = currentW;
-      } else if (b.status === 'RED' || b.status === 'HALF_RED') {
-        currentL++;
-        currentW = 0;
-        if (currentL > maxL) maxL = currentL;
-      }
-    });
-
-    let streakText = 'Sem histórico';
-    if (currentW > 0) {
-      streakText = `+${currentW} ${currentW === 1 ? 'Green seguido' : 'Greens seguidos'}`;
-    } else if (currentL > 0) {
-      streakText = `-${currentL} ${currentL === 1 ? 'Red seguido' : 'Reds seguidos'}`;
-    }
-
-    return {
-      maxWinStreak: maxW,
-      maxLossStreak: maxL,
-      currentStreakText: streakText,
-      maxDrawdownPct: maxDd
-    };
-  }, [bets, settings.initialBankroll]);
 
   const monthlyTargetAmount =
     (finiteNumber(settings.initialBankroll, 1000) * finiteNumber(settings.monthlyTargetPct, 30)) /
@@ -1303,42 +1562,29 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         treasury,
         freebets,
         freeSpins,
+        promoConversions,
         settings,
         addBet,
         updateBet,
         deleteBet,
         resolveBet,
         addTreasury,
+        updateTreasuryStatus,
         deleteTreasury,
         addFreebet,
         updateFreebetStatus,
         deleteFreebet,
         addFreeSpin,
         deleteFreeSpin,
+        convertPromoToReal,
+        deletePromoConversion,
         updateSettings,
         resetData,
         loadDemoData,
         importBackup,
         syncNow,
-        totalDeposits,
-        totalWithdrawals,
-        netBetProfit,
-        totalSpinsProfit,
-        totalFreebetsProfit,
-        currentEquity,
-        activeExposure,
-        openPositionsCount,
-        settledBetsCount,
-        winCount,
-        lossCount,
-        voidCount,
-        winRate,
-        turnoverVolume,
-        roi,
-        maxDrawdownPct,
-        currentStreakText,
-        maxWinStreak,
-        maxLossStreak,
+        ...metrics,
+        turnoverPolicyDoc: TURNOVER_POLICY_DOC,
         monthlyTargetAmount,
         stopLossDistance,
         unitValue: finiteNumber(settings.unitValue, 25)

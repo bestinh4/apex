@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BookmakerSelector } from './BookmakerLogo';
 
@@ -20,6 +20,15 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
   const [game, setGame] = useState('Gates of Olympus');
   const [spinsCount, setSpinsCount] = useState('10');
   const [netProfit, setNetProfit] = useState('25.00');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsSubmitting(false);
+      submissionKeyRef.current = `spin_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -33,24 +42,29 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     const profit = parseNum(netProfit);
     if (profit <= 0) return;
 
+    setIsSubmitting(true);
     const now = new Date();
     const formattedDate = `Hoje, ${String(now.getHours()).padStart(2, '0')}:${String(
       now.getMinutes()
     ).padStart(2, '0')}`;
 
-    addFreeSpin({
+    const created = addFreeSpin({
       provider,
       game,
       bookmaker,
       spinsCount: parseInt(spinsCount, 10) || 10,
       netProfit: profit,
-      date: formattedDate
+      date: formattedDate,
+      idempotencyKey: submissionKeyRef.current
     });
 
-    onSuccessToast?.(`Retorno de R$ ${profit.toFixed(2)} adicionado à banca!`);
+    if (created) {
+      onSuccessToast?.(`Retorno de R$ ${profit.toFixed(2)} creditado diretamente na banca real!`);
+    }
     onClose();
   };
 
@@ -162,9 +176,10 @@ export const FreeSpinModal: React.FC<FreeSpinModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
+              disabled={isSubmitting}
+              className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95"
             >
-              Salvar e Creditar
+              {isSubmitting ? 'Salvando...' : 'Salvar e Creditar'}
             </button>
           </div>
         </form>

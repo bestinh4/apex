@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
+import { TreasuryEntry } from '../types';
 
 interface CashflowViewProps {
   onOpenCashflowModal: () => void;
@@ -12,13 +13,21 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
 }) => {
   const {
     treasury,
+    updateTreasuryStatus,
     deleteTreasury,
     totalDeposits,
     totalWithdrawals,
-    currentEquity
+    pendingDeposits,
+    pendingWithdrawals,
+    bonusCredits,
+    pendingBonusCredits,
+    realEquity,
+    availableRealBalance,
+    realExposure,
+    promoBalance
   } = useBankroll();
 
-  const [filterType, setFilterType] = useState<'ALL' | 'DEPOSIT' | 'WITHDRAW'>('ALL');
+  const [filterType, setFilterType] = useState<'ALL' | 'DEPOSIT' | 'WITHDRAW' | 'BONUS'>('ALL');
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const formatBRL = (val: number) => {
@@ -30,6 +39,28 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
     return tx.type === filterType;
   });
 
+  const getStatusBadge = (status: TreasuryEntry['status']) => {
+    if (status === 'Compensado') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
+          Compensado
+        </span>
+      );
+    }
+    if (status === 'Processando') {
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-500/10 text-blue-300 border border-blue-500/20 whitespace-nowrap">
+          Processando
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-500/10 text-amber-300 border border-amber-500/20 whitespace-nowrap">
+        Pendente
+      </span>
+    );
+  };
+
   return (
     <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
       {/* Header */}
@@ -37,7 +68,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
         <div>
           <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">Fluxo de Caixa</h2>
           <p className="text-xs text-slate-400">
-            Controle de depósitos, saques e saldo líquido disponível
+            Apenas lançamentos compensados alteram o patrimônio real ou o saldo promocional
           </p>
         </div>
 
@@ -55,7 +86,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Total de Aportes</span>
+            <span className="text-xs font-semibold text-slate-400">Depósitos Compensados</span>
             <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
               <span className="material-symbols-outlined text-[18px]">south_east</span>
             </div>
@@ -63,14 +94,22 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
           <div className="text-xl sm:text-2xl font-mono font-bold text-white mt-2 tabular-nums">
             {formatBRL(totalDeposits)}
           </div>
-          <div className="text-xs text-slate-400 mt-1">
-            {treasury.filter((t) => t.type === 'DEPOSIT' || t.type === 'BONUS').length} registro(s)
+          <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-2">
+            <span>
+              {treasury.filter((t) => t.type === 'DEPOSIT' && t.status === 'Compensado').length}{' '}
+              compensado(s)
+            </span>
+            {pendingDeposits > 0 && (
+              <span className="text-amber-300 font-mono">
+                · Pendente: {formatBRL(pendingDeposits)}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Total de Saques</span>
+            <span className="text-xs font-semibold text-slate-400">Saques Compensados</span>
             <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <span className="material-symbols-outlined text-[18px]">north_east</span>
             </div>
@@ -78,22 +117,47 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
           <div className="text-xl sm:text-2xl font-mono font-bold text-emerald-400 mt-2 tabular-nums">
             {formatBRL(totalWithdrawals)}
           </div>
-          <div className="text-xs text-slate-400 mt-1">
-            {treasury.filter((t) => t.type === 'WITHDRAW').length} retirada(s)
+          <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-2">
+            <span>
+              {treasury.filter((t) => t.type === 'WITHDRAW' && t.status === 'Compensado').length}{' '}
+              retirada(s)
+            </span>
+            {pendingWithdrawals > 0 && (
+              <span className="text-amber-300 font-mono">
+                · Pendente: {formatBRL(pendingWithdrawals)}
+              </span>
+            )}
           </div>
         </div>
 
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400">Banca Atual em Caixa</span>
+            <span className="text-xs font-semibold text-slate-400">Patrimônio Real vs Disponível</span>
             <div className="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
               <span className="material-symbols-outlined text-[18px]">account_balance_wallet</span>
             </div>
           </div>
           <div className="text-xl sm:text-2xl font-mono font-bold text-blue-400 mt-2 tabular-nums">
-            {formatBRL(currentEquity)}
+            {formatBRL(realEquity)}
           </div>
-          <div className="text-xs text-slate-400 mt-1">Disponível para operações</div>
+          <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span>
+              Disp:{' '}
+              <strong className="font-mono text-emerald-400">
+                {formatBRL(availableRealBalance)}
+              </strong>
+            </span>
+            {realExposure > 0 && (
+              <span>
+                · Exp: <strong className="font-mono text-amber-300">{formatBRL(realExposure)}</strong>
+              </span>
+            )}
+            {(promoBalance !== 0 || bonusCredits > 0 || pendingBonusCredits > 0) && (
+              <span>
+                · Promo: <strong className="font-mono text-indigo-300">{formatBRL(promoBalance)}</strong>
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -103,40 +167,28 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
           <h3 className="text-sm sm:text-base font-bold text-white tracking-tight">
             Histórico de Transações
           </h3>
-          <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08]">
-            <button
-              type="button"
-              onClick={() => setFilterType('ALL')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs transition-all ${
-                filterType === 'ALL'
-                  ? 'bg-slate-800 text-white font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterType('DEPOSIT')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs transition-all ${
-                filterType === 'DEPOSIT'
-                  ? 'bg-slate-800 text-white font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Depósitos
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterType('WITHDRAW')}
-              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs transition-all ${
-                filterType === 'WITHDRAW'
-                  ? 'bg-slate-800 text-white font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              Saques
-            </button>
+          <div className="flex items-center bg-[#080c14] p-1 rounded-xl border border-white/[0.08] overflow-x-auto scrollbar-none">
+            {(
+              [
+                { key: 'ALL', label: 'Todos' },
+                { key: 'DEPOSIT', label: 'Depósitos' },
+                { key: 'WITHDRAW', label: 'Saques' },
+                { key: 'BONUS', label: 'Bônus Promo' }
+              ] as const
+            ).map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setFilterType(tab.key)}
+                className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
+                  filterType === tab.key
+                    ? 'bg-slate-800 text-white font-semibold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -174,48 +226,71 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                       <span className="text-xs font-semibold text-white block truncate">
                         {item.desc}
                       </span>
-                      <span className="text-[11px] text-slate-400 block truncate mt-0.5">
-                        {item.details || 'Compensado'} · {item.date}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                        {getStatusBadge(item.status)}
+                        <span className="text-[11px] text-slate-400 truncate">
+                          {item.details || item.status} · {item.date}
+                        </span>
+                      </div>
                     </div>
                     <span
                       className={`font-mono font-bold text-sm tabular-nums shrink-0 ${
-                        item.type === 'WITHDRAW' ? 'text-rose-400' : 'text-emerald-400'
+                        item.status !== 'Compensado'
+                          ? 'text-slate-400'
+                          : item.type === 'WITHDRAW'
+                          ? 'text-rose-400'
+                          : item.type === 'BONUS'
+                          ? 'text-indigo-300'
+                          : 'text-emerald-400'
                       }`}
                     >
                       {item.type === 'WITHDRAW' ? '-' : '+'}
                       {formatBRL(item.amount)}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.05]">
+                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.05] gap-2">
                     <span className="text-[11px] text-slate-400">
                       {item.type === 'DEPOSIT'
-                        ? 'Depósito'
+                        ? 'Depósito Real'
                         : item.type === 'WITHDRAW'
-                        ? 'Saque'
-                        : 'Bônus'}
+                        ? 'Saque Real'
+                        : 'Bônus Rollover (Promo)'}
                     </span>
-                    {confirmDeleteId === item.id ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          deleteTreasury(item.id);
-                          setConfirmDeleteId(null);
-                          onSuccessToast?.('Transação excluída.');
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-semibold"
-                      >
-                        Confirmar Exclusão
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDeleteId(item.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                      </button>
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {item.status !== 'Compensado' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateTreasuryStatus(item.id, 'Compensado');
+                            onSuccessToast?.('Movimentação marcada como Compensada.');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 text-[11px] font-semibold"
+                        >
+                          Compensar
+                        </button>
+                      )}
+                      {confirmDeleteId === item.id ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            deleteTreasury(item.id);
+                            setConfirmDeleteId(null);
+                            onSuccessToast?.('Transação excluída.');
+                          }}
+                          className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-xs font-semibold"
+                        >
+                          Confirmar Exclusão
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(item.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -228,6 +303,7 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                   <tr className="border-b border-white/[0.06] bg-slate-900/60 text-slate-400 text-[11px] font-semibold">
                     <th className="py-3 px-3.5">Data</th>
                     <th className="py-3 px-3.5">Tipo</th>
+                    <th className="py-3 px-3.5">Status</th>
                     <th className="py-3 px-3.5">Descrição</th>
                     <th className="py-3 px-3.5">Detalhes</th>
                     <th className="py-3 px-3.5 text-right">Valor</th>
@@ -243,51 +319,73 @@ export const CashflowView: React.FC<CashflowViewProps> = ({
                       <td className="py-3 px-3.5 whitespace-nowrap">
                         {item.type === 'DEPOSIT' ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                            Depósito
+                            Depósito Real
                           </span>
                         ) : item.type === 'WITHDRAW' ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                            Saque
+                            Saque Real
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Bônus
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                            Bônus Promo
                           </span>
                         )}
                       </td>
+                      <td className="py-3 px-3.5 whitespace-nowrap">{getStatusBadge(item.status)}</td>
                       <td className="py-3 px-3.5 font-medium text-slate-200">{item.desc}</td>
-                      <td className="py-3 px-3.5 text-slate-400">{item.details || 'Compensado'}</td>
+                      <td className="py-3 px-3.5 text-slate-400">{item.details || item.status}</td>
                       <td
                         className={`py-3 px-3.5 text-right font-mono font-bold whitespace-nowrap tabular-nums ${
-                          item.type === 'WITHDRAW' ? 'text-rose-400' : 'text-emerald-400'
+                          item.status !== 'Compensado'
+                            ? 'text-slate-400'
+                            : item.type === 'WITHDRAW'
+                            ? 'text-rose-400'
+                            : item.type === 'BONUS'
+                            ? 'text-indigo-300'
+                            : 'text-emerald-400'
                         }`}
                       >
                         {item.type === 'WITHDRAW' ? '-' : '+'}
                         {formatBRL(item.amount)}
                       </td>
                       <td className="py-3 px-3.5 text-center whitespace-nowrap">
-                        {confirmDeleteId === item.id ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              deleteTreasury(item.id);
-                              setConfirmDeleteId(null);
-                              onSuccessToast?.('Transação excluída com sucesso.');
-                            }}
-                            className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold"
-                          >
-                            Confirmar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setConfirmDeleteId(item.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
-                            title="Excluir"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                          </button>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {item.status !== 'Compensado' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateTreasuryStatus(item.id, 'Compensado');
+                                onSuccessToast?.('Movimentação compensada!');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/25 text-[11px] font-semibold"
+                              title="Marcar como Compensado"
+                            >
+                              Compensar
+                            </button>
+                          )}
+                          {confirmDeleteId === item.id ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                deleteTreasury(item.id);
+                                setConfirmDeleteId(null);
+                                onSuccessToast?.('Transação excluída com sucesso.');
+                              }}
+                              className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold"
+                            >
+                              Confirmar
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(item.id)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">delete</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

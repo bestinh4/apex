@@ -48,7 +48,7 @@ service cloud.firestore {
         'createdAt', 'updatedAt'
       ]) &&
       data.keys().hasOnly([
-        'uid', 'email', 'name', 'initialBankroll', 'unitValue',
+        'uid', 'email', 'name', 'initialBankroll', 'initialPromoBalance', 'unitValue',
         'kellyFraction', 'maxDrawdownLimitPct', 'monthlyTargetPct',
         'createdAt', 'updatedAt'
       ]) &&
@@ -56,6 +56,7 @@ service cloud.firestore {
       data.email is string && data.email.size() <= 256 &&
       data.name is string && data.name.size() <= 120 &&
       (data.initialBankroll is int || data.initialBankroll is float) && data.initialBankroll >= 0 &&
+      (!('initialPromoBalance' in data) || ((data.initialPromoBalance is int || data.initialPromoBalance is float) && data.initialPromoBalance >= 0)) &&
       (data.unitValue is int || data.unitValue is float) && data.unitValue > 0 &&
       data.kellyFraction is string && data.kellyFraction.size() <= 120 &&
       (data.maxDrawdownLimitPct is int || data.maxDrawdownLimitPct is float) && data.maxDrawdownLimitPct >= 0 &&
@@ -73,7 +74,7 @@ service cloud.firestore {
       data.keys().hasOnly([
         'userId', 'date', 'sport', 'event', 'market', 'odd', 'stake',
         'units', 'type', 'status', 'gross', 'pl', 'bookmaker',
-        'closingOdd', 'createdAt', 'updatedAt'
+        'cashoutReturn', 'freebetId', 'closingOdd', 'createdAt', 'updatedAt'
       ]) &&
       data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
       data.date is string && data.date.size() <= 40 &&
@@ -88,6 +89,8 @@ service cloud.firestore {
       (data.gross is int || data.gross is float) &&
       (data.pl is int || data.pl is float) &&
       data.bookmaker is string && data.bookmaker.size() <= 80 &&
+      (!('cashoutReturn' in data) || ((data.cashoutReturn is int || data.cashoutReturn is float) && data.cashoutReturn >= 0)) &&
+      (!('freebetId' in data) || isValidId(data.freebetId)) &&
       (!('closingOdd' in data) || ((data.closingOdd is int || data.closingOdd is float) && data.closingOdd >= 1)) &&
       data.createdAt is timestamp &&
       data.updatedAt is timestamp;
@@ -113,7 +116,7 @@ service cloud.firestore {
       ]) &&
       data.keys().hasOnly([
         'userId', 'bookmaker', 'event', 'selection', 'bonusAmount',
-        'odd', 'netReturn', 'status', 'date', 'createdAt'
+        'odd', 'netReturn', 'status', 'date', 'linkedBetId', 'createdAt'
       ]) &&
       data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
       data.bookmaker is string && data.bookmaker.size() <= 80 &&
@@ -121,9 +124,10 @@ service cloud.firestore {
       data.selection is string && data.selection.size() <= 200 &&
       (data.bonusAmount is int || data.bonusAmount is float) && data.bonusAmount >= 0 &&
       (data.odd is int || data.odd is float) && data.odd >= 1 &&
-      (data.netReturn is int || data.netReturn is float) &&
+      (data.netReturn is int || data.netReturn is float) && data.netReturn >= 0 &&
       data.status in ['Ao Vivo', 'Creditado', 'Pendente', 'Expirado'] &&
       data.date is string && data.date.size() <= 40 &&
+      (!('linkedBetId' in data) || isValidId(data.linkedBetId)) &&
       data.createdAt is timestamp;
     }
 
@@ -134,7 +138,7 @@ service cloud.firestore {
       ]) &&
       data.keys().hasOnly([
         'userId', 'provider', 'game', 'bookmaker', 'spinsCount',
-        'netProfit', 'date', 'createdAt'
+        'netProfit', 'date', 'idempotencyKey', 'createdAt'
       ]) &&
       data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
       data.provider is string && data.provider.size() <= 100 &&
@@ -143,6 +147,28 @@ service cloud.firestore {
       (data.spinsCount is int || data.spinsCount is float) && data.spinsCount >= 0 &&
       (data.netProfit is int || data.netProfit is float) &&
       data.date is string && data.date.size() <= 40 &&
+      (!('idempotencyKey' in data) || (data.idempotencyKey is string && data.idempotencyKey.size() <= 128)) &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidPromoConversion(data, userId) {
+      return data.keys().hasAll([
+        'userId', 'amount', 'date', 'origin', 'promotionName', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'amount', 'date', 'origin', 'promotionName',
+        'bookmaker', 'notes', 'idempotencyKey', 'sourceId', 'createdAtIso', 'createdAt'
+      ]) &&
+      data.userId is string && data.userId == userId && data.userId.size() <= 128 &&
+      (data.amount is int || data.amount is float) && data.amount > 0 &&
+      data.date is string && data.date.size() <= 40 &&
+      data.origin is string && data.origin.size() >= 1 && data.origin.size() <= 100 &&
+      data.promotionName is string && data.promotionName.size() >= 1 && data.promotionName.size() <= 160 &&
+      (!('bookmaker' in data) || (data.bookmaker is string && data.bookmaker.size() <= 80)) &&
+      (!('notes' in data) || (data.notes is string && data.notes.size() <= 300)) &&
+      (!('idempotencyKey' in data) || (data.idempotencyKey is string && data.idempotencyKey.size() <= 128)) &&
+      (!('sourceId' in data) || (data.sourceId is string && data.sourceId.size() <= 128)) &&
+      (!('createdAtIso' in data) || (data.createdAtIso is string && data.createdAtIso.size() <= 64)) &&
       data.createdAt is timestamp;
     }
 
@@ -161,7 +187,7 @@ service cloud.firestore {
         incoming().createdAt == existing().createdAt &&
         incoming().updatedAt == request.time &&
         incoming().diff(existing()).affectedKeys().hasOnly([
-          'name', 'email', 'initialBankroll', 'unitValue',
+          'name', 'email', 'initialBankroll', 'initialPromoBalance', 'unitValue',
           'kellyFraction', 'maxDrawdownLimitPct', 'monthlyTargetPct', 'updatedAt'
         ]);
       allow delete: if false;
@@ -186,7 +212,7 @@ service cloud.firestore {
           incoming().diff(existing()).affectedKeys().hasOnly([
             'date', 'sport', 'event', 'market', 'odd', 'stake',
             'units', 'type', 'status', 'gross', 'pl', 'bookmaker',
-            'closingOdd', 'updatedAt'
+            'cashoutReturn', 'freebetId', 'closingOdd', 'updatedAt'
           ]);
         allow delete: if isValidId(userId) && isValidId(betId) && isVerifiedOwner(userId) && hasParentUser(userId);
       }
@@ -200,7 +226,13 @@ service cloud.firestore {
           isValidTreasury(incoming(), userId) &&
           hasParentUser(userId) &&
           incoming().createdAt == request.time;
-        allow update: if false;
+        allow update: if isValidId(userId) && isValidId(entryId) &&
+          isVerifiedOwner(userId) &&
+          isValidTreasury(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['status']);
         allow delete: if isValidId(userId) && isValidId(entryId) && isVerifiedOwner(userId) && hasParentUser(userId);
       }
 
@@ -219,7 +251,7 @@ service cloud.firestore {
           hasParentUser(userId) &&
           incoming().userId == existing().userId &&
           incoming().createdAt == existing().createdAt &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'netReturn', 'linkedBetId']);
         allow delete: if isValidId(userId) && isValidId(freebetId) && isVerifiedOwner(userId) && hasParentUser(userId);
       }
 
@@ -234,6 +266,19 @@ service cloud.firestore {
           incoming().createdAt == request.time;
         allow update: if false;
         allow delete: if isValidId(userId) && isValidId(spinId) && isVerifiedOwner(userId) && hasParentUser(userId);
+      }
+
+      // Promo Conversions subcollection
+      match /promo_conversions/{conversionId} {
+        allow get: if isValidId(userId) && isValidId(conversionId) && isOwner(userId) && hasParentUser(userId);
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isValidId(userId) && isValidId(conversionId) &&
+          isVerifiedOwner(userId) &&
+          isValidPromoConversion(incoming(), userId) &&
+          hasParentUser(userId) &&
+          incoming().createdAt == request.time;
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(conversionId) && isVerifiedOwner(userId) && hasParentUser(userId);
       }
     }
   }

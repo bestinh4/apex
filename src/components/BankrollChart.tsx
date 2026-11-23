@@ -61,14 +61,14 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
     }).format(clean);
   };
 
-  // Build chronological points from settled bets
+  // Build chronological points strictly from settled real-money bets
   const allPoints = useMemo<ChartPoint[]>(() => {
     const settledChronological = [...bets]
-      .filter((b) => b.status !== 'PENDENTE')
+      .filter((b) => b.type === 'Saldo Real' && b.status !== 'PENDENTE')
       .reverse();
 
     const totalBetPL = settledChronological.reduce((acc, b) => acc + safeNum(b.pl, 0), 0);
-    // Base capital includes initialBankroll + net deposits/withdrawals/spins so final point equals currentEquity
+    // Base capital includes initialBankroll + compensated deposits/withdrawals/spins/conversions so final point equals realEquity
     const baseCapital = safeNum(currentEquity, safeNum(initialBankroll, 1000)) - totalBetPL;
     const safeUnit = safeNum(unitValue, 25) > 0 ? safeNum(unitValue, 25) : 25;
 
@@ -636,8 +636,11 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
           </span>
         </div>
 
-        <div className="bg-[#080c14] border border-white/[0.05] rounded-xl px-3 py-2.5 flex flex-col">
-          <span className="text-[10px] text-slate-400 uppercase tracking-wider">Drawdown Máx.</span>
+        <div
+          title="Calculado exclusivamente sobre a sequência de apostas liquidadas em Saldo Real (exclui depósitos, saques e giros grátis)."
+          className="bg-[#080c14] border border-white/[0.05] rounded-xl px-3 py-2.5 flex flex-col"
+        >
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider">Drawdown (Apostas)</span>
           <span className="font-mono text-xs sm:text-sm font-bold text-slate-200 tabular-nums mt-0.5">
             {maxDrawdownPct > 0 ? `-${maxDrawdownPct.toFixed(1)}%` : '0.0%'}
           </span>

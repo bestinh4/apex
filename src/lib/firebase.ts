@@ -30,6 +30,7 @@ import {
   TreasuryEntry,
   FreebetEntry,
   FreeSpinEntry,
+  PromoConversionEntry,
   AppSettings,
   BetStatus,
   BetFundType,
@@ -185,6 +186,7 @@ export function buildUserProfilePayload(
     email: clampStr(user.email, 'usuario@google.com', 256),
     name: clampStr(user.displayName || user.email?.split('@')[0], 'Apostador', 120),
     initialBankroll: Math.max(0, safeNum(settings.initialBankroll, 1000)),
+    initialPromoBalance: Math.max(0, safeNum(settings.initialPromoBalance, 0)),
     unitValue: Math.max(0.01, safeNum(settings.unitValue, 25)),
     kellyFraction: clampStr(settings.kellyFraction, '1/4 Kelly (Conservador)', 120),
     maxDrawdownLimitPct: Math.max(0, safeNum(settings.maxDrawdownLimitPct, 25)),
@@ -216,6 +218,7 @@ export async function ensureUserProfileDoc(
     const data = snap.data();
     return {
       initialBankroll: safeNum(data.initialBankroll, localSettings.initialBankroll),
+      initialPromoBalance: safeNum(data.initialPromoBalance, localSettings.initialPromoBalance ?? 0),
       unitValue: Math.max(0.01, safeNum(data.unitValue, localSettings.unitValue)),
       kellyFraction: clampStr(data.kellyFraction, localSettings.kellyFraction, 120),
       maxDrawdownLimitPct: safeNum(data.maxDrawdownLimitPct, localSettings.maxDrawdownLimitPct),
@@ -237,6 +240,7 @@ export async function updateUserProfileSettings(
       email: clampStr(user.email, 'usuario@google.com', 256),
       name: clampStr(user.displayName || user.email?.split('@')[0], 'Apostador', 120),
       initialBankroll: Math.max(0, safeNum(settings.initialBankroll, 1000)),
+      initialPromoBalance: Math.max(0, safeNum(settings.initialPromoBalance, 0)),
       unitValue: Math.max(0.01, safeNum(settings.unitValue, 25)),
       kellyFraction: clampStr(settings.kellyFraction, '1/4 Kelly (Conservador)', 120),
       maxDrawdownLimitPct: Math.max(0, safeNum(settings.maxDrawdownLimitPct, 25)),
@@ -269,6 +273,16 @@ function serializeBetForCreate(bet: BetEntry, uid: string) {
     updatedAt: serverTimestamp()
   };
 
+  if (
+    bet.cashoutReturn !== undefined &&
+    Number.isFinite(Number(bet.cashoutReturn)) &&
+    Number(bet.cashoutReturn) >= 0
+  ) {
+    payload.cashoutReturn = Number(bet.cashoutReturn);
+  }
+  if (bet.freebetId && String(bet.freebetId).trim()) {
+    payload.freebetId = sanitizeFirestoreId(bet.freebetId);
+  }
   if (bet.closingOdd !== undefined && Number.isFinite(Number(bet.closingOdd)) && Number(bet.closingOdd) >= 1) {
     payload.closingOdd = Number(bet.closingOdd);
   }
@@ -295,22 +309,26 @@ function serializeTreasuryForCreate(tx: TreasuryEntry, uid: string) {
 
 function serializeFreebetForCreate(fb: FreebetEntry, uid: string) {
   const status = ALLOWED_FREEBET_STATUSES.includes(fb.status) ? fb.status : 'Pendente';
-  return {
+  const payload: Record<string, unknown> = {
     userId: uid,
     bookmaker: clampStr(fb.bookmaker, '1win', 80),
     event: clampStr(fb.event, 'Evento Promocional', 200),
     selection: clampStr(fb.selection, 'Seleção', 200),
     bonusAmount: Math.max(0, safeNum(fb.bonusAmount, 0)),
     odd: Math.max(1, safeNum(fb.odd, 1)),
-    netReturn: safeNum(fb.netReturn, 0),
+    netReturn: Math.max(0, safeNum(fb.netReturn, 0)),
     status,
     date: clampStr(fb.date, new Date().toLocaleDateString('pt-BR'), 40),
     createdAt: serverTimestamp()
   };
+  if (fb.linkedBetId && String(fb.linkedBetId).trim()) {
+    payload.linkedBetId = sanitizeFirestoreId(fb.linkedBetId);
+  }
+  return payload;
 }
 
 function serializeFreeSpinForCreate(spin: FreeSpinEntry, uid: string) {
-  return {
+  const payload: Record<string, unknown> = {
     userId: uid,
     provider: clampStr(spin.provider, 'Pragmatic Play', 100),
     game: clampStr(spin.game, 'Slot', 150),
@@ -320,6 +338,37 @@ function serializeFreeSpinForCreate(spin: FreeSpinEntry, uid: string) {
     date: clampStr(spin.date, new Date().toLocaleDateString('pt-BR'), 40),
     createdAt: serverTimestamp()
   };
+  if (spin.idempotencyKey && String(spin.idempotencyKey).trim()) {
+    payload.idempotencyKey = clampStr(spin.idempotencyKey, '', 128);
+  }
+  return payload;
+}
+
+function serializePromoConversionForCreate(conv: PromoConversionEntry, uid: string) {
+  const payload: Record<string, unknown> = {
+    userId: uid,
+    amount: Math.max(0.01, safeNum(conv.amount, 0.01)),
+    date: clampStr(conv.date, new Date().toLocaleDateString('pt-BR'), 40),
+    origin: clampStr(conv.origin, 'Saldo Promocional', 100),
+    promotionName: clampStr(conv.promotionName, 'Conversão Manual', 160),
+    createdAt: serverTimestamp()
+  };
+  if (conv.bookmaker && String(conv.bookmaker).trim()) {
+    payload.bookmaker = clampStr(conv.bookmaker, '', 80);
+  }
+  if (conv.notes && String(conv.notes).trim()) {
+    payload.notes = clampStr(conv.notes, '', 300);
+  }
+  if (conv.idempotencyKey && String(conv.idempotencyKey).trim()) {
+    payload.idempotencyKey = clampStr(conv.idempotencyKey, '', 128);
+  }
+  if (conv.sourceId && String(conv.sourceId).trim()) {
+    payload.sourceId = clampStr(conv.sourceId, '', 128);
+  }
+  if (conv.createdAtIso && String(conv.createdAtIso).trim()) {
+    payload.createdAtIso = clampStr(conv.createdAtIso, '', 64);
+  }
+  return payload;
 }
 
 export async function createBetInFirestore(bet: BetEntry, uid: string): Promise<void> {
@@ -351,6 +400,16 @@ export async function updateBetInFirestore(bet: BetEntry, uid: string): Promise<
       gross: safeNum(bet.gross, 0),
       pl: safeNum(bet.pl, 0),
       bookmaker: clampStr(bet.bookmaker, '1win', 80),
+      cashoutReturn:
+        bet.cashoutReturn !== undefined &&
+        Number.isFinite(Number(bet.cashoutReturn)) &&
+        Number(bet.cashoutReturn) >= 0
+          ? Number(bet.cashoutReturn)
+          : deleteField(),
+      freebetId:
+        bet.freebetId && String(bet.freebetId).trim()
+          ? sanitizeFirestoreId(bet.freebetId)
+          : deleteField(),
       closingOdd:
         bet.closingOdd !== undefined &&
         Number.isFinite(Number(bet.closingOdd)) &&
@@ -385,6 +444,21 @@ export async function createTreasuryInFirestore(tx: TreasuryEntry, uid: string):
   }
 }
 
+export async function updateTreasuryStatusInFirestore(
+  txId: string,
+  status: TreasuryEntry['status'],
+  uid: string
+): Promise<void> {
+  const docId = sanitizeFirestoreId(txId);
+  const path = `users/${uid}/treasury/${docId}`;
+  const validStatus = ALLOWED_TREASURY_STATUSES.includes(status) ? status : 'Compensado';
+  try {
+    await updateDoc(doc(db, 'users', uid, 'treasury', docId), { status: validStatus });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
 export async function deleteTreasuryInFirestore(txId: string, uid: string): Promise<void> {
   const docId = sanitizeFirestoreId(txId);
   const path = `users/${uid}/treasury/${docId}`;
@@ -402,6 +476,27 @@ export async function createFreebetInFirestore(fb: FreebetEntry, uid: string): P
     await setDoc(doc(db, 'users', uid, 'freebets', docId), serializeFreebetForCreate(fb, uid));
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function updateFreebetInFirestore(
+  fb: Pick<FreebetEntry, 'id' | 'status' | 'netReturn' | 'linkedBetId'>,
+  uid: string
+): Promise<void> {
+  const docId = sanitizeFirestoreId(fb.id);
+  const path = `users/${uid}/freebets/${docId}`;
+  const validStatus = ALLOWED_FREEBET_STATUSES.includes(fb.status) ? fb.status : 'Pendente';
+  try {
+    const payload: Record<string, unknown> = {
+      status: validStatus,
+      netReturn: Math.max(0, safeNum(fb.netReturn, 0))
+    };
+    if (fb.linkedBetId && String(fb.linkedBetId).trim()) {
+      payload.linkedBetId = sanitizeFirestoreId(fb.linkedBetId);
+    }
+    await updateDoc(doc(db, 'users', uid, 'freebets', docId), payload);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
   }
 }
 
@@ -450,8 +545,40 @@ export async function deleteFreeSpinInFirestore(spinId: string, uid: string): Pr
   }
 }
 
+export async function createPromoConversionInFirestore(
+  conv: PromoConversionEntry,
+  uid: string
+): Promise<void> {
+  const docId = sanitizeFirestoreId(conv.id);
+  const path = `users/${uid}/promo_conversions/${docId}`;
+  try {
+    await setDoc(
+      doc(db, 'users', uid, 'promo_conversions', docId),
+      serializePromoConversionForCreate(conv, uid)
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+  }
+}
+
+export async function deletePromoConversionInFirestore(convId: string, uid: string): Promise<void> {
+  const docId = sanitizeFirestoreId(convId);
+  const path = `users/${uid}/promo_conversions/${docId}`;
+  try {
+    await deleteDoc(doc(db, 'users', uid, 'promo_conversions', docId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
 export async function hasAnyCloudRecords(uid: string): Promise<boolean> {
-  const subcollections = ['bets', 'treasury', 'freebets', 'free_spins'] as const;
+  const subcollections = [
+    'bets',
+    'treasury',
+    'freebets',
+    'free_spins',
+    'promo_conversions'
+  ] as const;
   for (const sub of subcollections) {
     const path = `users/${uid}/${sub}`;
     try {
@@ -489,6 +616,7 @@ export async function pushAllStateToFirestore(
     treasury: TreasuryEntry[];
     freebets: FreebetEntry[];
     freeSpins: FreeSpinEntry[];
+    promoConversions?: PromoConversionEntry[];
     settings: AppSettings;
   },
   clearExisting = false
@@ -527,13 +655,25 @@ export async function pushAllStateToFirestore(
     ops.push((batch) => batch.set(ref, serializeFreeSpinForCreate(spin, uid)));
   });
 
+  (state.promoConversions || []).forEach((conv) => {
+    const docId = sanitizeFirestoreId(conv.id);
+    const ref = doc(db, 'users', uid, 'promo_conversions', docId);
+    ops.push((batch) => batch.set(ref, serializePromoConversionForCreate(conv, uid)));
+  });
+
   if (ops.length > 0) {
     await commitOperationsInChunks(ops, `users/${uid}`);
   }
 }
 
 export async function clearAllUserSubcollectionsInFirestore(uid: string): Promise<void> {
-  const subcollections = ['bets', 'treasury', 'freebets', 'free_spins'] as const;
+  const subcollections = [
+    'bets',
+    'treasury',
+    'freebets',
+    'free_spins',
+    'promo_conversions'
+  ] as const;
   const ops: Array<(batch: ReturnType<typeof writeBatch>) => void> = [];
 
   for (const sub of subcollections) {

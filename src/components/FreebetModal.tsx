@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BookmakerSelector } from './BookmakerLogo';
+import { calculateFreebetPotentialReturn } from '../lib/financialEngine';
 
 interface FreebetModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
   onClose,
   onSuccessToast
 }) => {
-  const { addFreebet, addBet, settings } = useBankroll();
+  const { addFreebet } = useBankroll();
 
   const [bookmaker, setBookmaker] = useState('1win');
   const [event, setEvent] = useState('');
@@ -34,8 +35,8 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
   };
 
   const numBonus = parseNum(bonusAmount);
-  const numOdd = parseNum(odd) || 1.0;
-  const netReturn = numBonus * (numOdd - 1);
+  const numOdd = Math.max(1, parseNum(odd) || 1.0);
+  const potentialReturn = calculateFreebetPotentialReturn(numBonus, numOdd);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,33 +47,18 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
       now.getMinutes()
     ).padStart(2, '0')}`;
 
-    addFreebet({
-      bookmaker,
-      event,
-      selection: selection || 'Seleção Principal',
-      bonusAmount: numBonus,
-      odd: numOdd,
-      netReturn,
-      status,
-      date: formattedDate
-    });
-
-    if (syncToLedger) {
-      addBet({
-        date: formattedDate,
-        type: 'Freebet',
+    addFreebet(
+      {
         bookmaker,
-        sport: 'Futebol',
-        event,
-        market: selection || 'Aposta Grátis',
+        event: event.trim(),
+        selection: selection.trim() || 'Seleção Principal',
+        bonusAmount: numBonus,
         odd: numOdd,
-        stake: numBonus,
-        units: Number((numBonus / settings.unitValue).toFixed(2)),
-        status: status === 'Creditado' ? 'GREEN' : 'PENDENTE',
-        gross: netReturn,
-        pl: netReturn
-      });
-    }
+        status,
+        date: formattedDate
+      },
+      { syncToLedger, sport: 'Futebol' }
+    );
 
     onSuccessToast?.(`Freebet de R$ ${numBonus.toFixed(2)} cadastrada com sucesso!`);
     onClose();
@@ -199,9 +185,11 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
           </div>
 
           <div className="p-4 rounded-xl bg-[#080c14] border border-white/[0.07] flex items-center justify-between text-xs">
-            <span className="text-slate-400">Lucro Líquido Potencial:</span>
+            <span className="text-slate-400">
+              {status === 'Creditado' ? 'Lucro Líquido Creditado:' : 'Lucro Líquido Potencial (se Green):'}
+            </span>
             <span className="font-mono text-emerald-400 font-bold text-sm">
-              +R$ {netReturn.toFixed(2)}
+              +R$ {potentialReturn.toFixed(2)}
             </span>
           </div>
 

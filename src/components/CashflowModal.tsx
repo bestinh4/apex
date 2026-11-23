@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TreasuryType } from '../types';
+import { TreasuryEntry, TreasuryType } from '../types';
 import { useBankroll } from '../context/BankrollContext';
 
 interface CashflowModalProps {
@@ -13,9 +13,10 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
   onClose,
   onSuccessToast
 }) => {
-  const { addTreasury, currentEquity } = useBankroll();
+  const { addTreasury, realEquity, promoBalance } = useBankroll();
 
   const [type, setType] = useState<TreasuryType>('DEPOSIT');
+  const [status, setStatus] = useState<TreasuryEntry['status']>('Compensado');
   const [amount, setAmount] = useState('250.00');
   const [desc, setDesc] = useState('');
   const [details, setDetails] = useState('');
@@ -32,11 +33,19 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
   };
 
   const numAmount = parseNum(amount);
-  let projectedEquity = currentEquity;
-  if (type === 'DEPOSIT' || type === 'BONUS') {
-    projectedEquity += numAmount;
-  } else {
-    projectedEquity -= numAmount;
+  const affectsNow = status === 'Compensado';
+  const isBonus = type === 'BONUS';
+  let projectedRealEquity = realEquity;
+  let projectedPromoBalance = promoBalance;
+
+  if (affectsNow) {
+    if (type === 'DEPOSIT') {
+      projectedRealEquity += numAmount;
+    } else if (type === 'WITHDRAW') {
+      projectedRealEquity -= numAmount;
+    } else if (type === 'BONUS') {
+      projectedPromoBalance += numAmount;
+    }
   }
 
   const formatBRL = (val: number) => {
@@ -55,12 +64,16 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
       date: formattedDate,
       type,
       desc,
-      details: details || 'Lançamento registrado',
+      details: details || status,
       amount: numAmount,
-      status: 'Compensado'
+      status
     });
 
-    onSuccessToast?.(`Movimentação de ${formatBRL(numAmount)} registrada.`);
+    onSuccessToast?.(
+      status === 'Compensado'
+        ? `Movimentação de ${formatBRL(numAmount)} compensada.`
+        : `Movimentação de ${formatBRL(numAmount)} registrada (${status} — não altera o saldo até compensar).`
+    );
     onClose();
   };
 
@@ -129,9 +142,30 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
                     : 'text-slate-400 hover:text-blue-400'
                 }`}
               >
-                Bônus
+                Bônus Rollover
               </button>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+              Status da Movimentação
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TreasuryEntry['status'])}
+              className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
+            >
+              <option value="Compensado" className="bg-[#0e1422] text-white">
+                Compensado (Afeta saldo imediatamente)
+              </option>
+              <option value="Pendente" className="bg-[#0e1422] text-white">
+                Pendente (Não altera o saldo)
+              </option>
+              <option value="Processando" className="bg-[#0e1422] text-white">
+                Em Processamento (Não altera o saldo)
+              </option>
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -195,11 +229,29 @@ export const CashflowModal: React.FC<CashflowModalProps> = ({
             />
           </div>
 
-          <div className="p-4 rounded-xl bg-[#080c14] border border-white/[0.07] flex items-center justify-between text-xs">
-            <span className="text-slate-400">Banca após lançamento:</span>
-            <span className="font-mono font-bold text-sm text-emerald-400">
-              {formatBRL(projectedEquity)}
-            </span>
+          <div className="p-4 rounded-xl bg-[#080c14] border border-white/[0.07] flex flex-col gap-1.5 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-slate-400">
+                {isBonus ? 'Saldo Promocional após lançamento:' : 'Patrimônio Real após lançamento:'}
+              </span>
+              <span
+                className={`font-mono font-bold text-sm ${
+                  isBonus ? 'text-indigo-400' : 'text-emerald-400'
+                }`}
+              >
+                {formatBRL(isBonus ? projectedPromoBalance : projectedRealEquity)}
+              </span>
+            </div>
+            {status !== 'Compensado' && (
+              <span className="text-[11px] text-amber-300/90">
+                Lançamentos com status {status} permanecem separados e não alteram o saldo efetivo até serem compensados.
+              </span>
+            )}
+            {isBonus && status === 'Compensado' && (
+              <span className="text-[11px] text-indigo-300/90">
+                Bônus Rollover é isolado no Saldo Promocional e não entra como depósito real.
+              </span>
+            )}
           </div>
 
           <div className="flex items-center justify-end gap-2.5 pt-1">

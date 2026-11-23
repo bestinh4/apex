@@ -1,10 +1,18 @@
-import { BetEntry, TreasuryEntry, FreebetEntry, FreeSpinEntry, AppSettings } from '../types';
+import {
+  BetEntry,
+  TreasuryEntry,
+  FreebetEntry,
+  FreeSpinEntry,
+  PromoConversionEntry,
+  AppSettings
+} from '../types';
 
 // Clean default state ready for real use
 export const initialBets: BetEntry[] = [];
 export const initialTreasury: TreasuryEntry[] = [];
 export const initialFreebets: FreebetEntry[] = [];
 export const initialFreeSpins: FreeSpinEntry[] = [];
+export const initialPromoConversions: PromoConversionEntry[] = [];
 
 // Optional sample dataset if the user wants to test/preview
 export const demoBets: BetEntry[] = [
@@ -148,7 +156,7 @@ export const demoFreebets: FreebetEntry[] = [
     selection: "Mais de 2.5 Gols",
     bonusAmount: 50.00,
     odd: 2.10,
-    netReturn: 55.00,
+    netReturn: 0.00,
     status: "Ao Vivo",
     date: "Hoje, 16:00"
   }
@@ -168,6 +176,7 @@ export const demoFreeSpins: FreeSpinEntry[] = [
 
 export const defaultSettings: AppSettings = {
   initialBankroll: 1000.00,
+  initialPromoBalance: 0.00,
   unitValue: 25.00,
   kellyFraction: "KELLY CRITERION 2.4 FRACTIONAL",
   maxDrawdownLimitPct: 25.0,

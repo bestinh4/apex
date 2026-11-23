@@ -27,6 +27,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     treasury,
     freebets,
     freeSpins,
+    promoConversions,
     settings,
     updateSettings,
     resetData,
@@ -37,6 +38,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const { canShowInstallUI } = usePWAInstall();
 
   const [initialBankroll, setInitialBankroll] = useState(settings.initialBankroll.toString());
+  const [initialPromoBalance, setInitialPromoBalance] = useState(
+    String(settings.initialPromoBalance ?? 0)
+  );
   const [unitValue, setUnitValue] = useState(settings.unitValue.toString());
   const [confirmClear, setConfirmClear] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -45,8 +49,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   useEffect(() => {
     setInitialBankroll(String(settings.initialBankroll));
+    setInitialPromoBalance(String(settings.initialPromoBalance ?? 0));
     setUnitValue(String(settings.unitValue));
-  }, [settings.initialBankroll, settings.unitValue]);
+  }, [settings.initialBankroll, settings.initialPromoBalance, settings.unitValue]);
 
   const parseNum = (val: string | number): number => {
     if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -56,15 +61,17 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     return isNaN(parsed) ? 0 : parsed;
   };
 
-  const numBankroll = parseNum(initialBankroll) || 1000;
+  const numBankroll = parseNum(initialBankroll) || 0;
+  const numPromo = Math.max(0, parseNum(initialPromoBalance));
   const numUnit = parseNum(unitValue) || 25;
   const unitPct = numBankroll > 0 ? (numUnit / numBankroll) * 100 : 0;
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     updateSettings({
-      initialBankroll: numBankroll,
-      unitValue: numUnit
+      initialBankroll: Math.max(0, numBankroll),
+      initialPromoBalance: numPromo,
+      unitValue: Math.max(0.01, numUnit)
     });
     onSuccessToast?.('Configurações da sua banca salvas com sucesso!');
   };
@@ -129,7 +136,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       bets,
       treasury,
       freebets,
-      freeSpins
+      freeSpins,
+      promoConversions
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
       type: 'application/json;charset=utf-8;'
@@ -150,10 +158,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       try {
         const parsed = JSON.parse(String(event.target?.result || '{}'));
         importBackup(parsed);
-        if (parsed.settings?.initialBankroll) {
+        if (parsed.settings?.initialBankroll !== undefined) {
           setInitialBankroll(String(parsed.settings.initialBankroll));
         }
-        if (parsed.settings?.unitValue) {
+        if (parsed.settings?.initialPromoBalance !== undefined) {
+          setInitialPromoBalance(String(parsed.settings.initialPromoBalance));
+        }
+        if (parsed.settings?.unitValue !== undefined) {
           setUnitValue(String(parsed.settings.unitValue));
         }
         onSuccessToast?.('Backup restaurado na sua conta com sucesso!');
@@ -359,10 +370,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       {/* Main Settings Form */}
       <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-4 sm:p-6 shadow-sm">
         <form onSubmit={handleSave} className="flex flex-col gap-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-slate-300">
-                Banca Inicial de Referência (R$)
+                Banca Real Inicial (R$)
               </label>
               <input
                 type="text"
@@ -379,7 +390,29 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 required
               />
               <span className="text-[11px] text-slate-400">
-                Ponto de partida usado no gráfico de evolução e cálculo de crescimento
+                Base do patrimônio real e gráfico de evolução
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-semibold text-slate-300">
+                Saldo Promocional Inicial (R$)
+              </label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={initialPromoBalance}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                    setInitialPromoBalance(val);
+                  }
+                }}
+                placeholder="0,00"
+                className="bg-[#080c14] border border-white/[0.08] text-amber-300 font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-amber-500"
+              />
+              <span className="text-[11px] text-slate-400">
+                Saldo inicial isolado em bônus / promoções (opcional)
               </span>
             </div>
 

@@ -21,16 +21,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     bets,
     deleteBet,
     resolveBet,
-    currentEquity,
+    realEquity,
+    availableRealBalance,
+    realExposure,
+    promoBalance,
     settings,
     netBetProfit,
     winRate,
     turnoverVolume,
     roi,
+    turnoverPolicyDoc,
     winCount,
     lossCount,
     voidCount,
-    maxDrawdownPct
+    bettingDrawdownPct
   } = useBankroll();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -113,11 +117,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
       {/* 4 Primary KPI Cards - 2x2 on Mobile, 4 cols on Desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* 1. Saldo Total */}
+        {/* 1. Patrimônio Real & Disponível */}
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">
-              Saldo Total
+              Patrimônio Real
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
               <span className="material-symbols-outlined text-[16px] sm:text-[18px]">account_balance_wallet</span>
@@ -125,20 +129,46 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
             <span className="text-lg sm:text-xl xl:text-2xl font-mono font-bold text-white tracking-tight tabular-nums truncate">
-              {formatBRL(currentEquity)}
+              {formatBRL(realEquity)}
             </span>
-            <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 truncate">
-              <span>Inicial:</span>
-              <span className="font-mono text-slate-300 tabular-nums">{formatBRL(settings.initialBankroll)}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-400 mt-1">
+              <span>
+                Disp:{' '}
+                <span className="font-mono text-emerald-400 font-semibold tabular-nums">
+                  {formatBRL(availableRealBalance)}
+                </span>
+              </span>
+              {realExposure > 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    Exp:{' '}
+                    <span className="font-mono text-amber-300 tabular-nums">
+                      {formatBRL(realExposure)}
+                    </span>
+                  </span>
+                </>
+              )}
+              {promoBalance !== 0 && (
+                <>
+                  <span>·</span>
+                  <span>
+                    Promo:{' '}
+                    <span className="font-mono text-indigo-300 tabular-nums">
+                      {formatBRL(promoBalance)}
+                    </span>
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
 
-        {/* 2. Lucro Líquido */}
+        {/* 2. Lucro Líquido (Apostas Reais) */}
         <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-5 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">
-              Lucro Líquido
+              Lucro Líquido (Real)
             </span>
             <div
               className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center border shrink-0 ${
@@ -207,11 +237,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* 4. ROI (Retorno sobre Investimento) */}
-        <div className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-5 shadow-sm flex flex-col justify-between">
+        {/* 4. ROI (Retorno sobre Investimento Real) */}
+        <div
+          title={turnoverPolicyDoc}
+          className="bg-[#0e1422]/95 border border-white/[0.07] rounded-2xl p-3.5 sm:p-5 shadow-sm flex flex-col justify-between"
+        >
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] sm:text-xs font-semibold text-slate-400 truncate">
-              Retorno (ROI)
+              Retorno Real (ROI)
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
               <span className="material-symbols-outlined text-[16px] sm:text-[18px]">monitoring</span>
@@ -227,7 +260,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {roi.toFixed(1)}%
             </span>
             <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 truncate">
-              <span>Giro:</span>
+              <span>Giro Real:</span>
               <span className="font-mono text-slate-300 tabular-nums">{formatBRL(turnoverVolume)}</span>
             </div>
           </div>
@@ -238,9 +271,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <BankrollChart
         bets={bets}
         initialBankroll={settings.initialBankroll}
-        currentEquity={currentEquity}
+        currentEquity={realEquity}
         unitValue={settings.unitValue}
-        maxDrawdownPct={maxDrawdownPct}
+        maxDrawdownPct={bettingDrawdownPct}
         onOpenNewBetModal={onOpenNewBetModal}
       />
 
@@ -430,6 +463,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span>·</span>
                       <span className="text-slate-200">{formatBRL(bet.stake)}</span>
                       <span>({bet.units}u)</span>
+                      {bet.type !== 'Saldo Real' && (
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-500/15 text-indigo-300 text-[10px] font-sans font-semibold">
+                          {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400 min-w-0 truncate">
                       <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
@@ -565,7 +603,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         @{Number(bet.odd || 1).toFixed(2)}
                       </td>
                       <td className="py-3 px-3.5 text-right font-mono text-slate-200 whitespace-nowrap tabular-nums">
-                        {formatBRL(bet.stake)}
+                        <div className="flex flex-col items-end">
+                          <span>{formatBRL(bet.stake)}</span>
+                          {bet.type !== 'Saldo Real' && (
+                            <span className="text-[10px] font-sans font-semibold text-indigo-300">
+                              {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3.5 text-center whitespace-nowrap">
                         {getStatusBadge(bet.status)}

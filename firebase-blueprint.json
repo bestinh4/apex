@@ -26,6 +26,10 @@
           "type": "number",
           "description": "Starting reference bankroll in BRL."
         },
+        "initialPromoBalance": {
+          "type": "number",
+          "description": "Optional starting promotional balance in BRL."
+        },
         "unitValue": {
           "type": "number",
           "description": "Base value of 1.0 unit stake in BRL."
@@ -132,6 +136,16 @@
           "type": "string",
           "description": "Bookmaker name.",
           "maxLength": 80
+        },
+        "cashoutReturn": {
+          "type": "number",
+          "description": "Actual amount received on cashout."
+        },
+        "freebetId": {
+          "type": "string",
+          "description": "Linked FreebetEntry ID if synced from Promotions.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
         },
         "closingOdd": {
           "type": "number",
@@ -262,6 +276,12 @@
           "description": "Formatted date string.",
           "maxLength": 40
         },
+        "linkedBetId": {
+          "type": "string",
+          "description": "Linked BetEntry ID in the ledger.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -320,6 +340,11 @@
           "description": "Formatted date string.",
           "maxLength": 40
         },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Duplicate submission prevention key.",
+          "maxLength": 128
+        },
         "createdAt": {
           "type": "string",
           "format": "date-time",
@@ -334,6 +359,76 @@
         "spinsCount",
         "netProfit",
         "date",
+        "createdAt"
+      ]
+    },
+    "PromoConversionEntry": {
+      "title": "PromoConversionEntry",
+      "description": "Manual promotional-to-real bankroll conversion record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Converted amount in BRL."
+        },
+        "date": {
+          "type": "string",
+          "description": "Formatted conversion date string.",
+          "maxLength": 40
+        },
+        "origin": {
+          "type": "string",
+          "description": "Origin of promotional funds.",
+          "maxLength": 100
+        },
+        "promotionName": {
+          "type": "string",
+          "description": "Related promotion name.",
+          "maxLength": 160
+        },
+        "bookmaker": {
+          "type": "string",
+          "description": "Bookmaker name.",
+          "maxLength": 80
+        },
+        "notes": {
+          "type": "string",
+          "description": "Optional conversion notes.",
+          "maxLength": 300
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "description": "Duplicate conversion guard key.",
+          "maxLength": 128
+        },
+        "sourceId": {
+          "type": "string",
+          "description": "Optional source promotion ID.",
+          "maxLength": 128
+        },
+        "createdAtIso": {
+          "type": "string",
+          "description": "ISO timestamp.",
+          "maxLength": 64
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        }
+      },
+      "required": [
+        "userId",
+        "amount",
+        "date",
+        "origin",
+        "promotionName",
         "createdAt"
       ]
     }
@@ -368,6 +463,12 @@
         "$ref": "#/entities/FreeSpinEntry"
       },
       "description": "Promotional free spin profits belonging strictly to userId."
+    },
+    "/users/{userId}/promo_conversions/{conversionId}": {
+      "schema": {
+        "$ref": "#/entities/PromoConversionEntry"
+      },
+      "description": "Manual promotional-to-real conversions belonging strictly to userId."
     }
   }
 }

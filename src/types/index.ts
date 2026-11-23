@@ -15,6 +15,8 @@ export interface BetEntry {
   status: BetStatus;
   gross: number;
   pl: number;
+  cashoutReturn?: number;
+  freebetId?: string;
   bookmaker?: string;
   closingOdd?: number;
 }
@@ -41,6 +43,7 @@ export interface FreebetEntry {
   netReturn: number;
   status: 'Ao Vivo' | 'Creditado' | 'Pendente' | 'Expirado';
   date: string;
+  linkedBetId?: string;
 }
 
 export interface FreeSpinEntry {
@@ -51,10 +54,25 @@ export interface FreeSpinEntry {
   spinsCount: number;
   netProfit: number;
   date: string;
+  idempotencyKey?: string;
+}
+
+export interface PromoConversionEntry {
+  id: string;
+  amount: number;
+  date: string;
+  origin: string;
+  promotionName: string;
+  bookmaker?: string;
+  notes?: string;
+  idempotencyKey?: string;
+  sourceId?: string;
+  createdAtIso?: string;
 }
 
 export interface AppSettings {
   initialBankroll: number;
+  initialPromoBalance?: number;
   unitValue: number;
   kellyFraction: string;
   maxDrawdownLimitPct: number;

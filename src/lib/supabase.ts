@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { BetEntry, TreasuryEntry, FreebetEntry, FreeSpinEntry, AppSettings, BetStatus, BetFundType } from '../types';
+import { calculateBetSettlement, roundCurrency } from './financialEngine';
 
 export const SUPABASE_PROJECT_REF = 'giwvoaxkqmuepnjlrxgz';
 export const SUPABASE_REGION = 'us-west-2';
@@ -135,36 +136,25 @@ function computeFallbackGrossAndPL(
   stake: number,
   odd: number,
   status: BetStatus,
-  fundType: BetFundType
+  fundType: BetFundType,
+  cashoutReturn?: number
 ): { gross: number; pl: number } {
-  if (status === 'GREEN') {
-    const gross = fundType === 'Freebet' ? stake * (odd - 1) : stake * odd;
-    const pl = fundType === 'Freebet' ? gross : gross - stake;
-    return { gross, pl };
-  }
-  if (status === 'HALF_GREEN') {
-    const gross =
-      fundType === 'Freebet' ? (stake * (odd - 1)) / 2 : stake + (stake * (odd - 1)) / 2;
-    const pl = fundType === 'Freebet' ? gross : gross - stake;
-    return { gross, pl };
-  }
-  if (status === 'RED') {
-    return { gross: 0, pl: fundType === 'Freebet' ? 0 : -stake };
-  }
-  if (status === 'HALF_RED') {
-    return {
-      gross: fundType === 'Freebet' ? 0 : stake / 2,
-      pl: fundType === 'Freebet' ? 0 : -stake / 2
-    };
-  }
-  if (status === 'VOID') {
-    return { gross: fundType === 'Freebet' ? 0 : stake, pl: 0 };
-  }
   if (status === 'CASHOUT') {
-    const gross = stake * 1.15;
-    return { gross, pl: gross - stake };
+    const resolvedReturn =
+      cashoutReturn !== undefined && Number.isFinite(cashoutReturn) && cashoutReturn >= 0
+        ? roundCurrency(cashoutReturn)
+        : roundCurrency(stake);
+    const settled = calculateBetSettlement({
+      stake,
+      odd,
+      status: 'CASHOUT',
+      type: fundType,
+      cashoutReturn: resolvedReturn
+    });
+    return { gross: settled.gross, pl: settled.pl };
   }
-  return { gross: 0, pl: 0 };
+  const settled = calculateBetSettlement({ stake, odd, status, type: fundType });
+  return { gross: settled.gross, pl: settled.pl };
 }
 
 // SQL script with strict Multi-User Isolation (RLS by auth.uid())
@@ -284,7 +274,14 @@ export const mapRowToBet = (r: any, unitValue = 25): BetEntry => {
       ? 'Bônus Rollover'
       : 'Saldo Real';
 
-  const fallbackCalc = computeFallbackGrossAndPL(stake, odd, status, fundType);
+  const rawCashoutReturn =
+    r?.cashout_return !== undefined && r?.cashout_return !== null && Number.isFinite(Number(r.cashout_return))
+      ? Number(r.cashout_return)
+      : meta?.cashoutReturn !== undefined && Number.isFinite(Number(meta.cashoutReturn))
+      ? Number(meta.cashoutReturn)
+      : undefined;
+
+  const fallbackCalc = computeFallbackGrossAndPL(stake, odd, status, fundType, rawCashoutReturn);
 
   const rawPL =
     r?.pl !== undefined && r?.pl !== null && Number.isFinite(Number(r.pl))
@@ -328,9 +325,11 @@ export const mapRowToBet = (r: any, unitValue = 25): BetEntry => {
     units: rawUnits,
     type: fundType,
     status,
-    gross: rawGross,
-    pl: rawPL,
+    gross: status === 'PENDENTE' ? 0 : rawGross,
+    pl: status === 'PENDENTE' ? 0 : rawPL,
     bookmaker: cleanStr(r?.bookmaker ?? meta?.bookmaker, 'Bet365'),
+    ...(rawCashoutReturn !== undefined ? { cashoutReturn: rawCashoutReturn } : {}),
+    ...(meta?.freebetId ? { freebetId: String(meta.freebetId) } : {}),
     closingOdd:
       r?.closing_odd !== undefined && r?.closing_odd !== null
         ? safeNum(r.closing_odd)
@@ -357,6 +356,8 @@ const mapBetToPortugueseRow = (b: BetEntry, userId: string) => ({
     units: safeNum(b.units, 1),
     gross: safeNum(b.gross, 0),
     displayDate: b.date,
+    cashoutReturn: b.cashoutReturn,
+    freebetId: b.freebetId,
     closingOdd: b.closingOdd
   })
 });

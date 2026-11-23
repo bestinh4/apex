@@ -19,6 +19,7 @@ import {
   POPULAR_COMPETITION_PRESETS,
   splitEventAndInlineMarket
 } from '../lib/betLinkParser';
+import { calculateBetPreview } from '../lib/financialEngine';
 
 interface BetModalProps {
   isOpen: boolean;
@@ -61,6 +62,8 @@ export const BetModal: React.FC<BetModalProps> = ({
   const [odd, setOdd] = useState('1.90');
   const [stake, setStake] = useState('25.00');
   const [status, setStatus] = useState<BetStatus>('GREEN');
+  const [cashoutReturnInput, setCashoutReturnInput] = useState('');
+  const [cashoutError, setCashoutError] = useState<string | null>(null);
 
   // Shared bet link importer state
   const [shareLinkInput, setShareLinkInput] = useState('');
@@ -115,6 +118,12 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd(initialBet.odd.toString());
       setStake(initialBet.stake.toString());
       setStatus(initialBet.status);
+      setCashoutReturnInput(
+        initialBet.status === 'CASHOUT'
+          ? String(initialBet.cashoutReturn ?? initialBet.gross ?? '')
+          : ''
+      );
+      setCashoutError(null);
       setMarketSearch('');
       setManualMarketOverride(true);
       setInlineDetectedMarket(null);
@@ -168,6 +177,8 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd('1.90');
       setStake(settings.unitValue.toFixed(2));
       setStatus('GREEN');
+      setCashoutReturnInput('');
+      setCashoutError(null);
       setShareLinkInput(initialShareInput || '');
       setLinkParseError(null);
       setImportedResult(null);
@@ -420,35 +431,29 @@ export const BetModal: React.FC<BetModalProps> = ({
     return isNaN(parsed) ? 0 : parsed;
   };
 
+  const parseOptionalLocaleNumber = (val: string): number | null => {
+    const clean = String(val ?? '').trim().replace(',', '.');
+    if (!clean) return null;
+    const parsed = Number(clean);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   const numStake = parseLocaleNumber(stake);
-  const numOdd = parseLocaleNumber(odd) || 1.0;
+  const numOdd = Math.max(1, parseLocaleNumber(odd) || 1.0);
   const safeUnitVal = settings.unitValue > 0 ? settings.unitValue : 25;
   const units = numStake / safeUnitVal;
 
-  let gross = 0;
-  let pl = 0;
-  if (status === 'GREEN') {
-    gross = fundType === 'Freebet' ? numStake * (numOdd - 1) : numStake * numOdd;
-    pl = gross - (fundType === 'Freebet' ? 0 : numStake);
-  } else if (status === 'HALF_GREEN') {
-    gross = numStake + (numStake * (numOdd - 1)) / 2;
-    pl = gross - numStake;
-  } else if (status === 'RED') {
-    gross = 0;
-    pl = fundType === 'Freebet' ? 0 : -numStake;
-  } else if (status === 'HALF_RED') {
-    gross = numStake / 2;
-    pl = -numStake / 2;
-  } else if (status === 'VOID') {
-    gross = numStake;
-    pl = 0;
-  } else if (status === 'CASHOUT') {
-    gross = numStake * 1.15;
-    pl = gross - numStake;
-  } else if (status === 'PENDENTE') {
-    gross = numStake * numOdd;
-    pl = gross - numStake;
-  }
+  const parsedCashoutReturn = parseOptionalLocaleNumber(cashoutReturnInput);
+  const preview = calculateBetPreview({
+    stake: numStake,
+    odd: numOdd,
+    status,
+    type: fundType,
+    cashoutReturnInput: parsedCashoutReturn
+  });
+
+  const displayGross = status === 'PENDENTE' ? preview.potentialGross : preview.gross;
+  const displayPl = status === 'PENDENTE' ? preview.potentialPl : preview.pl;
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -460,6 +465,14 @@ export const BetModal: React.FC<BetModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (status === 'CASHOUT' && !preview.cashoutValid) {
+      setCashoutError(
+        'Informe o valor efetivamente recebido no Cashout (ex: 65,00).'
+      );
+      return;
+    }
+    setCashoutError(null);
 
     const finalMarket =
       customMarketText.trim() ||
@@ -483,8 +496,10 @@ export const BetModal: React.FC<BetModalProps> = ({
     }
 
     try {
-      const persistedGross = status === 'PENDENTE' ? 0 : gross;
-      const persistedPl = status === 'PENDENTE' ? 0 : pl;
+      const persistedGross = status === 'PENDENTE' ? 0 : preview.gross;
+      const persistedPl = status === 'PENDENTE' ? 0 : preview.pl;
+      const resolvedCashout =
+        status === 'CASHOUT' ? preview.cashoutReturn : undefined;
 
       if (initialBet) {
         updateBet(initialBet.id, {
@@ -497,7 +512,8 @@ export const BetModal: React.FC<BetModalProps> = ({
           stake: numStake,
           status,
           gross: persistedGross,
-          pl: persistedPl
+          pl: persistedPl,
+          cashoutReturn: resolvedCashout
         });
         onSuccessToast?.(`Aposta #${initialBet.id} atualizada com sucesso.`);
       } else {
@@ -513,15 +529,20 @@ export const BetModal: React.FC<BetModalProps> = ({
           units: Number(units.toFixed(2)),
           status,
           gross: persistedGross,
-          pl: persistedPl
+          pl: persistedPl,
+          ...(resolvedCashout !== undefined ? { cashoutReturn: resolvedCashout } : {})
         });
-        onSuccessToast?.(`Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada (${resolvedBookmaker})!`);
+        onSuccessToast?.(
+          `Nova aposta de R$ ${numStake.toFixed(2).replace('.', ',')} registrada (${resolvedBookmaker} · ${fundType})!`
+        );
       }
+      onClose();
     } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : 'Falha ao registrar aposta.';
+      setCashoutError(msg);
       console.error('Falha ao registrar aposta:', err);
     }
-
-    onClose();
   };
 
   const categoryCounts: Record<string, number> = {
@@ -747,31 +768,43 @@ export const BetModal: React.FC<BetModalProps> = ({
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* LEFT COLUMN: Entry details, Stake, Odd, Status, Return */}
           <div className="lg:col-span-5 flex flex-col gap-3.5">
-            {/* Tipo de Saldo (Real ou Freebet) */}
-            <div className="grid grid-cols-2 gap-1.5 p-1 bg-[#080c14] rounded-xl border border-white/[0.06]">
+            {/* Tipo de Saldo (Real, Freebet ou Bônus Rollover) */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-[#080c14] rounded-xl border border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => setFundType('Saldo Real')}
-                className={`py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                   fundType === 'Saldo Real'
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <span className="material-symbols-outlined text-[15px]">account_balance_wallet</span>
+                <span className="material-symbols-outlined text-[14px]">account_balance_wallet</span>
                 <span>Saldo Real</span>
               </button>
               <button
                 type="button"
                 onClick={() => setFundType('Freebet')}
-                className={`py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
                   fundType === 'Freebet'
                     ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
                     : 'text-slate-400 hover:text-emerald-400'
                 }`}
               >
-                <span className="material-symbols-outlined text-[15px]">redeem</span>
+                <span className="material-symbols-outlined text-[14px]">redeem</span>
                 <span>Freebet</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFundType('Bônus Rollover')}
+                className={`py-2 px-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 whitespace-nowrap ${
+                  fundType === 'Bônus Rollover'
+                    ? 'bg-indigo-500 text-white font-bold shadow-md shadow-indigo-500/25'
+                    : 'text-slate-400 hover:text-indigo-300'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[14px]">stars</span>
+                <span>Rollover</span>
               </button>
             </div>
 
@@ -1020,7 +1053,11 @@ export const BetModal: React.FC<BetModalProps> = ({
               </label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as BetStatus)}
+                onChange={(e) => {
+                  const next = e.target.value as BetStatus;
+                  setStatus(next);
+                  setCashoutError(null);
+                }}
                 className="bg-[#080c14] border border-white/[0.08] text-white px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-500"
               >
                 <option value="GREEN" className="bg-[#0e1422] text-white">GREEN (Ganho Total)</option>
@@ -1029,30 +1066,75 @@ export const BetModal: React.FC<BetModalProps> = ({
                 <option value="HALF_GREEN" className="bg-[#0e1422] text-white">MEIO GREEN (50% Ganho)</option>
                 <option value="HALF_RED" className="bg-[#0e1422] text-white">MEIO RED (50% Devolvido)</option>
                 <option value="VOID" className="bg-[#0e1422] text-white">REEMBOLSO / VOID (Devolvida)</option>
-                <option value="CASHOUT" className="bg-[#0e1422] text-white">CASHOUT (Encerrada)</option>
+                <option value="CASHOUT" className="bg-[#0e1422] text-white">CASHOUT (Valor Recebido)</option>
               </select>
             </div>
+
+            {status === 'CASHOUT' && (
+              <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-blue-500/[0.06] border border-blue-500/25">
+                <label className="text-[11px] font-semibold text-blue-300">
+                  Valor Efetivamente Recebido no Cashout (R$)
+                </label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={cashoutReturnInput}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^[0-9]*[.,]?[0-9]*$/.test(val) || val === '') {
+                      setCashoutReturnInput(val);
+                      setCashoutError(null);
+                    }
+                  }}
+                  placeholder="Ex: 65,00"
+                  className="bg-[#080c14] border border-blue-500/40 text-white font-mono px-3.5 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-400 tabular-nums"
+                  required
+                />
+                <span className="text-[10px] text-slate-400">
+                  {fundType === 'Freebet'
+                    ? 'Em Freebet, o valor recebido no cashout representa ganho promocional integral.'
+                    : 'Ex.: Stake R$ 100 e Cashout recebido de R$ 65 = resultado líquido de -R$ 35.'}
+                </span>
+                {cashoutError && (
+                  <span className="text-[11px] text-rose-400 font-medium">{cashoutError}</span>
+                )}
+              </div>
+            )}
 
             {/* Resumo do Retorno */}
             <div className="p-3.5 rounded-xl bg-[#080c14] border border-white/[0.07] flex items-center justify-between gap-3">
               <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] text-slate-400">Retorno Bruto</span>
+                <span className="text-[11px] text-slate-400">
+                  {status === 'PENDENTE' ? 'Retorno Potencial' : 'Retorno Bruto'}
+                </span>
                 <span className="font-mono text-sm sm:text-base font-bold text-white tabular-nums">
-                  {formatBRL(gross)}
+                  {status === 'CASHOUT' && !preview.cashoutValid
+                    ? 'Informe o valor'
+                    : formatBRL(displayGross)}
                 </span>
               </div>
               <div className="flex flex-col text-right gap-0.5">
                 <span className="text-[11px] text-slate-400">
-                  {status === 'PENDENTE' ? 'Lucro Potencial' : 'Resultado Líquido'}
+                  {status === 'PENDENTE'
+                    ? 'Lucro Potencial'
+                    : fundType === 'Saldo Real'
+                    ? 'Resultado Líquido'
+                    : 'Resultado Promo'}
                 </span>
                 <span
                   className={`font-mono text-sm sm:text-base font-bold tabular-nums ${
-                    pl > 0 ? 'text-emerald-400' : pl < 0 ? 'text-rose-400' : 'text-slate-300'
+                    displayPl > 0
+                      ? 'text-emerald-400'
+                      : displayPl < 0
+                      ? 'text-rose-400'
+                      : 'text-slate-300'
                   }`}
                 >
-                  {pl > 0 ? '+' : ''}
-                  {formatBRL(pl)} ({pl >= 0 ? '+' : ''}
-                  {(pl / safeUnitVal).toFixed(2)}u)
+                  {status === 'CASHOUT' && !preview.cashoutValid
+                    ? '—'
+                    : `${displayPl > 0 ? '+' : ''}${formatBRL(displayPl)} (${
+                        displayPl >= 0 ? '+' : ''
+                      }${(displayPl / safeUnitVal).toFixed(2)}u)`}
                 </span>
               </div>
             </div>
