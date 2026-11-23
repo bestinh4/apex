@@ -110,10 +110,10 @@ function AppContent() {
       <div className="pt-16 sm:pt-20 pb-20 lg:pb-10 flex-1 flex flex-col">
         <main className="w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 py-3 sm:py-5 flex-1 flex flex-col gap-4">
           {!authLoading && !isCloudAuthenticated && !syncBannerDismissed && (
-            <div className="bg-white border border-blue-200 rounded-2xl px-4 py-3.5 flex flex-col gap-3 shadow-sm">
+            <div className="bg-white border border-blue-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl px-4 py-3.5 flex flex-col gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-start sm:items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/20">
+                  <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-600/25">
                     <span className="material-symbols-outlined text-[20px]">devices</span>
                   </div>
                   <div className="min-w-0">
@@ -131,7 +131,7 @@ function AppContent() {
                     type="button"
                     onClick={handleConnectGoogleFromBanner}
                     disabled={connectingGoogle}
-                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm shadow-blue-600/20"
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap shadow-sm shadow-blue-600/25"
                   >
                     <span className="material-symbols-outlined text-[16px]">cloud_sync</span>
                     <span>{connectingGoogle ? 'Conectando...' : 'Conectar Google'}</span>
@@ -140,7 +140,8 @@ function AppContent() {
                     type="button"
                     onClick={() => setSyncBannerDismissed(true)}
                     title="Dispensar aviso"
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                    aria-label="Dispensar aviso"
+                    className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
                   >
                     <span className="material-symbols-outlined text-[18px]">close</span>
                   </button>
@@ -149,9 +150,9 @@ function AppContent() {
 
               {unauthorizedDomain && (
                 <div className="bg-amber-50 border border-amber-300 rounded-xl px-3.5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="text-xs text-amber-900 leading-relaxed">
-                    <strong className="text-amber-800">Domínio não autorizado:</strong> adicione{' '}
-                    <code className="px-1.5 py-0.5 rounded bg-amber-100 border border-amber-200 font-mono text-amber-950 font-semibold">
+                  <div className="text-xs text-amber-950 leading-relaxed">
+                    <strong className="text-amber-900">Domínio não autorizado:</strong> adicione{' '}
+                    <code className="px-1.5 py-0.5 rounded bg-amber-100 border border-amber-300 font-mono text-amber-950 font-semibold">
                       {unauthorizedDomain}
                     </code>{' '}
                     em <strong>Authentication → Settings → Authorized domains</strong> no Firebase Console.
@@ -160,7 +161,7 @@ function AppContent() {
                     <button
                       type="button"
                       onClick={() => handleCopyDomain(unauthorizedDomain)}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-[11px] font-semibold whitespace-nowrap transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-950 text-[11px] font-semibold whitespace-nowrap transition-colors"
                     >
                       Copiar Domínio
                     </button>

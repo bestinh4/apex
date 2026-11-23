@@ -62,22 +62,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <>
       {/* Top Bar */}
-      <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 bg-white/95 backdrop-blur-xl border-b border-slate-200/90 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <header className="fixed top-0 left-0 right-0 z-40 h-14 sm:h-16 bg-white/95 backdrop-blur-xl border-b border-slate-300/80 shadow-[0_2px_10px_-3px_rgba(15,23,42,0.08)]">
         <div className="h-full w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-8 flex items-center justify-between gap-3">
           {/* Zone 1: Brand Wordmark */}
           <button
             type="button"
             onClick={() => onSelectTab('dashboard')}
-            className="text-sm sm:text-base font-bold tracking-tight text-slate-900 hover:text-blue-600 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2"
+            className="text-sm sm:text-base font-bold tracking-tight text-slate-900 hover:text-blue-700 transition-colors whitespace-nowrap shrink-0 flex items-center gap-2 rounded-lg"
           >
-            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/20">
+            <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/25">
               <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
             </span>
             <span>Apex Bankroll</span>
           </button>
 
           {/* Zone 2: Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/90 shrink-0">
+          <nav className="hidden lg:flex items-center gap-0.5 xl:gap-1 bg-slate-100 p-1 rounded-xl border border-slate-300/80 shrink-0">
             {navItems.map((item) => {
               const isActive = activeTab === item.key;
               return (
@@ -87,13 +87,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => onSelectTab(item.key)}
                   className={`px-2.5 xl:px-3.5 py-1.5 text-xs font-medium rounded-lg transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
                     isActive
-                      ? 'bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/20'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/80'
+                      ? 'bg-blue-600 text-white font-semibold shadow-sm shadow-blue-600/25'
+                      : 'text-slate-700 hover:text-slate-900 hover:bg-white'
                   }`}
                 >
                   <span
                     className={`material-symbols-outlined text-[16px] ${
-                      isActive ? 'text-white' : 'text-slate-500'
+                      isActive ? 'text-white' : 'text-slate-600'
                     }`}
                   >
                     {item.icon}
@@ -117,8 +117,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-colors whitespace-nowrap shrink-0 ${
                   cloudSyncStatus === 'error'
-                    ? 'bg-rose-50 border-rose-200 text-rose-700'
-                    : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                    ? 'bg-rose-50 border-rose-300 text-rose-800 hover:bg-rose-100'
+                    : 'bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100'
                 }`}
               >
                 <span className="material-symbols-outlined text-[15px]">
@@ -141,7 +141,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={handleGoogleConnect}
                 title="Conectar Google para sincronizar PC e celular"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-blue-50 border border-blue-300 hover:bg-blue-100 text-blue-800 text-xs font-semibold transition-colors whitespace-nowrap shrink-0"
               >
                 <span className="material-symbols-outlined text-[15px]">cloud_upload</span>
                 <span className="hidden sm:inline">Sincronizar</span>
@@ -151,11 +151,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => onSelectTab('fluxo-de-caixa')}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors whitespace-nowrap shrink-0"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-colors whitespace-nowrap shrink-0"
               title="Ver Fluxo de Caixa"
             >
-              <span className="text-[11px] font-medium text-emerald-700 hidden sm:inline">Banca:</span>
-              <span className="font-mono text-xs sm:text-sm font-bold text-emerald-700 tracking-tight tabular-nums whitespace-nowrap">
+              <span className="text-[11px] font-semibold text-emerald-800 hidden sm:inline">Banca:</span>
+              <span className="font-mono text-xs sm:text-sm font-bold text-emerald-800 tracking-tight tabular-nums whitespace-nowrap">
                 {formatBRL(currentEquity)}
               </span>
             </button>
@@ -167,7 +167,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenNewBetModal}
-              className="px-2.5 sm:px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/25 active:scale-95 transition-all flex items-center gap-1 whitespace-nowrap shrink-0"
+              className="px-2.5 sm:px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-[0_2px_8px_rgba(37,99,235,0.28)] active:scale-95 transition-all flex items-center gap-1 whitespace-nowrap shrink-0"
             >
               <span className="material-symbols-outlined text-[17px]">add</span>
               <span className="hidden xs:inline sm:inline">Nova Aposta</span>
@@ -178,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={signOut}
                 title={`Sair da conta Google (${currentUser.email})`}
-                className="p-2 rounded-xl bg-slate-100 border border-slate-200 hover:border-rose-300 hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors flex items-center gap-1.5 shrink-0"
+                className="p-2 rounded-xl bg-slate-100 border border-slate-300 hover:border-rose-300 hover:bg-rose-50 text-slate-700 hover:text-rose-700 transition-colors flex items-center gap-1.5 shrink-0"
               >
                 <span className="material-symbols-outlined text-[17px]">logout</span>
                 <span className="hidden 2xl:inline text-xs font-medium max-w-[100px] truncate">
@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Mobile Bottom Tab Bar (< lg) */}
       <nav
         aria-label="Navegação principal móvel"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-14 bg-white/95 backdrop-blur-xl border-t border-slate-200 grid grid-cols-6 items-center px-1 shadow-[0_-2px_10px_rgba(15,23,42,0.05)]"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-14 bg-white/95 backdrop-blur-xl border-t border-slate-300/80 grid grid-cols-6 items-center px-1 shadow-[0_-4px_14px_-4px_rgba(15,23,42,0.08)]"
       >
         {navItems.map((item) => {
           const isActive = activeTab === item.key;
@@ -203,7 +203,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => onSelectTab(item.key)}
               className={`h-full flex flex-col items-center justify-center gap-0.5 transition-colors ${
-                isActive ? 'text-blue-600' : 'text-slate-500 hover:text-slate-800'
+                isActive ? 'text-blue-700' : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <span className="material-symbols-outlined text-[20px] leading-none">
@@ -211,7 +211,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
               <span
                 className={`text-[10px] tracking-tight truncate max-w-full px-0.5 ${
-                  isActive ? 'font-bold text-blue-600' : 'font-medium text-slate-500'
+                  isActive ? 'font-bold text-blue-700' : 'font-semibold text-slate-600'
                 }`}
               >
                 {item.shortLabel}

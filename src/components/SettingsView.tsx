@@ -179,24 +179,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
       {/* Header + Active User Account Card */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
             Ajustes & Gestão da Banca
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             Seus parâmetros e registros são exclusivos da sua conta
           </p>
         </div>
 
         {currentUser && (
-          <div className="flex items-center justify-between sm:justify-end gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5">
+          <div className="flex items-center justify-between sm:justify-end gap-3 bg-slate-50/90 border border-slate-300/80 rounded-xl px-3.5 py-2.5">
             <div className="flex items-center gap-2.5 min-w-0">
               {currentUser.photoURL ? (
                 <img
                   src={currentUser.photoURL}
                   alt={currentUser.name}
-                  className="w-8 h-8 rounded-lg object-cover border border-slate-200 shrink-0"
+                  className="w-8 h-8 rounded-lg object-cover border border-slate-300 shrink-0"
                   referrerPolicy="no-referrer"
                 />
               ) : (
@@ -208,12 +208,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <div className="text-xs font-semibold text-slate-900 truncate flex items-center gap-1.5">
                   <span className="truncate">{currentUser.name}</span>
                   {isCloudAuthenticated && (
-                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-50 border border-emerald-300 text-emerald-800 text-[10px] font-semibold">
                       Google Nuvem
                     </span>
                   )}
                 </div>
-                <div className="text-[11px] text-slate-500 truncate font-mono">
+                <div className="text-[11px] text-slate-600 truncate font-mono">
                   {isCloudAuthenticated ? currentUser.email : 'Modo Local (apenas este aparelho)'}
                 </div>
               </div>
@@ -224,7 +224,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <button
                   type="button"
                   onClick={signOut}
-                  className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-1 transition-colors"
+                  className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 text-xs font-semibold flex items-center gap-1 transition-colors"
                 >
                   <span className="material-symbols-outlined text-[15px]">logout</span>
                   <span>Desconectar</span>
@@ -246,7 +246,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Firebase Real-time Cloud Sync (PC <-> Mobile) */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-4">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col gap-4">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-start gap-3">
             <div
@@ -254,7 +254,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 isCloudAuthenticated
                   ? cloudSyncStatus === 'error'
                     ? 'bg-rose-600 shadow-rose-600/20'
-                    : 'bg-emerald-600 shadow-emerald-600/20'
+                    : 'bg-emerald-700 shadow-emerald-700/20'
                   : 'bg-blue-600 shadow-blue-600/20'
               }`}
             >
@@ -277,7 +277,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   aposta, depósito ou ajuste feito no PC aparece instantaneamente no celular e
                   vice-versa.
                   {lastSyncedAt && (
-                    <span className="text-slate-500 ml-1.5 font-mono">
+                    <span className="text-slate-600 ml-1.5 font-mono">
                       (Atualizado às {lastSyncedAt.toLocaleTimeString('pt-BR')})
                     </span>
                   )}
@@ -290,7 +290,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 </p>
               )}
               {cloudSyncError && !unauthorizedDomain && (
-                <p className="text-xs text-rose-600 font-medium mt-1.5">{cloudSyncError}</p>
+                <p className="text-xs text-rose-700 font-medium mt-1.5">{cloudSyncError}</p>
               )}
             </div>
           </div>
@@ -302,7 +302,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="button"
                   onClick={handleManualSync}
                   disabled={isSyncing}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm shadow-emerald-600/20"
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm shadow-emerald-700/20"
                 >
                   <span className="material-symbols-outlined text-[16px]">sync</span>
                   <span>{isSyncing ? 'Sincronizando...' : 'Sincronizar Agora'}</span>
@@ -311,9 +311,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   type="button"
                   onClick={handlePushLocalBackupToCloud}
                   disabled={isSyncing}
-                  className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-300 hover:border-slate-400 text-slate-800 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
                 >
-                  <span className="material-symbols-outlined text-[16px] text-blue-600">
+                  <span className="material-symbols-outlined text-[16px] text-blue-700">
                     cloud_upload
                   </span>
                   <span>Enviar Dados Locais</span>
@@ -368,7 +368,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       </div>
 
       {/* Main Settings Form */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
         <form onSubmit={handleSave} className="flex flex-col gap-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="flex flex-col gap-1.5">
@@ -386,10 +386,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }
                 }}
                 placeholder="1000,00"
-                className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+                className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
                 required
               />
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-slate-600">
                 Base do patrimônio real e gráfico de evolução
               </span>
             </div>
@@ -409,9 +409,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }
                 }}
                 placeholder="0,00"
-                className="bg-slate-50 border border-slate-200 text-amber-700 font-bold font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-amber-500 focus:bg-white placeholder:text-slate-400"
+                className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-amber-800 font-bold font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-amber-600 focus:bg-white focus:ring-2 focus:ring-amber-600/15 placeholder:text-slate-500"
               />
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-slate-600">
                 Saldo inicial isolado em bônus / promoções (opcional)
               </span>
             </div>
@@ -421,7 +421,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <label className="text-xs font-semibold text-slate-700">
                   Valor de 1.0 Unidade / Stake (R$)
                 </label>
-                <span className="text-[11px] font-mono text-blue-600 font-semibold tabular-nums whitespace-nowrap">
+                <span className="text-[11px] font-mono text-blue-700 font-semibold tabular-nums whitespace-nowrap">
                   {unitPct.toFixed(1)}% da banca
                 </span>
               </div>
@@ -436,18 +436,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   }
                 }}
                 placeholder="25,00"
-                className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+                className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-sm focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
                 required
               />
               {/* Quick Unit % Presets */}
               <div className="flex items-center gap-1.5 pt-0.5">
-                <span className="text-[11px] text-slate-500 mr-1">Atalhos:</span>
+                <span className="text-[11px] text-slate-600 mr-1">Atalhos:</span>
                 {[1, 2, 2.5, 5].map((pct) => (
                   <button
                     key={pct}
                     type="button"
                     onClick={() => applyUnitPctPreset(pct)}
-                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 text-[11px] font-mono font-semibold text-slate-700 hover:text-blue-700 transition-colors"
+                    className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 border border-slate-300 hover:border-blue-400 text-[11px] font-mono font-semibold text-slate-700 hover:text-blue-800 transition-colors"
                   >
                     {pct}%
                   </button>
@@ -456,7 +456,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-end pt-3 border-t border-slate-200/80">
+          <div className="flex items-center justify-end pt-3 border-t border-slate-300/80">
             <button
               type="submit"
               className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs transition-all active:scale-95 shadow-sm shadow-blue-600/20 flex items-center justify-center gap-1.5"
@@ -470,12 +470,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
       {/* Native App Installation Card (PWA) - only displayed when not yet installed */}
       {canShowInstallUI && (
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
               Aplicativo Instalável (Android, iOS & Desktop)
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               Instale o aplicativo completo no seu aparelho para abrir em tela cheia, sem barra de endereço do navegador e com carregamento instantâneo.
             </p>
           </div>
@@ -486,12 +486,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       )}
 
       {/* Backup & Data Control */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-4">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col gap-4">
         <div>
           <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
             Backup & Controle da Sua Conta
           </h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-600">
             Exporte um backup em JSON, restaure registros ou limpe exclusivamente os dados da sua conta.
           </p>
         </div>
@@ -500,18 +500,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <button
             type="button"
             onClick={handleExportBackup}
-            className="px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+            className="px-4 py-3 bg-slate-50/90 hover:bg-slate-100 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[18px] text-blue-600">download</span>
+            <span className="material-symbols-outlined text-[18px] text-blue-700">download</span>
             <span>Exportar Backup (.json)</span>
           </button>
 
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+            className="px-4 py-3 bg-slate-50/90 hover:bg-slate-100 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[18px] text-emerald-600">upload_file</span>
+            <span className="material-symbols-outlined text-[18px] text-emerald-700">upload_file</span>
             <span>Importar Backup (.json)</span>
           </button>
           <input
@@ -529,9 +529,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onSuccessToast?.('Dados de demonstração carregados na sua conta!');
               onNavigateTab('dashboard');
             }}
-            className="px-4 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
+            className="px-4 py-3 bg-slate-50/90 hover:bg-slate-100 border border-slate-300 hover:border-slate-400 rounded-xl text-xs font-semibold text-slate-800 flex items-center justify-center gap-2 transition-colors whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[18px] text-indigo-600">science</span>
+            <span className="material-symbols-outlined text-[18px] text-indigo-700">science</span>
             <span>Carregar Exemplo</span>
           </button>
 
@@ -552,7 +552,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setConfirmClear(false)}
-                className="py-3 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                className="py-3 px-3 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-800 rounded-xl text-xs font-semibold transition-colors"
               >
                 Cancelar
               </button>
@@ -561,7 +561,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <button
               type="button"
               onClick={() => setConfirmClear(true)}
-              className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
+              className="px-4 py-3 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition-colors"
             >
               <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
               <span>Zerar Meus Dados</span>

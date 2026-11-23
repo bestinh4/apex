@@ -69,44 +69,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     switch (status) {
       case 'GREEN':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 whitespace-nowrap">
             Green
           </span>
         );
       case 'RED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300 whitespace-nowrap">
             Red
           </span>
         );
       case 'HALF_GREEN':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300 whitespace-nowrap">
             ½ Green
           </span>
         );
       case 'HALF_RED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-100 text-rose-900 border border-rose-300 whitespace-nowrap">
             ½ Red
           </span>
         );
       case 'VOID':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap">
             Reembolso
           </span>
         );
       case 'CASHOUT':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300 whitespace-nowrap">
             Cashout
           </span>
         );
       case 'PENDENTE':
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap">
             Pendente
           </span>
         );
@@ -118,9 +118,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       {/* 4 Primary KPI Cards - 2x2 on Mobile, 4 cols on Desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Patrimônio Real & Disponível */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
               Patrimônio Real
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/25 flex items-center justify-center shrink-0">
@@ -131,10 +131,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-lg sm:text-xl xl:text-2xl font-mono font-bold text-slate-900 tracking-tight tabular-nums truncate">
               {formatBRL(realEquity)}
             </span>
-            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-500 mt-1">
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] text-slate-600 mt-1">
               <span>
                 Disp:{' '}
-                <span className="font-mono text-emerald-600 font-semibold tabular-nums">
+                <span className="font-mono text-emerald-700 font-semibold tabular-nums">
                   {formatBRL(availableRealBalance)}
                 </span>
               </span>
@@ -143,7 +143,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>·</span>
                   <span>
                     Exp:{' '}
-                    <span className="font-mono text-amber-600 font-semibold tabular-nums">
+                    <span className="font-mono text-amber-700 font-semibold tabular-nums">
                       {formatBRL(realExposure)}
                     </span>
                   </span>
@@ -154,7 +154,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <span>·</span>
                   <span>
                     Promo:{' '}
-                    <span className="font-mono text-indigo-600 font-semibold tabular-nums">
+                    <span className="font-mono text-indigo-700 font-semibold tabular-nums">
                       {formatBRL(promoBalance)}
                     </span>
                   </span>
@@ -165,15 +165,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 2. Lucro Líquido (Apostas Reais) */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
               Lucro Líquido (Real)
             </span>
             <div
               className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl flex items-center justify-center text-white shadow-sm shrink-0 ${
                 netBetProfit >= 0
-                  ? 'bg-emerald-600 shadow-emerald-600/25'
+                  ? 'bg-emerald-700 shadow-emerald-700/25'
                   : 'bg-rose-600 shadow-rose-600/25'
               }`}
             >
@@ -185,23 +185,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="mt-2 sm:mt-3 flex flex-col">
             <span
               className={`text-lg sm:text-xl xl:text-2xl font-mono font-bold tracking-tight tabular-nums truncate ${
-                netBetProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                netBetProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'
               }`}
             >
               {netBetProfit >= 0 ? '+' : ''}
               {formatBRL(netBetProfit)}
             </span>
-            <div className="flex items-center gap-1 text-[11px] mt-1 text-slate-500 truncate">
+            <div className="flex items-center gap-1 text-[11px] mt-1 text-slate-600 truncate">
               <span
                 className={`font-mono font-semibold tabular-nums ${
-                  netBetProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                  netBetProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'
                 }`}
               >
                 {netBetProfit >= 0 ? '+' : ''}
                 {plPct.toFixed(1)}%
               </span>
               <span>·</span>
-              <span className="font-mono text-slate-700 font-medium tabular-nums">
+              <span className="font-mono text-slate-800 font-semibold tabular-nums">
                 {plUnits >= 0 ? '+' : ''}
                 {plUnits.toFixed(1)}u
               </span>
@@ -210,9 +210,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
 
         {/* 3. Taxa de Acerto (Win Rate) */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col justify-between">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
               Taxa de Acerto
             </span>
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-600 text-white shadow-sm shadow-indigo-600/25 flex items-center justify-center shrink-0">
@@ -223,14 +223,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span className="text-lg sm:text-xl xl:text-2xl font-mono font-bold text-slate-900 tracking-tight tabular-nums">
               {winRate.toFixed(1)}%
             </span>
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mt-1 font-mono tabular-nums">
-              <span className="text-emerald-600 font-bold">{winCount}G</span>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-600 mt-1 font-mono tabular-nums">
+              <span className="text-emerald-700 font-bold">{winCount}G</span>
               <span>·</span>
-              <span className="text-rose-600 font-bold">{lossCount}R</span>
+              <span className="text-rose-700 font-bold">{lossCount}R</span>
               {voidCount > 0 && (
                 <>
                   <span>·</span>
-                  <span className="text-slate-500 font-medium">{voidCount}V</span>
+                  <span className="text-slate-600 font-semibold">{voidCount}V</span>
                 </>
               )}
             </div>
@@ -240,28 +240,28 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         {/* 4. ROI (Retorno sobre Investimento Real) */}
         <div
           title={turnoverPolicyDoc}
-          className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col justify-between"
+          className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-5 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col justify-between"
         >
           <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 truncate">
               Retorno Real (ROI)
             </span>
-            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-600 text-white shadow-sm shadow-teal-600/25 flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-teal-700 text-white shadow-sm shadow-teal-700/25 flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[16px] sm:text-[18px]">monitoring</span>
             </div>
           </div>
           <div className="mt-2 sm:mt-3 flex flex-col">
             <span
               className={`text-lg sm:text-xl xl:text-2xl font-mono font-bold tracking-tight tabular-nums ${
-                roi >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                roi >= 0 ? 'text-emerald-700' : 'text-rose-700'
               }`}
             >
               {roi >= 0 ? '+' : ''}
               {roi.toFixed(1)}%
             </span>
-            <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1 truncate">
+            <div className="flex items-center gap-1 text-[11px] text-slate-600 mt-1 truncate">
               <span>Giro Real:</span>
-              <span className="font-mono text-slate-700 font-medium tabular-nums">{formatBRL(turnoverVolume)}</span>
+              <span className="font-mono text-slate-800 font-semibold tabular-nums">{formatBRL(turnoverVolume)}</span>
             </div>
           </div>
         </div>
@@ -278,7 +278,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       />
 
       {/* Recent Bets Section */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-4">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col gap-4">
         {/* Section Header + Toolbar */}
         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div className="flex items-center justify-between gap-3">
@@ -286,7 +286,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                 Apostas Recentes
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-slate-600">
                 Gerencie suas entradas, edite ou liquide apostas pendentes
               </p>
             </div>
@@ -303,7 +303,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {/* Search Input */}
             <div className="relative flex-1 sm:w-60">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-[16px]">
                 search
               </span>
               <input
@@ -311,12 +311,12 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Buscar evento, mercado ou casa..."
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400 transition-colors"
+                className="w-full bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500 transition-colors"
               />
             </div>
 
             {/* Status Segmented Tabs */}
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto scrollbar-none shrink-0">
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300/80 overflow-x-auto scrollbar-none shrink-0">
               {(['ALL', 'GREEN', 'RED', 'PENDENTE'] as const).map((st) => (
                 <button
                   key={st}
@@ -325,7 +325,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs whitespace-nowrap transition-all ${
                     filterStatus === st
                       ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                      : 'text-slate-600 hover:text-slate-900'
+                      : 'text-slate-700 hover:text-slate-900 font-medium'
                   }`}
                 >
                   {st === 'ALL' ? 'Todas' : st === 'GREEN' ? 'Greens' : st === 'RED' ? 'Reds' : 'Pendentes'}
@@ -346,15 +346,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Empty State */}
         {filteredBets.length === 0 ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl py-10 px-4 flex flex-col items-center justify-center text-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/20">
+          <div className="bg-slate-50 border border-slate-300/80 rounded-xl py-10 px-4 flex flex-col items-center justify-center text-center gap-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/25">
               <span className="material-symbols-outlined text-[22px]">receipt_long</span>
             </div>
             <div className="max-w-sm">
               <h4 className="text-sm font-bold text-slate-900">
                 {bets.length === 0 ? 'Nenhuma aposta registrada' : 'Nenhum resultado para o filtro'}
               </h4>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 {bets.length === 0
                   ? 'Seu painel está limpo e pronto para uso. Adicione sua primeira operação para acompanhar estatísticas e evolução da banca.'
                   : 'Tente alterar os termos da busca ou selecionar outro status.'}
@@ -364,7 +364,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenNewBetModal}
-                className="mt-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+                className="mt-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-emerald-700 hover:from-blue-700 hover:to-emerald-800 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/25 active:scale-95 transition-all flex items-center gap-1.5"
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
                 <span>Registrar Primeira Aposta</span>
@@ -382,13 +382,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 return (
                 <div
                   key={bet.id}
-                  className="bg-slate-50/70 border border-slate-200 rounded-xl p-3.5 flex flex-col gap-2.5"
+                  className="bg-slate-50/90 border border-slate-300/80 shadow-[0_1px_2px_rgba(15,23,42,0.03)] rounded-xl p-3.5 flex flex-col gap-2.5"
                 >
                   {/* Top Row: Crests + Status + P&L, then full-width Event + Market */}
                   {isMultipleBet ? (
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                        <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1">
                           <span className="material-symbols-outlined text-[14px]">layers</span>
                           <span>Entrada Múltipla</span>
                         </span>
@@ -397,10 +397,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <span
                             className={`font-mono font-bold text-sm tabular-nums ${
                               bet.status === 'PENDENTE'
-                                ? 'text-amber-600'
+                                ? 'text-amber-700'
                                 : bet.pl >= 0
-                                ? 'text-emerald-600'
-                                : 'text-rose-600'
+                                ? 'text-emerald-700'
+                                : 'text-rose-700'
                             }`}
                           >
                             {bet.status === 'PENDENTE'
@@ -417,7 +417,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         maxScrollHeightClass="max-h-[168px]"
                       />
                       {bet.market && (
-                        <div className="rounded-lg bg-white border border-slate-200 px-2.5 py-1.5 max-h-16 overflow-y-auto overscroll-contain text-[11px] text-slate-600 leading-relaxed space-y-0.5">
+                        <div className="rounded-lg bg-white border border-slate-300/80 px-2.5 py-1.5 max-h-16 overflow-y-auto overscroll-contain text-[11px] text-slate-700 leading-relaxed space-y-0.5">
                           {bet.market.split(' | ').map((line, i) => (
                             <p key={i} className="break-words">{line}</p>
                           ))}
@@ -433,10 +433,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <span
                             className={`font-mono font-bold text-sm tabular-nums ${
                               bet.status === 'PENDENTE'
-                                ? 'text-amber-600'
+                                ? 'text-amber-700'
                                 : bet.pl >= 0
-                                ? 'text-emerald-600'
-                                : 'text-rose-600'
+                                ? 'text-emerald-700'
+                                : 'text-rose-700'
                             }`}
                           >
                             {bet.status === 'PENDENTE'
@@ -449,7 +449,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <span className="text-[13px] sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2 break-words">
                           {bet.event}
                         </span>
-                        <span className="text-xs text-slate-500 block truncate">
+                        <span className="text-xs text-slate-600 block truncate">
                           {bet.market}
                         </span>
                       </div>
@@ -457,20 +457,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   )}
 
                   {/* Middle Metadata Row: Odd · Stake · Bookmaker · Date */}
-                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-500 pt-2 border-t border-slate-200/80">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-600 pt-2 border-t border-slate-300/70">
                     <div className="flex items-center gap-1.5 font-mono tabular-nums shrink-0">
-                      <span className="text-blue-600 font-bold">@{Number(bet.odd || 1).toFixed(2)}</span>
+                      <span className="text-blue-700 font-bold">@{Number(bet.odd || 1).toFixed(2)}</span>
                       <span>·</span>
-                      <span className="text-slate-800 font-semibold">{formatBRL(bet.stake)}</span>
+                      <span className="text-slate-900 font-semibold">{formatBRL(bet.stake)}</span>
                       <span>({bet.units}u)</span>
                       {bet.type !== 'Saldo Real' && (
-                        <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-sans font-semibold">
+                        <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-300 text-indigo-800 text-[10px] font-sans font-semibold">
                           {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-slate-500 min-w-0 truncate">
-                      <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-700 font-medium" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-600 min-w-0 truncate">
+                      <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-800 font-medium" />
                       <span>·</span>
                       <span className="font-mono shrink-0">{bet.date}</span>
                     </div>
@@ -486,7 +486,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             resolveBet(bet.id, 'GREEN');
                             onSuccessToast?.(`Aposta resolvida como GREEN!`);
                           }}
-                          className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
+                          className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-sm"
                         >
                           <span className="material-symbols-outlined text-[16px]">check</span>
                           <span>Green</span>
@@ -504,14 +504,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         </button>
                       </div>
                     ) : (
-                      <span className="text-[11px] text-slate-500 font-medium">{bet.sport}</span>
+                      <span className="text-[11px] text-slate-600 font-medium">{bet.sport}</span>
                     )}
 
                     <div className="flex items-center gap-1.5 ml-auto">
                       <button
                         type="button"
                         onClick={() => onEditBet(bet)}
-                        className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1 transition-colors"
+                        className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-800 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1 transition-colors"
                       >
                         <span className="material-symbols-outlined text-[15px]">edit</span>
                         <span>Editar</span>
@@ -525,7 +525,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             setConfirmDeleteId(null);
                             onSuccessToast?.('Aposta removida.');
                           }}
-                          className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold flex items-center gap-1"
+                          className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold flex items-center gap-1"
                         >
                           <span>Confirmar</span>
                         </button>
@@ -533,7 +533,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteId(bet.id)}
-                          className="min-h-[38px] min-w-[38px] rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 flex items-center justify-center transition-colors"
+                          aria-label="Excluir aposta"
+                          className="min-h-[38px] min-w-[38px] rounded-lg bg-white border border-slate-300 text-slate-600 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 flex items-center justify-center transition-colors"
                           title="Excluir"
                         >
                           <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -547,10 +548,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
 
             {/* DESKTOP TABLE (md and up) */}
-            <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <div className="hidden md:block w-full overflow-x-auto rounded-xl border border-slate-300/85 bg-white shadow-[0_1px_3px_rgba(15,23,42,0.05)]">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 text-[11px] font-bold">
+                  <tr className="border-b border-slate-300/85 bg-slate-100/90 text-slate-700 text-[11px] font-bold">
                     <th className="py-3 px-3.5">Data</th>
                     <th className="py-3 px-3.5">Casa</th>
                     <th className="py-3 px-3.5">Evento / Mercado</th>
@@ -561,10 +562,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <th className="py-3 px-3.5 text-center">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-200">
                   {filteredBets.map((bet) => (
-                    <tr key={bet.id} className="hover:bg-slate-50/90 transition-colors">
-                      <td className="py-3 px-3.5 font-mono text-slate-500 whitespace-nowrap tabular-nums">
+                    <tr key={bet.id} className="hover:bg-blue-50/40 transition-colors">
+                      <td className="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap tabular-nums">
                         {bet.date}
                       </td>
                       <td className="py-3 px-3.5 font-semibold text-slate-800 whitespace-nowrap">
@@ -582,7 +583,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                               maxScrollHeightClass="max-h-[156px]"
                             />
                             {bet.market && (
-                              <div className="rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 max-h-14 overflow-y-auto overscroll-contain text-[11px] text-slate-600 leading-snug space-y-0.5">
+                              <div className="rounded-lg bg-slate-50 border border-slate-300/80 px-2.5 py-1 max-h-14 overflow-y-auto overscroll-contain text-[11px] text-slate-700 leading-snug space-y-0.5">
                                 {bet.market.split(' | ').map((line, i) => (
                                   <p key={i} className="truncate">{line}</p>
                                 ))}
@@ -594,19 +595,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             <MatchCrests event={bet.event} sport={bet.sport} size="md" />
                             <div className="flex flex-col min-w-0">
                               <span className="font-semibold text-slate-900 truncate">{bet.event}</span>
-                              <span className="text-[11px] text-slate-500 truncate">{bet.market}</span>
+                              <span className="text-[11px] text-slate-600 truncate">{bet.market}</span>
                             </div>
                           </div>
                         )}
                       </td>
-                      <td className="py-3 px-3.5 text-right font-mono font-bold text-blue-600 whitespace-nowrap tabular-nums">
+                      <td className="py-3 px-3.5 text-right font-mono font-bold text-blue-700 whitespace-nowrap tabular-nums">
                         @{Number(bet.odd || 1).toFixed(2)}
                       </td>
-                      <td className="py-3 px-3.5 text-right font-mono text-slate-800 font-medium whitespace-nowrap tabular-nums">
+                      <td className="py-3 px-3.5 text-right font-mono text-slate-900 font-medium whitespace-nowrap tabular-nums">
                         <div className="flex flex-col items-end">
                           <span>{formatBRL(bet.stake)}</span>
                           {bet.type !== 'Saldo Real' && (
-                            <span className="text-[10px] font-sans font-semibold text-indigo-600">
+                            <span className="text-[10px] font-sans font-semibold text-indigo-700">
                               {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
                             </span>
                           )}
@@ -618,10 +619,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <td
                         className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm whitespace-nowrap tabular-nums ${
                           bet.status === 'PENDENTE'
-                            ? 'text-amber-600'
+                            ? 'text-amber-700'
                             : bet.pl >= 0
-                            ? 'text-emerald-600'
-                            : 'text-rose-600'
+                            ? 'text-emerald-700'
+                            : 'text-rose-700'
                         }`}
                       >
                         {bet.status === 'PENDENTE'
@@ -638,7 +639,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                   resolveBet(bet.id, 'GREEN');
                                   onSuccessToast?.(`Aposta resolvida como GREEN!`);
                                 }}
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                aria-label="Definir Green"
+                                className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100 transition-colors"
                                 title="Definir Green"
                               >
                                 <span className="material-symbols-outlined text-[16px]">check</span>
@@ -649,7 +651,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                   resolveBet(bet.id, 'RED');
                                   onSuccessToast?.(`Aposta resolvida como RED.`);
                                 }}
-                                className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100 transition-colors"
+                                aria-label="Definir Red"
+                                className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-100 transition-colors"
                                 title="Definir Red"
                               >
                                 <span className="material-symbols-outlined text-[16px]">close</span>
@@ -660,7 +663,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                           <button
                             type="button"
                             onClick={() => onEditBet(bet)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                            aria-label="Editar aposta"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
                             title="Editar"
                           >
                             <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -674,7 +678,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                                 setConfirmDeleteId(null);
                                 onSuccessToast?.('Aposta removida.');
                               }}
-                              className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold"
+                              className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold"
                             >
                               Confirmar
                             </button>
@@ -682,7 +686,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteId(bet.id)}
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              aria-label="Excluir aposta"
+                              className="p-1.5 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50 transition-colors"
                               title="Excluir"
                             >
                               <span className="material-symbols-outlined text-[16px]">delete</span>

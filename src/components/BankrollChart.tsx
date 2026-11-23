@@ -282,7 +282,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
       : '#e11d48';
 
   return (
-    <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)] flex flex-col gap-4">
+    <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col gap-4">
       {/* Top Row: Title + Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center justify-between sm:justify-start gap-3">
@@ -291,11 +291,11 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
               <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                 Evolução da Banca
               </h3>
-              <span className="text-xs text-slate-500 font-mono tabular-nums">
+              <span className="text-xs text-slate-600 font-mono font-medium tabular-nums">
                 · {settledCount} {settledCount === 1 ? 'aposta' : 'apostas'}
               </span>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-600 mt-0.5">
               Passe o cursor ou toque no gráfico para inspecionar cada operação
             </p>
           </div>
@@ -304,7 +304,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
         {/* Mode & Range Segmented Controls */}
         <div className="flex items-center justify-between md:justify-end gap-2 flex-wrap">
           {/* Metric Mode Selector */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300/80">
             {(
               [
                 { key: 'EQUITY', label: 'Banca (R$)' },
@@ -319,7 +319,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                 className={`px-2.5 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
                   mode === item.key
                     ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    : 'text-slate-700 hover:text-slate-900'
                 }`}
               >
                 {item.label}
@@ -328,7 +328,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
           </div>
 
           {/* Range Filter */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300/80">
             {(
               [
                 { key: 'ALL', label: 'Tudo' },
@@ -346,8 +346,8 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                 }}
                 className={`px-2 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all ${
                   range === r.key
-                    ? 'bg-white text-blue-600 font-bold shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-white text-blue-700 font-bold shadow-sm border border-slate-300/70'
+                    : 'text-slate-700 hover:text-slate-900 font-medium'
                 }`}
               >
                 {r.label}
@@ -359,22 +359,22 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
 
       {/* Interactive Active Point Inspector Bar */}
       {activePoint && (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div className="bg-slate-50/90 border border-slate-300/80 rounded-xl p-3 sm:px-4 sm:py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
           <div className="flex items-center gap-3 min-w-0">
             <div
               className={`w-2.5 h-8 rounded-full shrink-0 ${
                 activePoint.index === 0
                   ? 'bg-blue-600'
                   : activePoint.deltaPL > 0
-                  ? 'bg-emerald-500'
+                  ? 'bg-emerald-600'
                   : activePoint.deltaPL < 0
-                  ? 'bg-rose-500'
-                  : 'bg-slate-400'
+                  ? 'bg-rose-600'
+                  : 'bg-slate-500'
               }`}
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-xs text-slate-500">
-                <span className="font-mono text-slate-700 font-semibold">
+              <div className="flex items-center gap-2 text-xs text-slate-600">
+                <span className="font-mono text-slate-800 font-semibold">
                   {activePoint.index === 0 ? 'Início' : `#${activePoint.index}`}
                 </span>
                 <span>·</span>
@@ -382,7 +382,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                 {activePoint.odd && (
                   <>
                     <span>·</span>
-                    <span className="font-mono text-blue-600 font-semibold">
+                    <span className="font-mono text-blue-700 font-semibold">
                       @{Number(activePoint.odd || 1).toFixed(2)}
                     </span>
                   </>
@@ -391,25 +391,25 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
               <div className="text-xs sm:text-sm font-semibold text-slate-900 truncate mt-0.5">
                 {activePoint.label}
                 {activePoint.index > 0 && (
-                  <span className="text-slate-500 font-normal"> — {activePoint.sublabel}</span>
+                  <span className="text-slate-600 font-normal"> — {activePoint.sublabel}</span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 shrink-0">
+          <div className="flex items-center justify-between sm:justify-end gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-300/70 shrink-0">
             {activePoint.index > 0 && (
               <div className="flex flex-col sm:items-end">
-                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+                <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
                   Resultado da Aposta
                 </span>
                 <span
                   className={`font-mono text-xs sm:text-sm font-bold tabular-nums ${
                     activePoint.deltaPL > 0
-                      ? 'text-emerald-600'
+                      ? 'text-emerald-700'
                       : activePoint.deltaPL < 0
-                      ? 'text-rose-600'
-                      : 'text-slate-600'
+                      ? 'text-rose-700'
+                      : 'text-slate-700'
                   }`}
                 >
                   {activePoint.deltaPL > 0 ? '+' : ''}
@@ -420,7 +420,7 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
             )}
 
             <div className="flex flex-col items-end">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+              <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">
                 {mode === 'EQUITY'
                   ? 'Banca no Ponto'
                   : mode === 'PROFIT'
@@ -436,9 +436,9 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
       )}
 
       {/* Main SVG Chart Canvas */}
-      <div className="relative w-full h-52 sm:h-64 bg-slate-50/75 border border-slate-200 rounded-xl overflow-hidden select-none touch-pan-y">
+      <div className="relative w-full h-52 sm:h-64 bg-slate-50/90 border border-slate-300/80 rounded-xl overflow-hidden select-none touch-pan-y">
         {/* Y-Axis Reference Labels (Right-aligned subtle overlay) */}
-        <div className="absolute inset-y-0 right-2.5 py-3 flex flex-col justify-between items-end pointer-events-none z-20 text-[10px] font-mono text-slate-500 font-medium tabular-nums">
+        <div className="absolute inset-y-0 right-2.5 py-3 flex flex-col justify-between items-end pointer-events-none z-20 text-[10px] font-mono text-slate-600 font-semibold tabular-nums">
           <span>{formatAxisValue(chartGeometry.peakVal)}</span>
           <span>{formatAxisValue(chartGeometry.midVal)}</span>
           <span>{formatAxisValue(chartGeometry.lowVal)}</span>
@@ -486,9 +486,9 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
                 x2={chartGeometry.width - chartGeometry.padRight}
                 y1={y}
                 y2={y}
-                stroke="#e2e8f0"
+                stroke="#cbd5e1"
                 strokeWidth="1"
-                strokeOpacity="1"
+                strokeOpacity="0.75"
               />
             );
           })}
@@ -499,8 +499,8 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
             x2={chartGeometry.width - chartGeometry.padRight}
             y1={chartGeometry.baselineY}
             y2={chartGeometry.baselineY}
-            stroke="#94a3b8"
-            strokeWidth="1.2"
+            stroke="#64748b"
+            strokeWidth="1.25"
             strokeDasharray="4 4"
           />
 
@@ -534,11 +534,11 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
               x2={activeCoord.x}
               y1={chartGeometry.padTop}
               y2={chartGeometry.padTop + chartGeometry.plotH}
-              stroke="#64748b"
+              stroke="#475569"
               strokeWidth="1"
               vectorEffect="non-scaling-stroke"
               strokeDasharray="3 3"
-              strokeOpacity="0.6"
+              strokeOpacity="0.7"
             />
           )}
         </svg>
@@ -622,25 +622,25 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
 
       {/* Bottom Summary Metrics Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-1">
-        <div className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 flex flex-col">
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Base do Período</span>
+        <div className="bg-slate-50/90 border border-slate-300/80 rounded-xl px-3 py-2.5 flex flex-col">
+          <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">Base do Período</span>
           <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 tabular-nums mt-0.5">
             {formatValue(chartGeometry.startVal)}
           </span>
         </div>
 
-        <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl px-3 py-2.5 flex flex-col">
-          <span className="text-[10px] text-emerald-700 uppercase tracking-wider font-medium">Pico (Máxima)</span>
-          <span className="font-mono text-xs sm:text-sm font-bold text-emerald-600 tabular-nums mt-0.5">
+        <div className="bg-emerald-50/75 border border-emerald-300 rounded-xl px-3 py-2.5 flex flex-col">
+          <span className="text-[10px] text-emerald-800 uppercase tracking-wider font-semibold">Pico (Máxima)</span>
+          <span className="font-mono text-xs sm:text-sm font-bold text-emerald-700 tabular-nums mt-0.5">
             {formatValue(chartGeometry.peakVal)}
           </span>
         </div>
 
         <div
           title="Calculado exclusivamente sobre a sequência de apostas liquidadas em Saldo Real (exclui depósitos, saques e giros grátis)."
-          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 flex flex-col"
+          className="bg-slate-50/90 border border-slate-300/80 rounded-xl px-3 py-2.5 flex flex-col"
         >
-          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">Drawdown (Apostas)</span>
+          <span className="text-[10px] text-slate-600 uppercase tracking-wider font-semibold">Drawdown (Apostas)</span>
           <span className="font-mono text-xs sm:text-sm font-bold text-slate-900 tabular-nums mt-0.5">
             {maxDrawdownPct > 0 ? `-${maxDrawdownPct.toFixed(1)}%` : '0.0%'}
           </span>
@@ -649,20 +649,20 @@ export const BankrollChart: React.FC<BankrollChartProps> = ({
         <div
           className={`rounded-xl px-3 py-2.5 flex flex-col border ${
             totalPeriodVariation >= 0
-              ? 'bg-emerald-50/60 border-emerald-200'
-              : 'bg-rose-50/60 border-rose-200'
+              ? 'bg-emerald-50/75 border-emerald-300'
+              : 'bg-rose-50/75 border-rose-300'
           }`}
         >
           <span
-            className={`text-[10px] uppercase tracking-wider font-medium ${
-              totalPeriodVariation >= 0 ? 'text-emerald-700' : 'text-rose-700'
+            className={`text-[10px] uppercase tracking-wider font-semibold ${
+              totalPeriodVariation >= 0 ? 'text-emerald-800' : 'text-rose-800'
             }`}
           >
             Crescimento Total
           </span>
           <span
             className={`font-mono text-xs sm:text-sm font-bold tabular-nums mt-0.5 ${
-              totalPeriodVariation >= 0 ? 'text-emerald-600' : 'text-rose-600'
+              totalPeriodVariation >= 0 ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
             {growthPct >= 0 ? '+' : ''}

@@ -69,24 +69,25 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/50 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/60 backdrop-blur-sm p-0 sm:p-4 overflow-y-auto"
     >
-      <div className="w-full max-w-md bg-white border-t sm:border border-slate-200 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-2xl flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto">
-        <div className="w-10 h-1 bg-slate-300 rounded-full mx-auto sm:hidden shrink-0" />
-        <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="w-full max-w-md bg-white border-t sm:border border-slate-300 rounded-t-3xl sm:rounded-2xl p-4 sm:p-6 shadow-[0_24px_56px_-12px_rgba(15,23,42,0.28),0_8px_24px_-4px_rgba(15,23,42,0.12)] flex flex-col gap-4 sm:gap-5 max-h-[92dvh] overflow-y-auto">
+        <div className="w-10 h-1 bg-slate-400 rounded-full mx-auto sm:hidden shrink-0" />
+        <div className="flex items-center justify-between pb-4 border-b border-slate-300/80">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-600/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[20px]">redeem</span>
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900 tracking-tight">Nova Freebet</h3>
-              <p className="text-xs text-slate-500">Aposta grátis (retorno líquido sem stake)</p>
+              <p className="text-xs text-slate-600">Aposta grátis (retorno líquido sem stake)</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
+            aria-label="Fechar modal"
+            className="text-slate-600 hover:text-slate-900 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
@@ -94,14 +95,14 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               Casa de Apostas
             </label>
             <BookmakerSelector value={bookmaker} onChange={setBookmaker} />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               Evento / Partida
             </label>
             <input
@@ -109,13 +110,13 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
               value={event}
               onChange={(e) => setEvent(e.target.value)}
               placeholder="Ex: Arsenal vs Bayern de Munique"
-              className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+              className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
               required
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               Mercado & Seleção
             </label>
             <input
@@ -123,14 +124,14 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
               value={selection}
               onChange={(e) => setSelection(e.target.value)}
               placeholder="Ex: Ambas Marcam: Sim"
-              className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+              className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
               required
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3.5">
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                 Valor Bônus (R$)
               </label>
               <input
@@ -144,12 +145,12 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
                   }
                 }}
                 placeholder="50,00"
-                className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+                className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
                 required
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                 Odd Decimal
               </label>
               <input
@@ -163,20 +164,20 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
                   }
                 }}
                 placeholder="2,10"
-                className="bg-slate-50 border border-slate-200 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white placeholder:text-slate-400"
+                className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 font-mono px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 placeholder:text-slate-500"
                 required
               />
             </div>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
               Status
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as any)}
-              className="bg-slate-50 border border-slate-200 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white"
+              className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3.5 py-2.5 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15"
             >
               <option value="Ao Vivo" className="bg-white text-slate-900">Ao Vivo (Em andamento)</option>
               <option value="Creditado" className="bg-white text-slate-900">Creditado (Green convertido)</option>
@@ -184,11 +185,11 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
             </select>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-            <span className="text-slate-600 font-medium">
+          <div className="p-4 rounded-xl bg-slate-50/90 border border-slate-300/80 flex items-center justify-between text-xs">
+            <span className="text-slate-700 font-medium">
               {status === 'Creditado' ? 'Lucro Líquido Creditado:' : 'Lucro Líquido Potencial (se Green):'}
             </span>
-            <span className="font-mono text-emerald-600 font-bold text-sm">
+            <span className="font-mono text-emerald-700 font-bold text-sm">
               +R$ {potentialReturn.toFixed(2)}
             </span>
           </div>
@@ -207,7 +208,7 @@ export const FreebetModal: React.FC<FreebetModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 text-xs font-semibold text-slate-600 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
             >
               Cancelar
             </button>

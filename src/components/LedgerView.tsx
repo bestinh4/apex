@@ -252,44 +252,44 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     switch (status) {
       case 'GREEN':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 whitespace-nowrap">
             Green
           </span>
         );
       case 'RED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-300 whitespace-nowrap">
             Red
           </span>
         );
       case 'HALF_GREEN':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-100 text-emerald-900 border border-emerald-300 whitespace-nowrap">
             ½ Green
           </span>
         );
       case 'HALF_RED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-rose-100 text-rose-900 border border-rose-300 whitespace-nowrap">
             ½ Red
           </span>
         );
       case 'VOID':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-300 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap">
             Reembolso
           </span>
         );
       case 'CASHOUT':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-800 border border-blue-300 whitespace-nowrap">
             Cashout
           </span>
         );
       case 'PENDENTE':
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 whitespace-nowrap">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-300 whitespace-nowrap">
             Pendente
           </span>
         );
@@ -299,10 +299,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   return (
     <div className="w-full flex flex-col gap-4 sm:gap-6 animate-in fade-in duration-200">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-6 shadow-[0_1px_3px_rgba(15,23,42,0.06),0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
         <div>
           <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Livro-Razão</h2>
-          <p className="text-xs text-slate-500">Extrato auditável de todas as suas operações esportivas</p>
+          <p className="text-xs text-slate-600">Extrato auditável de todas as suas operações esportivas</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -310,7 +310,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             type="button"
             onClick={exportCSV}
             disabled={filteredBets.length === 0}
-            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 transition-colors flex items-center gap-1.5 whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[16px]">download</span>
             <span>Exportar CSV</span>
@@ -318,7 +318,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <button
             type="button"
             onClick={onOpenNewBetModal}
-            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-md shadow-blue-600/20 active:scale-95 whitespace-nowrap"
+            className="flex-1 sm:flex-initial justify-center px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs transition-all flex items-center gap-1.5 shadow-md shadow-blue-600/25 active:scale-95 whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>Nova Aposta</span>
@@ -340,8 +340,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               }}
               className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 isSelected
-                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/20'
-                  : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-50 border border-slate-200'
+                  ? 'bg-blue-600 text-white shadow-sm shadow-blue-600/25'
+                  : 'bg-white text-slate-700 hover:text-slate-900 hover:bg-slate-50 border border-slate-300/85 shadow-[0_1px_2px_rgba(15,23,42,0.03)]'
               }`}
             >
               {m.label}
@@ -352,13 +352,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Period Summary 4-Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-sm">
-          <span className="text-[11px] text-slate-500 font-semibold">Apostas no Filtro</span>
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
+          <span className="text-[11px] text-slate-600 font-semibold">Apostas no Filtro</span>
           <div className="text-lg sm:text-xl font-mono font-bold text-slate-900 mt-1 tabular-nums">
             {periodStats.count}
           </div>
           {!periodStats.isPromoOnlyView && periodStats.promoPl !== 0 && (
-            <span className="text-[10px] text-indigo-600 font-mono font-semibold">
+            <span className="text-[10px] text-indigo-700 font-mono font-semibold">
               Promo no filtro: {periodStats.promoPl >= 0 ? '+' : ''}
               {formatBRL(periodStats.promoPl)}
             </span>
@@ -366,22 +366,22 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
         <div
           title={TURNOVER_POLICY_DOC}
-          className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-sm"
+          className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]"
         >
-          <span className="text-[11px] text-slate-500 font-semibold">
+          <span className="text-[11px] text-slate-600 font-semibold">
             {periodStats.isPromoOnlyView ? 'Giro Promocional' : 'Turnover Real (sem VOID)'}
           </span>
           <div className="text-lg sm:text-xl font-mono font-bold text-slate-900 mt-1 tabular-nums truncate">
             {formatBRL(periodStats.volume)}
           </div>
         </div>
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-sm">
-          <span className="text-[11px] text-slate-500 font-semibold">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
+          <span className="text-[11px] text-slate-600 font-semibold">
             {periodStats.isPromoOnlyView ? 'Resultado Promo' : 'Lucro Real / P&L'}
           </span>
           <div
             className={`text-lg sm:text-xl font-mono font-bold mt-1 tabular-nums truncate ${
-              periodStats.pl >= 0 ? 'text-emerald-600' : 'text-rose-600'
+              periodStats.pl >= 0 ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
             {periodStats.pl >= 0 ? '+' : ''}
@@ -390,14 +390,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
         <div
           title={TURNOVER_POLICY_DOC}
-          className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 shadow-sm"
+          className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]"
         >
-          <span className="text-[11px] text-slate-500 font-semibold">
+          <span className="text-[11px] text-slate-600 font-semibold">
             {periodStats.isPromoOnlyView ? 'ROI Promocional' : 'ROI Real do Período'}
           </span>
           <div
             className={`text-lg sm:text-xl font-mono font-bold mt-1 tabular-nums ${
-              periodStats.roi >= 0 ? 'text-emerald-600' : 'text-rose-600'
+              periodStats.roi >= 0 ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
             {periodStats.roi >= 0 ? '+' : ''}
@@ -407,10 +407,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-3.5 sm:p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 shadow-sm">
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 flex-1">
           <div className="relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 text-[16px]">
               search
             </span>
             <input
@@ -421,7 +421,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                 setCurrentPage(1);
               }}
               placeholder="Time, evento ou casa..."
-              className="bg-slate-50 border border-slate-200 text-slate-900 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white w-full placeholder:text-slate-400"
+              className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 pl-9 pr-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15 w-full placeholder:text-slate-500"
             />
           </div>
 
@@ -431,7 +431,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               setFundTypeFilter(e.target.value as 'ALL' | BetFundType);
               setCurrentPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white"
+            className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15"
           >
             <option value="ALL" className="bg-white text-slate-900">Todos os Saldos</option>
             <option value="Saldo Real" className="bg-white text-slate-900">Saldo Real</option>
@@ -445,7 +445,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               setSelectedSport(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white"
+            className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15"
           >
             <option value="ALL" className="bg-white text-slate-900">Todos os Esportes</option>
             {SPORTS_LIST.map((sp) => (
@@ -461,7 +461,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               setSelectedMarketCat(e.target.value);
               setCurrentPage(1);
             }}
-            className="bg-slate-50 border border-slate-200 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white"
+            className="bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-900 px-3 py-2 rounded-xl text-xs focus:outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-600/15"
           >
             <option value="ALL" className="bg-white text-slate-900">Todos os Mercados</option>
             <option value="Resultado" className="bg-white text-slate-900">Resultado / ML</option>
@@ -475,7 +475,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         </div>
 
         {/* Status segmented buttons */}
-        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200 overflow-x-auto scrollbar-none shrink-0">
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-300/80 overflow-x-auto scrollbar-none shrink-0">
           {(['ALL', 'GREEN', 'RED', 'PENDENTE'] as const).map((st) => (
             <button
               key={st}
@@ -487,7 +487,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               className={`flex-1 xl:flex-initial px-3 py-1.5 text-xs rounded-lg whitespace-nowrap transition-all ${
                 statusFilter === st
                   ? 'bg-blue-600 text-white font-semibold shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
+                  : 'text-slate-700 hover:text-slate-900 font-medium'
               }`}
             >
               {st === 'ALL' ? 'Todas' : st === 'GREEN' ? 'Greens' : st === 'RED' ? 'Reds' : 'Pendentes'}
@@ -498,13 +498,13 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Results List / Table */}
       {paginatedBets.length === 0 ? (
-        <div className="bg-white border border-slate-200/90 rounded-2xl py-12 px-4 flex flex-col items-center justify-center text-center gap-3 shadow-sm">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/20">
+        <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl py-12 px-4 flex flex-col items-center justify-center text-center gap-3 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
+          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-sm shadow-blue-600/25">
             <span className="material-symbols-outlined text-[22px]">table_rows</span>
           </div>
           <div className="max-w-sm">
             <h4 className="text-sm font-bold text-slate-900">Nenhum registro encontrado</h4>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               {bets.length === 0
                 ? 'Adicione sua primeira aposta para preencher o Livro-Razão.'
                 : 'Nenhuma aposta corresponde aos filtros selecionados.'}
@@ -514,7 +514,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
             <button
               type="button"
               onClick={onOpenNewBetModal}
-              className="mt-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-1.5"
+              className="mt-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-md shadow-blue-600/25 active:scale-95 transition-all flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>Registrar Nova Aposta</span>
@@ -532,12 +532,12 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               return (
               <div
                 key={bet.id}
-                className="bg-white border border-slate-200/90 rounded-xl p-3.5 flex flex-col gap-2.5 shadow-sm"
+                className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-xl p-3.5 flex flex-col gap-2.5 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_12px_-2px_rgba(15,23,42,0.05)]"
               >
                 {isMultipleBet ? (
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">layers</span>
                         <span>Entrada Múltipla</span>
                       </span>
@@ -546,10 +546,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <span
                           className={`font-mono font-bold text-sm tabular-nums ${
                             bet.status === 'PENDENTE'
-                              ? 'text-amber-600'
+                              ? 'text-amber-700'
                               : bet.pl >= 0
-                              ? 'text-emerald-600'
-                              : 'text-rose-600'
+                              ? 'text-emerald-700'
+                              : 'text-rose-700'
                           }`}
                         >
                           {bet.status === 'PENDENTE'
@@ -566,7 +566,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       maxScrollHeightClass="max-h-[168px]"
                     />
                     {bet.market && (
-                      <div className="rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1.5 max-h-16 overflow-y-auto overscroll-contain text-[11px] text-slate-600 leading-relaxed space-y-0.5">
+                      <div className="rounded-lg bg-slate-50 border border-slate-300/80 px-2.5 py-1.5 max-h-16 overflow-y-auto overscroll-contain text-[11px] text-slate-700 leading-relaxed space-y-0.5">
                         {bet.market.split(' | ').map((line, i) => (
                           <p key={i} className="break-words">{line}</p>
                         ))}
@@ -582,10 +582,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <span
                           className={`font-mono font-bold text-sm tabular-nums ${
                             bet.status === 'PENDENTE'
-                              ? 'text-amber-600'
+                              ? 'text-amber-700'
                               : bet.pl >= 0
-                              ? 'text-emerald-600'
-                              : 'text-rose-600'
+                              ? 'text-emerald-700'
+                              : 'text-rose-700'
                           }`}
                         >
                           {bet.status === 'PENDENTE'
@@ -598,27 +598,27 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       <span className="text-[13px] sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2 break-words">
                         {bet.event}
                       </span>
-                      <span className="text-xs text-slate-500 block truncate">
+                      <span className="text-xs text-slate-600 block truncate">
                         {bet.market} · {bet.sport}
                       </span>
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-500 pt-2 border-t border-slate-200/80">
+                <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-slate-600 pt-2 border-t border-slate-300/70">
                   <div className="flex items-center gap-1.5 font-mono tabular-nums shrink-0">
-                    <span className="text-blue-600 font-bold">@{Number(bet.odd || 1).toFixed(2)}</span>
+                    <span className="text-blue-700 font-bold">@{Number(bet.odd || 1).toFixed(2)}</span>
                     <span>·</span>
-                    <span className="text-slate-800 font-semibold">{formatBRL(bet.stake)}</span>
+                    <span className="text-slate-900 font-semibold">{formatBRL(bet.stake)}</span>
                     <span>({bet.units}u)</span>
                     {bet.type !== 'Saldo Real' && (
-                      <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-sans font-semibold">
+                      <span className="px-1.5 py-0.5 rounded bg-indigo-50 border border-indigo-300 text-indigo-800 text-[10px] font-sans font-semibold">
                         {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1.5 text-[11px] text-slate-500 min-w-0 truncate">
-                    <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-700 font-medium" />
+                  <div className="flex items-center gap-1.5 text-[11px] text-slate-600 min-w-0 truncate">
+                    <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-800 font-medium" />
                     <span>·</span>
                     <span className="font-mono shrink-0">{bet.date}</span>
                   </div>
@@ -633,7 +633,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           resolveBet(bet.id, 'GREEN');
                           onSuccessToast?.('Aposta resolvida como GREEN!');
                         }}
-                        className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1 shadow-sm"
+                        className="flex-1 min-h-[38px] px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center justify-center gap-1 shadow-sm"
                       >
                         <span className="material-symbols-outlined text-[16px]">check</span>
                         <span>Green</span>
@@ -651,14 +651,14 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <span className="text-[11px] text-slate-400 font-mono truncate min-w-0 flex-1">{bet.id}</span>
+                    <span className="text-[11px] text-slate-600 font-mono truncate min-w-0 flex-1">{bet.id}</span>
                   )}
 
                   <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     <button
                       type="button"
                       onClick={() => onEditBet(bet)}
-                      className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1"
+                      className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-slate-50 border border-slate-300 text-slate-800 hover:text-slate-900 hover:bg-slate-100 text-xs font-semibold flex items-center gap-1"
                     >
                       <span className="material-symbols-outlined text-[15px]">edit</span>
                       <span>Editar</span>
@@ -672,7 +672,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           setConfirmDeleteId(null);
                           onSuccessToast?.('Aposta excluída.');
                         }}
-                        className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-semibold"
+                        className="min-h-[38px] px-2.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold"
                       >
                         Confirmar
                       </button>
@@ -680,7 +680,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(bet.id)}
-                        className="min-h-[38px] min-w-[38px] rounded-lg bg-slate-50 border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 flex items-center justify-center"
+                        aria-label="Excluir aposta"
+                        className="min-h-[38px] min-w-[38px] rounded-lg bg-slate-50 border border-slate-300 text-slate-600 hover:text-rose-700 hover:border-rose-300 hover:bg-rose-50 flex items-center justify-center"
                         title="Excluir"
                       >
                         <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -694,10 +695,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           </div>
 
           {/* DESKTOP TABLE (md and up) */}
-          <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-slate-200/90 bg-white shadow-sm">
+          <div className="hidden md:block w-full overflow-x-auto rounded-2xl border border-slate-300/85 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-slate-600 text-[11px] font-bold">
+                <tr className="border-b border-slate-300/85 bg-slate-100/90 text-slate-700 text-[11px] font-bold">
                   <th className="py-3 px-3.5">Data</th>
                   <th className="py-3 px-3.5">Casa</th>
                   <th className="py-3 px-3.5">Evento / Mercado</th>
@@ -708,10 +709,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <th className="py-3 px-3.5 text-center">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200">
                 {paginatedBets.map((bet) => (
-                  <tr key={bet.id} className="hover:bg-slate-50/90 transition-colors">
-                    <td className="py-3 px-3.5 font-mono text-slate-500 whitespace-nowrap tabular-nums">
+                  <tr key={bet.id} className="hover:bg-blue-50/40 transition-colors">
+                    <td className="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap tabular-nums">
                       {bet.date}
                     </td>
                     <td className="py-3 px-3.5 font-semibold text-slate-800 whitespace-nowrap">
@@ -729,7 +730,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                             maxScrollHeightClass="max-h-[156px]"
                           />
                           {bet.market && (
-                            <div className="rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1 max-h-14 overflow-y-auto overscroll-contain text-[11px] text-slate-600 leading-snug space-y-0.5">
+                            <div className="rounded-lg bg-slate-50 border border-slate-300/80 px-2.5 py-1 max-h-14 overflow-y-auto overscroll-contain text-[11px] text-slate-700 leading-snug space-y-0.5">
                               {bet.market.split(' | ').map((line, i) => (
                                 <p key={i} className="truncate">{line}</p>
                               ))}
@@ -741,21 +742,21 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           <MatchCrests event={bet.event} sport={bet.sport} size="md" />
                           <div className="flex flex-col min-w-0">
                             <span className="font-semibold text-slate-900 truncate">{bet.event}</span>
-                            <span className="text-[11px] text-slate-500 truncate">
+                            <span className="text-[11px] text-slate-600 truncate">
                               {bet.market} · {bet.sport}
                             </span>
                           </div>
                         </div>
                       )}
                     </td>
-                    <td className="py-3 px-3.5 text-right font-mono font-bold text-blue-600 whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-3.5 text-right font-mono font-bold text-blue-700 whitespace-nowrap tabular-nums">
                       @{Number(bet.odd || 1).toFixed(2)}
                     </td>
-                    <td className="py-3 px-3.5 text-right font-mono text-slate-800 font-medium whitespace-nowrap tabular-nums">
+                    <td className="py-3 px-3.5 text-right font-mono text-slate-900 font-medium whitespace-nowrap tabular-nums">
                       <div className="flex flex-col items-end">
                         <span>{formatBRL(bet.stake)}</span>
                         {bet.type !== 'Saldo Real' && (
-                          <span className="text-[10px] font-sans font-semibold text-indigo-600">
+                          <span className="text-[10px] font-sans font-semibold text-indigo-700">
                             {bet.type === 'Bônus Rollover' ? 'Rollover' : 'Freebet'}
                           </span>
                         )}
@@ -767,10 +768,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                     <td
                       className={`py-3 px-3.5 text-right font-mono font-bold text-xs sm:text-sm whitespace-nowrap tabular-nums ${
                         bet.status === 'PENDENTE'
-                          ? 'text-amber-600'
+                          ? 'text-amber-700'
                           : bet.pl >= 0
-                          ? 'text-emerald-600'
-                          : 'text-rose-600'
+                          ? 'text-emerald-700'
+                          : 'text-rose-700'
                       }`}
                     >
                       {bet.status === 'PENDENTE' ? '-' : `${bet.pl >= 0 ? '+' : ''}${formatBRL(bet.pl)}`}
@@ -785,7 +786,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                                 resolveBet(bet.id, 'GREEN');
                                 onSuccessToast?.('Aposta resolvida como GREEN');
                               }}
-                              className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-100"
+                              aria-label="Definir Green"
+                              className="p-1.5 rounded-lg text-emerald-700 hover:bg-emerald-100"
                               title="Green"
                             >
                               <span className="material-symbols-outlined text-[16px]">check</span>
@@ -796,7 +798,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                                 resolveBet(bet.id, 'RED');
                                 onSuccessToast?.('Aposta resolvida como RED');
                               }}
-                              className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-100"
+                              aria-label="Definir Red"
+                              className="p-1.5 rounded-lg text-rose-700 hover:bg-rose-100"
                               title="Red"
                             >
                               <span className="material-symbols-outlined text-[16px]">close</span>
@@ -806,7 +809,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onEditBet(bet)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                          aria-label="Editar aposta"
+                          className="p-1.5 rounded-lg text-slate-600 hover:text-blue-700 hover:bg-blue-50"
                           title="Editar"
                         >
                           <span className="material-symbols-outlined text-[16px]">edit</span>
@@ -819,7 +823,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                               setConfirmDeleteId(null);
                               onSuccessToast?.('Aposta excluída com sucesso.');
                             }}
-                            className="px-2 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-semibold"
+                            className="px-2 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold"
                           >
                             Confirmar
                           </button>
@@ -827,7 +831,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(bet.id)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                            aria-label="Excluir aposta"
+                            className="p-1.5 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50"
                             title="Excluir"
                           >
                             <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -845,7 +850,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+        <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
           <span>
             Mostrando {paginatedBets.length} de {filteredBets.length} apostas
           </span>
@@ -854,18 +859,18 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
               type="button"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg disabled:opacity-40 text-slate-700 hover:bg-slate-50 font-semibold"
+              className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg disabled:opacity-40 text-slate-800 hover:bg-slate-50 font-semibold"
             >
               Anterior
             </button>
-            <span className="px-2 font-mono text-slate-800 font-semibold tabular-nums">
+            <span className="px-2 font-mono text-slate-900 font-semibold tabular-nums">
               {currentPage} / {totalPages}
             </span>
             <button
               type="button"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg disabled:opacity-40 text-slate-700 hover:bg-slate-50 font-semibold"
+              className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg disabled:opacity-40 text-slate-800 hover:bg-slate-50 font-semibold"
             >
               Próxima
             </button>

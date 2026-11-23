@@ -47,8 +47,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <div className="min-h-screen bg-[#f4f7fb] text-slate-900 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white border border-rose-200 rounded-2xl p-6 shadow-xl flex flex-col gap-4 text-center">
-            <div className="w-12 h-12 mx-auto rounded-xl bg-rose-600 text-white shadow-md shadow-rose-600/20 flex items-center justify-center">
+          <div className="w-full max-w-md bg-white border border-rose-300 rounded-2xl p-6 shadow-[0_20px_48px_-12px_rgba(15,23,42,0.18)] flex flex-col gap-4 text-center">
+            <div className="w-12 h-12 mx-auto rounded-xl bg-rose-600 text-white shadow-md shadow-rose-600/25 flex items-center justify-center">
               <span className="material-symbols-outlined text-[26px]">warning</span>
             </div>
             <div>
@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             <button
               type="button"
               onClick={this.handleReload}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm shadow-blue-600/20"
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm shadow-blue-600/25"
             >
               Recarregar Aplicativo
             </button>
