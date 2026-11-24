@@ -2,6 +2,15 @@ export type BetStatus = 'GREEN' | 'RED' | 'HALF_GREEN' | 'HALF_RED' | 'VOID' | '
 
 export type BetFundType = 'Saldo Real' | 'Freebet' | 'Bônus Rollover';
 
+export interface BetDateRecoveryCandidate {
+  id: string;
+  event: string;
+  bookmaker: string;
+  currentDate: string;
+  recoveredDate: string;
+  createdAtMillis: number;
+}
+
 export interface BetEntry {
   id: string;
   date: string;
