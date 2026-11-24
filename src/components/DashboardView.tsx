@@ -12,7 +12,7 @@ const formatBetDate = (value: string): string => {
   const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (br) return raw;
   if (/^hoje\b/i.test(raw)) return 'Data não identificada';
-  if (/^hoje\\b/i.test(raw)) return 'Data não identificada';
+  if (/^hoje\b/i.test(raw)) return 'Data não identificada';
   return raw || 'Data não identificada';
 };
 
