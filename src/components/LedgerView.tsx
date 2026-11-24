@@ -45,6 +45,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const rowsPerPage = 12;
+  const undatedBetsCount = bets.filter((bet) => !toISODate(bet.date)).length;
 
   const months = [
     { key: 'ALL', label: 'Todos' },
@@ -389,7 +390,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           <input id="period-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900" />
         </div>
         <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1); }} className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50">Limpar período</button>
-        <p className="text-[10px] text-slate-500 sm:max-w-[220px]">O resultado considera a data real de cada aposta. Registros antigos sem data identificável não entram no intervalo.</p>
+        <div className="text-[10px] text-slate-500 sm:max-w-[260px]">
+          <p>O resultado considera a data real de cada aposta. Registros antigos sem data identificável não entram no intervalo.</p>
+          {undatedBetsCount > 0 && <p className="text-amber-700 font-semibold mt-1">{undatedBetsCount} aposta(s) com data antiga não identificada.</p>}
+        </div>
       </div>
 
       {/* Period Summary 4-Cards */}
