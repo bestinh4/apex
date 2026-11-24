@@ -1,6 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BookmakerBadge } from './BookmakerLogo';
+import {
+  AnalyticsScope,
+  TURNOVER_POLICY_DOC,
+  computeScopedAnalytics
+} from '../lib/financialEngine';
+
 
 const toISODate = (value: string): string | null => {
   const raw = String(value || '').trim();
@@ -19,12 +25,6 @@ const localISODate = (date: Date): string => {
 };
 
 type PeriodPreset = 'ALL' | 'TODAY' | '7D' | '30D' | 'MONTH' | 'YEAR' | 'CUSTOM';
-
-import {
-  AnalyticsScope,
-  TURNOVER_POLICY_DOC,
-  computeScopedAnalytics
-} from '../lib/financialEngine';
 
 interface AnalyticsViewProps {
   onSuccessToast?: (msg: string) => void;
