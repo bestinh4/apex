@@ -449,8 +449,8 @@ function normalizeStoredBetDate(value: string): string | null {
   let year = 0;
   let month = 0;
   let day = 0;
-  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
-  const br = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (iso) {
     year = Number(iso[1]);
     month = Number(iso[2]);
@@ -476,7 +476,7 @@ function isRecoverableLegacyBetDate(
   recoveredDate: string,
   today: string
 ): boolean {
-  if (/^(hoje|today)(?:\\b|,|\\s)/i.test(storedDate.trim())) return true;
+  if (/^(hoje|today)(?:\b|,|\s)/i.test(storedDate.trim())) return true;
   const normalized = normalizeStoredBetDate(storedDate);
   return normalized === today && recoveredDate !== today;
 }
@@ -514,9 +514,9 @@ export async function previewBetDateRecoveryInFirestore(
 export async function applyBetDateRecoveryInFirestore(
   uid: string,
   candidates: BetDateRecoveryCandidate[]
-): Promise<{ recovered: number; skipped: number }> {
+): Promise<{ recovered: number; skipped: number; recoveredIds: string[] }> {
   const path = `users/${uid}/bets`;
-  if (!candidates.length) return { recovered: 0, skipped: 0 };
+  if (!candidates.length) return { recovered: 0, skipped: 0, recoveredIds: [] };
   try {
     // Re-read before writing so a stale preview can never overwrite a newer user edit.
     const snap = await getDocs(
@@ -547,7 +547,11 @@ export async function applyBetDateRecoveryInFirestore(
       });
       await batch.commit();
     }
-    return { recovered: eligible.length, skipped: candidates.length - eligible.length };
+    return {
+      recovered: eligible.length,
+      skipped: candidates.length - eligible.length,
+      recoveredIds: eligible.map((item) => item.ref.id)
+    };
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
