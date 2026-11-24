@@ -4,29 +4,31 @@ import {
   splitEventAndInlineMarket
 } from '../src/lib/betLinkParser';
 
-const sample = 'Live 🇧🇷 Serie A Fluminense vs Mirassol Totais: Acima De 1.0';
+const event = 'Live 🇧🇷 Serie A Fluminense vs Mirassol';
+const sample = `${event} Totais: Acima De 1.0`;
 const split = splitEventAndInlineMarket(sample);
 
-assert.equal(
-  split.eventPart,
-  'Live 🇧🇷 Serie A Fluminense vs Mirassol',
-  'O cabeçalho do campeonato e o confronto devem permanecer no evento.'
-);
-assert.equal(
-  split.marketPart,
-  'Totais: Acima De 1.0',
-  'O texto do mercado deve ser separado integralmente do evento.'
-);
+assert.equal(split.eventPart, event);
+assert.equal(split.marketPart, 'Totais: Acima De 1.0');
 
-const match = matchFootballCatalogMarket(split.marketPart, split.eventPart);
-assert.ok(match, 'O mercado de gols deve ser identificado.');
-assert.equal(match.market.id, 'gols-asiaticos');
-assert.equal(match.market.name, 'Gols Asiáticos (Linhas Inteiras & Quartos)');
-assert.equal(match.selection, 'Mais de 1.0 Gols Asiáticos');
+const dynamicLines = [
+  { line: '1.0', expectedMarket: 'gols-asiaticos', expectedSelection: 'Mais de 1.0 Gols Asiáticos' },
+  { line: '0.75', expectedMarket: 'gols-asiaticos', expectedSelection: 'Mais de 0.75 Gols Asiáticos' },
+  { line: '1.25', expectedMarket: 'gols-asiaticos', expectedSelection: 'Mais de 1.25 Gols Asiáticos' },
+  { line: '2.25', expectedMarket: 'gols-asiaticos', expectedSelection: 'Mais de 2.25 Gols Asiáticos' },
+  { line: '1.5', expectedMarket: 'gols-over-under', expectedSelection: 'Mais de 1.5 Gols (Over/Under 1.5)' },
+  { line: '3.5', expectedMarket: 'gols-over-under', expectedSelection: 'Mais de 3.5 Gols (Over/Under 3.5)' }
+];
 
-// Também deve reconhecer a forma direta, sem depender do prefixo "Totais:".
-const directMatch = matchFootballCatalogMarket('Acima de 1.0', split.eventPart);
-assert.equal(directMatch?.market.id, 'gols-asiaticos');
-assert.equal(directMatch?.selection, 'Mais de 1.0 Gols Asiáticos');
+for (const item of dynamicLines) {
+  const hit = matchFootballCatalogMarket(`Totais: Acima de ${item.line}`, event);
+  assert.ok(hit, `Deve reconhecer a linha ${item.line}`);
+  assert.equal(hit.market.id, item.expectedMarket);
+  assert.equal(hit.selection, item.expectedSelection);
+}
+
+const under = matchFootballCatalogMarket('Totais: Abaixo de 2.25', event);
+assert.equal(under?.market.id, 'gols-asiaticos');
+assert.equal(under?.selection, 'Menos de 2.25 Gols Asiáticos');
 
 console.log('betMarketParsing: todos os testes passaram.');
