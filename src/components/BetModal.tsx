@@ -484,11 +484,6 @@ export const BetModal: React.FC<BetModalProps> = ({
     const finalEvent =
       event.trim() || (sport === 'Futebol' ? `${activeMarket?.name || 'Aposta'}` : 'Entrada Avulsa');
 
-    if (!initialBet && !betDate) {
-      setCashoutError('Informe a data em que a aposta foi realizada.');
-      return;
-    }
-
     const resolvedBookmaker =
       bookmaker === 'Outra' ? customBookmaker.trim() || '1win' : bookmaker;
 
@@ -777,6 +772,7 @@ export const BetModal: React.FC<BetModalProps> = ({
               type="date"
               value={betDate}
               onChange={(e) => setBetDate(e.target.value)}
+              required={!initialBet}
               max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}
               className="w-full sm:max-w-xs bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
             />
