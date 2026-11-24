@@ -466,11 +466,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       Prévia: {recoveryCandidates.length} aposta(s) com data recuperável
                     </p>
                     <div className="max-h-64 overflow-y-auto divide-y divide-slate-200">
-                      {recoveryCandidates.slice(0, 12).map((candidate) => (
+                      {recoveryCandidates.map((candidate) => (
                         <div key={candidate.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs">
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-800 truncate">{candidate.event}</p>
                             <p className="text-slate-500">{candidate.bookmaker} · Data atual: {candidate.currentDate || 'sem data'}</p>
+                            <p className="text-[10px] text-slate-500">Cadastro original: {new Date(candidate.createdAtMillis).toLocaleString('pt-BR')}</p>
                           </div>
                           <p className="font-mono font-bold text-emerald-700 shrink-0">
                             {candidate.recoveredDate.split('-').reverse().join('/')}
@@ -478,11 +479,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                         </div>
                       ))}
                     </div>
-                    {recoveryCandidates.length > 12 && (
-                      <p className="text-[11px] text-slate-500">
-                        Exibindo as primeiras 12. A confirmação considera todas as {recoveryCandidates.length} apostas.
-                      </p>
-                    )}
+
                     <p className="text-[11px] text-amber-800">
                       A data recuperada representa o dia do cadastro no Apex, não necessariamente o dia da partida.
                     </p>
