@@ -16,6 +16,7 @@ const toISODate = (value: string): string | null => {
 
 const formatBetDate = (value: string): string => {
   const iso = toISODate(value);
+  if (!iso && /^hoje\\b/i.test(String(value || '').trim())) return 'Data não identificada (registro antigo)';
   if (!iso) return value || 'Data não identificada';
   const [year, month, day] = iso.split('-');
   return `${day}/${month}/${year}`;
