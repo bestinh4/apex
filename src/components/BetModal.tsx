@@ -62,6 +62,7 @@ export const BetModal: React.FC<BetModalProps> = ({
   const [odd, setOdd] = useState('1.90');
   const [stake, setStake] = useState('25.00');
   const [status, setStatus] = useState<BetStatus>('GREEN');
+  const [betDate, setBetDate] = useState<string>('');
   const [cashoutReturnInput, setCashoutReturnInput] = useState('');
   const [cashoutError, setCashoutError] = useState<string | null>(null);
 
@@ -118,6 +119,7 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd(initialBet.odd.toString());
       setStake(initialBet.stake.toString());
       setStatus(initialBet.status);
+      setBetDate(/^\d{4}-\d{2}-\d{2}$/.test(initialBet.date) ? initialBet.date : /^\d{2}\/\d{2}\/\d{4}$/.test(initialBet.date) ? `${initialBet.date.slice(6, 10)}-${initialBet.date.slice(3, 5)}-${initialBet.date.slice(0, 2)}` : '');
       setCashoutReturnInput(
         initialBet.status === 'CASHOUT'
           ? String(initialBet.cashoutReturn ?? initialBet.gross ?? '')
@@ -177,6 +179,7 @@ export const BetModal: React.FC<BetModalProps> = ({
       setOdd('1.90');
       setStake(settings.unitValue.toFixed(2));
       setStatus('GREEN');
+      setBetDate(new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10));
       setCashoutReturnInput('');
       setCashoutError(null);
       setShareLinkInput(initialShareInput || '');
@@ -481,10 +484,10 @@ export const BetModal: React.FC<BetModalProps> = ({
     const finalEvent =
       event.trim() || (sport === 'Futebol' ? `${activeMarket?.name || 'Aposta'}` : 'Entrada Avulsa');
 
-    const now = new Date();
-    const formattedDate = `Hoje, ${String(now.getHours()).padStart(2, '0')}:${String(
-      now.getMinutes()
-    ).padStart(2, '0')}`;
+    if (!initialBet && !betDate) {
+      setCashoutError('Informe a data em que a aposta foi realizada.');
+      return;
+    }
 
     const resolvedBookmaker =
       bookmaker === 'Outra' ? customBookmaker.trim() || '1win' : bookmaker;
@@ -513,12 +516,13 @@ export const BetModal: React.FC<BetModalProps> = ({
           status,
           gross: persistedGross,
           pl: persistedPl,
-          cashoutReturn: resolvedCashout
+          cashoutReturn: resolvedCashout,
+          ...(betDate ? { date: betDate } : {})
         });
         onSuccessToast?.(`Aposta #${initialBet.id} atualizada com sucesso.`);
       } else {
         addBet({
-          date: formattedDate,
+          date: betDate,
           type: fundType,
           bookmaker: resolvedBookmaker,
           sport,
@@ -766,6 +770,20 @@ export const BetModal: React.FC<BetModalProps> = ({
 
         {/* Form Body - 2-column layout on Desktop (lg), stacked on Mobile */}
         <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          <div className="lg:col-span-12 flex flex-col gap-1.5">
+            <label htmlFor="bet-date" className="text-xs font-semibold text-slate-700">Data da aposta</label>
+            <input
+              id="bet-date"
+              type="date"
+              value={betDate}
+              onChange={(e) => setBetDate(e.target.value)}
+              max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)}
+              className="w-full sm:max-w-xs bg-white border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-600/15"
+            />
+            {!betDate && initialBet && (
+              <span className="text-[11px] text-amber-700">Data antiga não identificada. Se souber o dia correto, selecione-o; se deixar em branco, o registro original será preservado.</span>
+            )}
+          </div>
           {/* LEFT COLUMN: Entry details, Stake, Odd, Status, Return */}
           <div className="lg:col-span-5 flex flex-col gap-3.5">
             {/* Tipo de Saldo (Real, Freebet ou Bônus Rollover) */}
