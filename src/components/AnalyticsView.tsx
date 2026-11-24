@@ -1,6 +1,25 @@
 import React, { useState, useMemo } from 'react';
 import { useBankroll } from '../context/BankrollContext';
 import { BookmakerBadge } from './BookmakerLogo';
+
+const toISODate = (value: string): string | null => {
+  const raw = String(value || '').trim();
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return \`\${iso[1]}-\${iso[2]}-\${iso[3]}\`;
+  const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return \`\${br[3]}-\${br[2]}-\${br[1]}\`;
+  return null;
+};
+
+const localISODate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return \`\${year}-\${month}-\${day}\`;
+};
+
+type PeriodPreset = 'ALL' | 'TODAY' | '7D' | '30D' | 'MONTH' | 'YEAR' | 'CUSTOM';
+
 import {
   AnalyticsScope,
   TURNOVER_POLICY_DOC,
@@ -22,16 +41,57 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
     rolloverRoi,
     promoRoi,
     promoTurnover,
-    promoBetProfit
+    promoBetProfit,
+    unitValue
   } = useBankroll();
 
   const [scope, setScope] = useState<AnalyticsScope>('Saldo Real');
+  const [periodPreset, setPeriodPreset] = useState<PeriodPreset>('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const formatBRL = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
   };
 
-  const analytics = useMemo(() => computeScopedAnalytics(bets, scope), [bets, scope]);
+  const applyPeriodPreset = (preset: PeriodPreset) => {
+    const today = new Date();
+    const end = localISODate(today);
+    const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (preset === 'ALL') {
+      setDateFrom('');
+      setDateTo('');
+    } else if (preset === 'TODAY') {
+      setDateFrom(end);
+      setDateTo(end);
+    } else if (preset === '7D' || preset === '30D') {
+      startDate.setDate(startDate.getDate() - (preset === '7D' ? 6 : 29));
+      setDateFrom(localISODate(startDate));
+      setDateTo(end);
+    } else if (preset === 'MONTH') {
+      setDateFrom(localISODate(new Date(today.getFullYear(), today.getMonth(), 1)));
+      setDateTo(end);
+    } else if (preset === 'YEAR') {
+      setDateFrom(localISODate(new Date(today.getFullYear(), 0, 1)));
+      setDateTo(end);
+    }
+    setPeriodPreset(preset);
+  };
+
+  const periodBets = useMemo(() => bets.filter((bet) => {
+    const betDate = toISODate(bet.date);
+    if (!betDate) return !dateFrom && !dateTo;
+    if (dateFrom && betDate < dateFrom) return false;
+    if (dateTo && betDate > dateTo) return false;
+    return true;
+  }), [bets, dateFrom, dateTo]);
+
+  const analytics = useMemo(() => computeScopedAnalytics(periodBets, scope), [periodBets, scope]);
+  const safeUnitValue = Number.isFinite(Number(unitValue)) && Number(unitValue) > 0 ? Number(unitValue) : 25;
+  const profitUnits = analytics.totalPl / safeUnitValue;
+  const gainUnits = analytics.totalGains / safeUnitValue;
+  const lossUnits = analytics.totalLosses / safeUnitValue;
+  const undatedCount = bets.filter((bet) => !toISODate(bet.date)).length;
 
   const handleExport = () => {
     let csv = 'Escopo,Modalidade,Apostas,Volume_Efetivo_BRL,Taxa_Acerto_Pct,Lucro_BRL,ROI_Pct\n';
@@ -100,6 +160,63 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
           </button>
         </div>
       </div>
+
+      <section className="bg-white border border-slate-300/80 rounded-2xl p-4 sm:p-5 flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">Período da análise</h3>
+            <p className="text-[11px] text-slate-600">Todos os indicadores e rankings abaixo respeitam este intervalo.</p>
+          </div>
+          <span className="text-[11px] font-semibold text-slate-700">{analytics.scopedBets.length} apostas no período</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {([
+            ['ALL', 'Todo o histórico'], ['TODAY', 'Hoje'], ['7D', 'Últimos 7 dias'],
+            ['30D', 'Últimos 30 dias'], ['MONTH', 'Este mês'], ['YEAR', 'Este ano']
+          ] as [PeriodPreset, string][]).map(([key, label]) => (
+            <button key={key} type="button" onClick={() => applyPeriodPreset(key)}
+              className={\`px-3 py-2 rounded-lg text-[11px] font-semibold border transition-colors \${periodPreset === key ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-blue-50'}\`}>
+              {label}
+            </button>
+          ))}
+          <button type="button" onClick={() => setPeriodPreset('CUSTOM')}
+            className={\`px-3 py-2 rounded-lg text-[11px] font-semibold border \${periodPreset === 'CUSTOM' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300'}\`}>
+            Personalizado
+          </button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
+          <label className="text-[11px] font-semibold text-slate-600 flex flex-col gap-1">De
+            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPeriodPreset('CUSTOM'); }} max={dateTo || undefined} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900" />
+          </label>
+          <label className="text-[11px] font-semibold text-slate-600 flex flex-col gap-1">Até
+            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPeriodPreset('CUSTOM'); }} min={dateFrom || undefined} className="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900" />
+          </label>
+        </div>
+        {undatedCount > 0 && <p className="text-[10px] text-amber-700">{undatedCount} aposta(s) sem data identificável ficam fora dos períodos definidos. No histórico completo, elas continuam incluídas.</p>}
+      </section>
+
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-slate-600">Ganhos no período</p>
+          <p className="text-lg sm:text-xl font-mono font-bold text-emerald-700 mt-1">{formatBRL(analytics.totalGains)}</p>
+          <p className="text-[10px] text-slate-500 mt-1">+{gainUnits.toFixed(2)}u</p>
+        </div>
+        <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-slate-600">Perdas no período</p>
+          <p className="text-lg sm:text-xl font-mono font-bold text-rose-700 mt-1">{formatBRL(analytics.totalLosses)}</p>
+          <p className="text-[10px] text-slate-500 mt-1">-{lossUnits.toFixed(2)}u</p>
+        </div>
+        <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-slate-600">Lucro líquido</p>
+          <p className={\`text-lg sm:text-xl font-mono font-bold mt-1 \${analytics.totalPl >= 0 ? 'text-emerald-700' : 'text-rose-700'}\`}>{analytics.totalPl >= 0 ? '+' : ''}{formatBRL(analytics.totalPl)}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{profitUnits >= 0 ? '+' : ''}{profitUnits.toFixed(2)}u · unidade atual {formatBRL(safeUnitValue)}</p>
+        </div>
+        <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
+          <p className="text-[11px] font-semibold text-slate-600">Volume / ROI</p>
+          <p className="text-lg sm:text-xl font-mono font-bold text-slate-900 mt-1">{formatBRL(analytics.totalVolume)}</p>
+          <p className={\`text-[10px] font-semibold mt-1 \${analytics.totalRoi >= 0 ? 'text-emerald-700' : 'text-rose-700'}\`}>ROI {analytics.totalRoi >= 0 ? '+' : ''}{analytics.totalRoi.toFixed(2)}%</p>
+        </div>
+      </section>
 
       {/* Turnover Policy Notice */}
       <div className="px-4 py-3 rounded-xl bg-blue-50 border border-blue-300 text-[11px] text-blue-950 flex items-start gap-2 shadow-[0_1px_2px_rgba(15,23,42,0.03)]">
