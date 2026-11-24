@@ -27,6 +27,7 @@ import {
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
   BetEntry,
+  BetDateRecoveryCandidate,
   TreasuryEntry,
   FreebetEntry,
   FreeSpinEntry,
@@ -431,6 +432,124 @@ export async function deleteBetInFirestore(betId: string, uid: string): Promise<
     await deleteDoc(doc(db, 'users', uid, 'bets', docId));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+
+function localDateInputFromMillis(milliseconds: number): string {
+  const date = new Date(milliseconds);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeStoredBetDate(value: string): string | null {
+  const raw = value.trim();
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  const br = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+  if (iso) {
+    year = Number(iso[1]);
+    month = Number(iso[2]);
+    day = Number(iso[3]);
+  } else if (br) {
+    day = Number(br[1]);
+    month = Number(br[2]);
+    year = Number(br[3]);
+  } else {
+    return null;
+  }
+  const check = new Date(Date.UTC(year, month - 1, day));
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) return null;
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+function isRecoverableLegacyBetDate(
+  storedDate: string,
+  recoveredDate: string,
+  today: string
+): boolean {
+  if (/^(hoje|today)(?:\\b|,|\\s)/i.test(storedDate.trim())) return true;
+  const normalized = normalizeStoredBetDate(storedDate);
+  return normalized === today && recoveredDate !== today;
+}
+
+export async function previewBetDateRecoveryInFirestore(
+  uid: string
+): Promise<BetDateRecoveryCandidate[]> {
+  const path = `users/${uid}/bets`;
+  try {
+    const snap = await getDocs(
+      query(collection(db, 'users', uid, 'bets'), where('userId', '==', uid))
+    );
+    const today = localDateInputFromMillis(Date.now());
+    return snap.docs.flatMap((betDoc) => {
+      const data = betDoc.data();
+      const createdAtMillis = timestampToMillis(data.createdAt);
+      if (!createdAtMillis) return [];
+      const recoveredDate = localDateInputFromMillis(createdAtMillis);
+      const currentDate = String(data.date || '');
+      if (!isRecoverableLegacyBetDate(currentDate, recoveredDate, today)) return [];
+      return [{
+        id: betDoc.id,
+        event: String(data.event || 'Evento sem identificação'),
+        bookmaker: String(data.bookmaker || 'Casa não informada'),
+        currentDate,
+        recoveredDate,
+        createdAtMillis
+      }];
+    }).sort((a, b) => a.recoveredDate.localeCompare(b.recoveredDate));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path);
+  }
+}
+
+export async function applyBetDateRecoveryInFirestore(
+  uid: string,
+  candidates: BetDateRecoveryCandidate[]
+): Promise<{ recovered: number; skipped: number }> {
+  const path = `users/${uid}/bets`;
+  if (!candidates.length) return { recovered: 0, skipped: 0 };
+  try {
+    // Re-read before writing so a stale preview can never overwrite a newer user edit.
+    const snap = await getDocs(
+      query(collection(db, 'users', uid, 'bets'), where('userId', '==', uid))
+    );
+    const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+    const eligible: Array<{ ref: (typeof snap.docs)[number]['ref']; date: string }> = [];
+    snap.docs.forEach((betDoc) => {
+      const candidate = byId.get(betDoc.id);
+      if (!candidate) return;
+      const data = betDoc.data();
+      const createdAtMillis = timestampToMillis(data.createdAt);
+      if (
+        String(data.date || '') !== candidate.currentDate ||
+        createdAtMillis !== candidate.createdAtMillis ||
+        localDateInputFromMillis(createdAtMillis) !== candidate.recoveredDate
+      ) return;
+      eligible.push({ ref: betDoc.ref, date: candidate.recoveredDate });
+    });
+
+    for (let i = 0; i < eligible.length; i += 400) {
+      const batch = writeBatch(db);
+      eligible.slice(i, i + 400).forEach((item) => {
+        batch.update(item.ref, {
+          date: item.date,
+          updatedAt: serverTimestamp()
+        });
+      });
+      await batch.commit();
+    }
+    return { recovered: eligible.length, skipped: candidates.length - eligible.length };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, path);
   }
 }
 
