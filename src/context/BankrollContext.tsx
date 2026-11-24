@@ -19,6 +19,7 @@ import {
 } from 'firebase/firestore';
 import {
   BetEntry,
+  BetDateRecoveryCandidate,
   TreasuryEntry,
   FreebetEntry,
   FreeSpinEntry,
@@ -46,6 +47,8 @@ import {
   ensureUserProfileDoc,
   updateUserProfileSettings,
   createBetInFirestore,
+  previewBetDateRecoveryInFirestore,
+  applyBetDateRecoveryInFirestore,
   updateBetInFirestore,
   deleteBetInFirestore,
   createTreasuryInFirestore,
@@ -160,6 +163,17 @@ interface BankrollContextType {
     settings?: AppSettings;
   }) => void;
   syncNow: () => Promise<boolean>;
+  previewBetDateRecovery: () => Promise<{
+    success: boolean;
+    candidates: BetDateRecoveryCandidate[];
+    error?: string;
+  }>;
+  applyBetDateRecovery: (candidates: BetDateRecoveryCandidate[]) => Promise<{
+    success: boolean;
+    recovered: number;
+    skipped: number;
+    error?: string;
+  }>;
 
   // Métricas Financeiras (Fase 1.1)
   totalDeposits: number;
@@ -813,6 +827,66 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [attachCloudListeners]);
+
+
+  const previewBetDateRecovery = useCallback(async () => {
+    const fbUser = firebaseUserRef.current;
+    if (!fbUser) {
+      return {
+        success: false,
+        candidates: [],
+        error: 'Conecte sua conta Google para consultar os registros originais na nuvem.'
+      };
+    }
+    try {
+      const candidates = await previewBetDateRecoveryInFirestore(fbUser.uid);
+      return { success: true, candidates };
+    } catch (err: any) {
+      return {
+        success: false,
+        candidates: [],
+        error: err?.message || 'Não foi possível analisar as datas das apostas.'
+      };
+    }
+  }, []);
+
+  const applyBetDateRecovery = useCallback(async (candidates: BetDateRecoveryCandidate[]) => {
+    const fbUser = firebaseUserRef.current;
+    if (!fbUser) {
+      return {
+        success: false,
+        recovered: 0,
+        skipped: candidates.length,
+        error: 'Conecte sua conta Google antes de recuperar as datas.'
+      };
+    }
+    try {
+      setCloudSyncStatus('syncing');
+      const result = await applyBetDateRecoveryInFirestore(fbUser.uid, candidates);
+      const recoveredDates = new Map(
+        candidates.map((candidate) => [candidate.id, candidate.recoveredDate])
+      );
+      setBets((previous) =>
+        previous.map((bet) =>
+          recoveredDates.has(bet.id)
+            ? { ...bet, date: recoveredDates.get(bet.id)! }
+            : bet
+        )
+      );
+      setCloudSyncStatus('synced');
+      setLastSyncedAt(new Date());
+      return { success: true, ...result };
+    } catch (err: any) {
+      setCloudSyncStatus('error');
+      setCloudSyncError(err?.message || 'Falha ao recuperar datas das apostas.');
+      return {
+        success: false,
+        recovered: 0,
+        skipped: candidates.length,
+        error: err?.message || 'Falha ao recuperar datas das apostas.'
+      };
+    }
+  }, []);
 
   const signUp = async (
     email: string,
@@ -1583,6 +1657,8 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
         loadDemoData,
         importBackup,
         syncNow,
+        previewBetDateRecovery,
+        applyBetDateRecovery,
         ...metrics,
         turnoverPolicyDoc: TURNOVER_POLICY_DOC,
         monthlyTargetAmount,
