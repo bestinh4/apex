@@ -511,7 +511,7 @@ function isLeagueOrHeaderLine(line: string): boolean {
 }
 
 const INLINE_MARKET_SPLIT_REGEX =
-  /\s+(?:[:|]|[-–]\s+(?=(?:over|under|btts|ambas|ambos|ml|moneyline|vencedor|empate|casa|fora|mais|menos|acima|abaixo|handicap|h\.?\s*a\.?|ha\b|escanteios?|cantos?|cart[oõ]es|gols?|dupla\s+(?:chance|hip[oó]tese)|dnb|empate\s+anula|total\b|1x2\b|ht|ft|[+-]\d)))|\s+(?=(?:over\b|under\b|btts\b|ambas\b|ambos\b|mais\s+de\b|menos\s+de\b|acima\s+de\b|abaixo\s+de\b|total\s+de\b|handicap\b|h\.?\s*a\.?(?:\s|$)|ha\b|escanteios?\b|cantos?\b|cart[oõ]es\b|1x2\b|dupla\s+(?:chance|hip[oó]tese)\b|dnb\b|empate\s+anula\b|moneyline\b|\bml\b|\bgg\b|\bng\b|\bo\d+(?:[.,]\d+)?\b|\bu\d+(?:[.,]\d+)?\b|[+-]\d+(?:[.,]\d+)?(?:\s|$)))/i;
+  /\s+(?:[:|]|[-–]\s+(?=(?:over|under|btts|ambas|ambos|ml|moneyline|vencedor|empate|casa|fora|mais|menos|acima|abaixo|handicap|h\.?\s*a\.?|ha\b|escanteios?|cantos?|cart[oõ]es|gols?|dupla\s+(?:chance|hip[oó]tese)|dnb|empate\s+anula|totais?\b|1x2\b|ht|ft|[+-]\d)))|\s+(?=(?:totais?\b|over\b|under\b|btts\b|ambas\b|ambos\b|mais\s+de\b|menos\s+de\b|acima\s+de\b|abaixo\s+de\b|total\s+de\b|handicap\b|h\.?\s*a\.?(?:\s|$)|ha\b|escanteios?\b|cantos?\b|cart[oõ]es\b|1x2\b|dupla\s+(?:chance|hip[oó]tese)\b|dnb\b|empate\s+anula\b|moneyline\b|\bml\b|\bgg\b|\bng\b|\bo\d+(?:[.,]\d+)?\b|\bu\d+(?:[.,]\d+)?\b|[+-]\d+(?:[.,]\d+)?(?:\s|$)))/i;
 
 export function splitEventAndInlineMarket(rawLine: string): {
   eventPart: string;
@@ -1764,7 +1764,7 @@ export function matchFootballCatalogMarket(
   }
 
   // 17. Asian Goals (2.0 / 2.25 / 2.75 / 3.0)
-  const asianGoalLine = n.match(/\b(2\.0|2\.25|2\.75|3\.0)\b/)?.[1];
+  const asianGoalLine = n.match(/\b(1\.0|2\.0|2\.25|2\.75|3\.0)\b/)?.[1];
   if (hasTotalKeyword && (/\basiatic/i.test(n) || asianGoalLine)) {
     const m = findById('gols-asiaticos');
     if (m) {
