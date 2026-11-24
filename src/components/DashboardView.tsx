@@ -5,6 +5,15 @@ import { BankrollChart } from './BankrollChart';
 import { BookmakerBadge } from './BookmakerLogo';
 import { MatchCrests } from './TeamCrests';
 
+const formatBetDate = (value: string): string => {
+  const raw = String(value || '').trim();
+  const iso = raw.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  const br = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+  if (br) return raw;
+  return raw || 'Data não identificada';
+};
+
 interface DashboardViewProps {
   onOpenNewBetModal: () => void;
   onOpenFreebetModal: () => void;
@@ -472,7 +481,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-600 min-w-0 truncate">
                       <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-800 font-medium" />
                       <span>·</span>
-                      <span className="font-mono shrink-0">{bet.date}</span>
+                      <span className="font-mono shrink-0">{formatBetDate(bet.date)}</span>
                     </div>
                   </div>
 
