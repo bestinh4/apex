@@ -3,6 +3,7 @@ import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { FIREBASE_PROJECT_ID } from '../lib/firebase';
+import { BetDateRecoveryCandidate } from '../types';
 
 interface SettingsViewProps {
   onSuccessToast?: (msg: string) => void;
@@ -33,7 +34,9 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     resetData,
     loadDemoData,
     importBackup,
-    syncNow
+    syncNow,
+    previewBetDateRecovery,
+    applyBetDateRecovery
   } = useBankroll();
   const { canShowInstallUI } = usePWAInstall();
 
@@ -45,6 +48,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [confirmClear, setConfirmClear] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [recoveryCandidates, setRecoveryCandidates] = useState<BetDateRecoveryCandidate[]>([]);
+  const [recoveryWasChecked, setRecoveryWasChecked] = useState(false);
+  const [isCheckingRecovery, setIsCheckingRecovery] = useState(false);
+  const [isApplyingRecovery, setIsApplyingRecovery] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -116,6 +123,44 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       onSuccessToast?.('Registros locais enviados e mesclados na sua conta Google!');
     } else {
       onSuccessToast?.('Erro ao enviar registros locais para a nuvem.');
+    }
+  };
+
+
+  const handlePreviewBetDateRecovery = async () => {
+    setIsCheckingRecovery(true);
+    setRecoveryWasChecked(false);
+    setRecoveryCandidates([]);
+    const result = await previewBetDateRecovery();
+    setIsCheckingRecovery(false);
+    if (!result.success) {
+      onSuccessToast?.(result.error || 'Não foi possível analisar as datas.');
+      return;
+    }
+    setRecoveryCandidates(result.candidates);
+    setRecoveryWasChecked(true);
+    if (result.candidates.length === 0) {
+      onSuccessToast?.('Nenhuma data recuperável foi encontrada nos registros da nuvem.');
+    }
+  };
+
+  const handleApplyBetDateRecovery = async () => {
+    if (!recoveryCandidates.length || isApplyingRecovery) return;
+    const confirmed = window.confirm(
+      `Confirma a recuperação de ${recoveryCandidates.length} data(s) usando o horário original de cadastro? Nenhum valor ou resultado de aposta será alterado.`
+    );
+    if (!confirmed) return;
+    setIsApplyingRecovery(true);
+    const result = await applyBetDateRecovery(recoveryCandidates);
+    setIsApplyingRecovery(false);
+    if (result.success) {
+      setRecoveryCandidates([]);
+      setRecoveryWasChecked(false);
+      onSuccessToast?.(
+        `${result.recovered} data(s) recuperada(s). ${result.skipped} registro(s) foram ignorados por já terem mudado ou não coincidirem mais com a prévia.`
+      );
+    } else {
+      onSuccessToast?.(result.error || 'Não foi possível recuperar as datas.');
     }
   };
 
@@ -364,6 +409,93 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </a>
             </div>
           </div>
+        )}
+      </div>
+
+
+      {/* Safe recovery of historical bet dates */}
+      <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-4 sm:p-6 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)] flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined text-[22px]">history</span>
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">Recuperar datas antigas das apostas</h3>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              O Apex compara a data exibida com o horário original de cadastro salvo no Firestore.
+              Primeiro fazemos uma prévia. Só corrigimos os registros depois da sua confirmação.
+              Valores, odds, unidades e resultados não são modificados.
+            </p>
+          </div>
+        </div>
+
+        {!isCloudAuthenticated ? (
+          <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
+            Conecte a mesma conta Google que contém suas apostas para consultar os horários originais.
+          </p>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handlePreviewBetDateRecovery}
+                disabled={isCheckingRecovery || isApplyingRecovery}
+                className="px-3.5 py-2 bg-blue-700 hover:bg-blue-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              >
+                <span className="material-symbols-outlined text-[16px]">manage_search</span>
+                {isCheckingRecovery ? 'Analisando registros...' : 'Analisar datas recuperáveis'}
+              </button>
+              {recoveryWasChecked && recoveryCandidates.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleApplyBetDateRecovery}
+                  disabled={isApplyingRecovery || isCheckingRecovery}
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">event_available</span>
+                  {isApplyingRecovery ? 'Recuperando...' : `Confirmar recuperação (${recoveryCandidates.length})`}
+                </button>
+              )}
+            </div>
+
+            {recoveryWasChecked && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 flex flex-col gap-2">
+                {recoveryCandidates.length > 0 ? (
+                  <>
+                    <p className="text-xs font-semibold text-slate-800">
+                      Prévia: {recoveryCandidates.length} aposta(s) com data recuperável
+                    </p>
+                    <div className="max-h-64 overflow-y-auto divide-y divide-slate-200">
+                      {recoveryCandidates.slice(0, 12).map((candidate) => (
+                        <div key={candidate.id} className="py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-800 truncate">{candidate.event}</p>
+                            <p className="text-slate-500">{candidate.bookmaker} · Data atual: {candidate.currentDate || 'sem data'}</p>
+                          </div>
+                          <p className="font-mono font-bold text-emerald-700 shrink-0">
+                            {candidate.recoveredDate.split('-').reverse().join('/')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    {recoveryCandidates.length > 12 && (
+                      <p className="text-[11px] text-slate-500">
+                        Exibindo as primeiras 12. A confirmação considera todas as {recoveryCandidates.length} apostas.
+                      </p>
+                    )}
+                    <p className="text-[11px] text-amber-800">
+                      A data recuperada representa o dia do cadastro no Apex, não necessariamente o dia da partida.
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-600">
+                    Nenhuma aposta com data genérica ou data atual incompatível com o horário de cadastro foi encontrada.
+                    Registros sem horário original não podem ser recuperados com segurança.
+                  </p>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
