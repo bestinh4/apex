@@ -279,6 +279,8 @@ export const FOOTBALL_MARKETS: FootballMarket[] = [
     category: 'Handicap Asiático',
     popular: true,
     selections: [
+      'Mais de 1.0 Gols Asiáticos',
+      'Menos de 1.0 Gols Asiáticos',
       'Mais de 2.0 Gols Asiáticos',
       'Menos de 2.0 Gols Asiáticos',
       'Mais de 2.25 Gols Asiáticos (2.0, 2.5)',
