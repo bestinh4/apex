@@ -6,6 +6,21 @@ import { BookmakerBadge } from './BookmakerLogo';
 import { MatchCrests } from './TeamCrests';
 import { TURNOVER_POLICY_DOC, finiteNumber, roundCurrency } from '../lib/financialEngine';
 
+const toISODate = (value: string): string | null => {
+  const raw = String(value || '').trim();
+  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(raw)) return raw;
+  const br = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return null;
+};
+
+const formatBetDate = (value: string): string => {
+  const iso = toISODate(value);
+  if (!iso) return value || 'Data não identificada';
+  const [year, month, day] = iso.split('-');
+  return `${day}/${month}/${year}`;
+};
+
 interface LedgerViewProps {
   onOpenNewBetModal: () => void;
   onEditBet: (bet: BetEntry) => void;
@@ -20,6 +35,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
   const { bets, deleteBet, resolveBet } = useBankroll();
 
   const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSport, setSelectedSport] = useState('ALL');
   const [selectedMarketCat, setSelectedMarketCat] = useState('ALL');
@@ -51,6 +68,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
   const filteredBets = useMemo(() => {
     return bets.filter((b) => {
+      const betISODate = toISODate(b.date);
+      if (dateFrom && (!betISODate || betISODate < dateFrom)) return false;
+      if (dateTo && (!betISODate || betISODate > dateTo)) return false;
+
       if (selectedMonth !== 'ALL') {
         const dStr = b.date || '';
         const match = dStr.match(/(\d{4})-(\d{2})|(\d{2})\/(\d{2})/);
@@ -181,7 +202,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
 
       return true;
     });
-  }, [bets, selectedMonth, searchTerm, selectedSport, selectedMarketCat, statusFilter, fundTypeFilter]);
+  }, [bets, selectedMonth, dateFrom, dateTo, searchTerm, selectedSport, selectedMarketCat, statusFilter, fundTypeFilter]);
 
   const periodStats = useMemo(() => {
     const isPromoOnlyView = fundTypeFilter === 'Freebet' || fundTypeFilter === 'Bônus Rollover';
@@ -189,6 +210,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
     let pl = 0;
     let promoVolume = 0;
     let promoPl = 0;
+    let totalGains = 0;
+    let totalLosses = 0;
     let settledScopedCount = 0;
 
     filteredBets.forEach((b) => {
@@ -196,6 +219,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       const betPl = finiteNumber(b.pl, 0);
       const isSettled = b.status !== 'PENDENTE';
       const isTurnoverEligible = isSettled && b.status !== 'VOID';
+      if (isSettled && ((isPromoOnlyView && b.type !== 'Saldo Real') || (!isPromoOnlyView && b.type === 'Saldo Real'))) {
+        if (betPl > 0) totalGains += betPl;
+        if (betPl < 0) totalLosses += Math.abs(betPl);
+      }
 
       if (b.type === 'Saldo Real') {
         if (isSettled) {
@@ -227,6 +254,8 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
       pl: activePl,
       roi,
       promoPl: roundCurrency(promoPl),
+      totalGains: roundCurrency(totalGains),
+      totalLosses: roundCurrency(totalLosses),
       isPromoOnlyView
     };
   }, [filteredBets, fundTypeFilter]);
@@ -350,6 +379,19 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
         })}
       </div>
 
+      <div className="bg-white border border-slate-300/80 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1">
+          <label htmlFor="period-from" className="block text-[11px] font-semibold text-slate-600 mb-1">Data inicial</label>
+          <input id="period-from" type="date" value={dateFrom} max={dateTo || undefined} onChange={(e) => { setDateFrom(e.target.value); setCurrentPage(1); }} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900" />
+        </div>
+        <div className="flex-1">
+          <label htmlFor="period-to" className="block text-[11px] font-semibold text-slate-600 mb-1">Data final</label>
+          <input id="period-to" type="date" value={dateTo} min={dateFrom || undefined} onChange={(e) => { setDateTo(e.target.value); setCurrentPage(1); }} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900" />
+        </div>
+        <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); setCurrentPage(1); }} className="px-3 py-2 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50">Limpar período</button>
+        <p className="text-[10px] text-slate-500 sm:max-w-[220px]">O resultado considera a data real de cada aposta. Registros antigos sem data identificável não entram no intervalo.</p>
+      </div>
+
       {/* Period Summary 4-Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="bg-white border border-slate-300/80 ring-1 ring-slate-900/[0.03] rounded-2xl p-3.5 sm:p-4 shadow-[0_1px_2px_rgba(15,23,42,0.05),0_4px_14px_-2px_rgba(15,23,42,0.06)]">
@@ -386,6 +428,10 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
           >
             {periodStats.pl >= 0 ? '+' : ''}
             {formatBRL(periodStats.pl)}
+          </div>
+          <div className="text-[10px] mt-1 space-y-0.5">
+            <div className="text-emerald-700">Ganhos: +{formatBRL(periodStats.totalGains)}</div>
+            <div className="text-rose-700">Perdas: -{formatBRL(periodStats.totalLosses)}</div>
           </div>
         </div>
         <div
@@ -620,7 +666,7 @@ export const LedgerView: React.FC<LedgerViewProps> = ({
                   <div className="flex items-center gap-1.5 text-[11px] text-slate-600 min-w-0 truncate">
                     <BookmakerBadge bookmaker={bet.bookmaker} size="sm" className="text-slate-800 font-medium" />
                     <span>·</span>
-                    <span className="font-mono shrink-0">{bet.date}</span>
+                    <span className="font-mono shrink-0">{formatBetDate(bet.date)}</span>
                   </div>
                 </div>
 
