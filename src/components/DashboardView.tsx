@@ -577,7 +577,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   {filteredBets.map((bet) => (
                     <tr key={bet.id} className="hover:bg-blue-50/40 transition-colors">
                       <td className="py-3 px-3.5 font-mono text-slate-600 whitespace-nowrap tabular-nums">
-                        {bet.date}
+                        {formatBetDate(bet.date)}
                       </td>
                       <td className="py-3 px-3.5 font-semibold text-slate-800 whitespace-nowrap">
                         <BookmakerBadge bookmaker={bet.bookmaker} size="sm" />
