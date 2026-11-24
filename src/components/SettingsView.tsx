@@ -3,7 +3,7 @@ import { useBankroll } from '../context/BankrollContext';
 import { PWAInstallButton } from './PWAInstallButton';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 import { FIREBASE_PROJECT_ID } from '../lib/firebase';
-import { BetDateRecoveryCandidate } from '../types';
+import type { BetDateRecoveryCandidate } from '../types';
 
 interface SettingsViewProps {
   onSuccessToast?: (msg: string) => void;
