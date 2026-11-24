@@ -863,8 +863,11 @@ export function BankrollProvider({ children }: { children: ReactNode }) {
     try {
       setCloudSyncStatus('syncing');
       const result = await applyBetDateRecoveryInFirestore(fbUser.uid, candidates);
+      const recoveredIds = new Set(result.recoveredIds);
       const recoveredDates = new Map(
-        candidates.map((candidate) => [candidate.id, candidate.recoveredDate])
+        candidates
+          .filter((candidate) => recoveredIds.has(candidate.id))
+          .map((candidate) => [candidate.id, candidate.recoveredDate])
       );
       setBets((previous) =>
         previous.map((bet) =>
