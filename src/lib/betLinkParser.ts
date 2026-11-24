@@ -1763,13 +1763,21 @@ export function matchFootballCatalogMarket(
     }
   }
 
-  // 17. Asian Goals (2.0 / 2.25 / 2.75 / 3.0)
-  const asianGoalLine = n.match(/\b(1\.0|2\.0|2\.25|2\.75|3\.0)\b/)?.[1];
-  if (hasTotalKeyword && (/\basiatic/i.test(n) || asianGoalLine)) {
+  // 17. Total Goals: dynamic line support (live markets can change with match state).
+  // Whole-number and quarter-goal lines are Asian totals; half-goal lines are standard O/U.
+  const goalLine = n.match(/\b(\d+(?:\.\d+)?)\b/)?.[1];
+  const isAsianGoalTotal =
+    /\basiatic/i.test(n) ||
+    (!!goalLine && !/\.5$/.test(goalLine));
+
+  if (hasTotalKeyword && isAsianGoalTotal) {
     const m = findById('gols-asiaticos');
     if (m) {
-      const sel = asianGoalLine ? pickLineSelection(m, asianGoalLine, dir) : undefined;
-      return { market: m, selection: sel };
+      const direction = dir === 'under' ? 'Menos de' : dir === 'over' ? 'Mais de' : '';
+      const selection = goalLine && direction
+        ? `${direction} ${goalLine} Gols Asiáticos`
+        : undefined;
+      return { market: m, selection };
     }
   }
 
@@ -1777,9 +1785,11 @@ export function matchFootballCatalogMarket(
   if (hasTotalKeyword) {
     const m = findById('gols-over-under');
     if (m) {
-      const line = n.match(/\b(0\.5|1\.5|2\.5|3\.5|4\.5|5\.5)\b/)?.[1];
-      const sel = line ? pickLineSelection(m, line, dir) : undefined;
-      return { market: m, selection: sel };
+      const direction = dir === 'under' ? 'Menos de' : dir === 'over' ? 'Mais de' : '';
+      const selection = goalLine && direction
+        ? `${direction} ${goalLine} Gols (Over/Under ${goalLine})`
+        : undefined;
+      return { market: m, selection };
     }
   }
 
