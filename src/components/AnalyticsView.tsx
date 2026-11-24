@@ -5,9 +5,9 @@ import { BookmakerBadge } from './BookmakerLogo';
 const toISODate = (value: string): string | null => {
   const raw = String(value || '').trim();
   const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (iso) return \`\${iso[1]}-\${iso[2]}-\${iso[3]}\`;
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
   const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (br) return \`\${br[3]}-\${br[2]}-\${br[1]}\`;
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
   return null;
 };
 
@@ -15,7 +15,7 @@ const localISODate = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  return \`\${year}-\${month}-\${day}\`;
+  return `${year}-${month}-${day}`;
 };
 
 type PeriodPreset = 'ALL' | 'TODAY' | '7D' | '30D' | 'MONTH' | 'YEAR' | 'CUSTOM';
@@ -41,8 +41,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
     rolloverRoi,
     promoRoi,
     promoTurnover,
-    promoBetProfit,
-    unitValue
+    promoBetProfit
   } = useBankroll();
 
   const [scope, setScope] = useState<AnalyticsScope>('Saldo Real');
@@ -87,10 +86,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
   }), [bets, dateFrom, dateTo]);
 
   const analytics = useMemo(() => computeScopedAnalytics(periodBets, scope), [periodBets, scope]);
-  const safeUnitValue = Number.isFinite(Number(unitValue)) && Number(unitValue) > 0 ? Number(unitValue) : 25;
-  const profitUnits = analytics.totalPl / safeUnitValue;
-  const gainUnits = analytics.totalGains / safeUnitValue;
-  const lossUnits = analytics.totalLosses / safeUnitValue;
+  const betProfitUnits = (bet: (typeof analytics.settledBets)[number]) => {
+    const stake = Number(bet.stake);
+    const units = Number(bet.units);
+    if (!Number.isFinite(stake) || stake <= 0 || !Number.isFinite(units)) return 0;
+    return (Number(bet.pl || 0) / stake) * units;
+  };
+  const profitUnits = analytics.settledBets.reduce((sum, bet) => sum + betProfitUnits(bet), 0);
+  const gainUnits = analytics.settledBets.filter((bet) => bet.pl > 0).reduce((sum, bet) => sum + betProfitUnits(bet), 0);
+  const lossUnits = Math.abs(analytics.settledBets.filter((bet) => bet.pl < 0).reduce((sum, bet) => sum + betProfitUnits(bet), 0));
   const undatedCount = bets.filter((bet) => !toISODate(bet.date)).length;
 
   const handleExport = () => {
@@ -175,12 +179,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
             ['30D', 'Últimos 30 dias'], ['MONTH', 'Este mês'], ['YEAR', 'Este ano']
           ] as [PeriodPreset, string][]).map(([key, label]) => (
             <button key={key} type="button" onClick={() => applyPeriodPreset(key)}
-              className={\`px-3 py-2 rounded-lg text-[11px] font-semibold border transition-colors \${periodPreset === key ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-blue-50'}\`}>
+              className={`px-3 py-2 rounded-lg text-[11px] font-semibold border transition-colors ${periodPreset === key ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300 hover:bg-blue-50'}`}>
               {label}
             </button>
           ))}
           <button type="button" onClick={() => setPeriodPreset('CUSTOM')}
-            className={\`px-3 py-2 rounded-lg text-[11px] font-semibold border \${periodPreset === 'CUSTOM' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300'}\`}>
+            className={`px-3 py-2 rounded-lg text-[11px] font-semibold border ${periodPreset === 'CUSTOM' ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-50 text-slate-700 border-slate-300'}`}>
             Personalizado
           </button>
         </div>
@@ -208,13 +212,13 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ onSuccessToast }) 
         </div>
         <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
           <p className="text-[11px] font-semibold text-slate-600">Lucro líquido</p>
-          <p className={\`text-lg sm:text-xl font-mono font-bold mt-1 \${analytics.totalPl >= 0 ? 'text-emerald-700' : 'text-rose-700'}\`}>{analytics.totalPl >= 0 ? '+' : ''}{formatBRL(analytics.totalPl)}</p>
-          <p className="text-[10px] text-slate-500 mt-1">{profitUnits >= 0 ? '+' : ''}{profitUnits.toFixed(2)}u · unidade atual {formatBRL(safeUnitValue)}</p>
+          <p className={`text-lg sm:text-xl font-mono font-bold mt-1 ${analytics.totalPl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{analytics.totalPl >= 0 ? '+' : ''}{formatBRL(analytics.totalPl)}</p>
+          <p className="text-[10px] text-slate-500 mt-1">{profitUnits >= 0 ? '+' : ''}{profitUnits.toFixed(2)}u · unidade histórica de cada aposta</p>
         </div>
         <div className="bg-white border border-slate-300/80 rounded-2xl p-4">
           <p className="text-[11px] font-semibold text-slate-600">Volume / ROI</p>
           <p className="text-lg sm:text-xl font-mono font-bold text-slate-900 mt-1">{formatBRL(analytics.totalVolume)}</p>
-          <p className={\`text-[10px] font-semibold mt-1 \${analytics.totalRoi >= 0 ? 'text-emerald-700' : 'text-rose-700'}\`}>ROI {analytics.totalRoi >= 0 ? '+' : ''}{analytics.totalRoi.toFixed(2)}%</p>
+          <p className={`text-[10px] font-semibold mt-1 ${analytics.totalRoi >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>ROI {analytics.totalRoi >= 0 ? '+' : ''}{analytics.totalRoi.toFixed(2)}%</p>
         </div>
       </section>
 
