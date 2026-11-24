@@ -11,6 +11,7 @@ const formatBetDate = (value: string): string => {
   if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
   const br = raw.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
   if (br) return raw;
+  if (/^hoje\b/i.test(raw)) return 'Data não identificada';
   return raw || 'Data não identificada';
 };
 
